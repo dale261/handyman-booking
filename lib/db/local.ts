@@ -1,6 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
 import path from "node:path";
+import { mergeLibrary } from "@/lib/domain/library";
+import type { LibraryEntry } from "@/lib/domain/library-data";
 import { blocksSchedule } from "@/lib/domain/scheduling";
 import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
@@ -30,6 +32,7 @@ type FileShape = {
   notifications: NotificationRecord[];
   emails: EmailRecord[];
   reviews: ReviewRecord[];
+  library: LibraryEntry[];
   geo: Record<string, { lat: number; lng: number }>;
   routes: Record<string, { miles: number; source: string }>;
   invoiceSeq: number;
@@ -186,6 +189,7 @@ function seed(): FileShape {
     notifications: [],
     emails: [],
     reviews: [],
+    library: mergeLibrary(null),
     geo: {},
     routes: {},
     invoiceSeq: 1000,
@@ -219,6 +223,7 @@ export class LocalRepository implements Repository {
     const parsed = JSON.parse(fs.readFileSync(this.filePath, "utf8")) as FileShape;
     parsed.settings = normalizeSettings(parsed.settings);
     parsed.invoiceSeq = parsed.invoiceSeq || 1000;
+    parsed.library = mergeLibrary(Array.isArray(parsed.library) ? parsed.library : null);
     return parsed;
   }
 
@@ -259,6 +264,14 @@ export class LocalRepository implements Repository {
   async saveSettings(settings: Settings) {
     await this.run(async () => {
       this.db().settings = normalizeSettings(settings);
+    });
+  }
+  async listLibrary() {
+    return this.run(async () => this.clone(this.db().library));
+  }
+  async saveLibrary(entries: LibraryEntry[]) {
+    await this.run(async () => {
+      this.db().library = mergeLibrary(entries);
     });
   }
   async listZips() {

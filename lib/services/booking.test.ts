@@ -232,4 +232,96 @@ describe("booking flow", () => {
     if (!approved.ok) throw new Error(approved.error);
     expect(approved.data.status).toBe("completed");
   });
+
+  it("books a clear unlisted job from the library high and keeps that price when the slot is held", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const created = await createQuote(store, customer, {
+      service: "other",
+      description: "Install 40 feet of baseboard in the hallway",
+      params: { ...DEFAULT_PARAMS },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.data.status).toBe("quoted");
+    expect(created.data.quoteMeta?.kind).toBe("library");
+    expect(created.data.quoteMeta?.bookable).toBe(true);
+    expect(created.data.lines.some((line) => line.label === "Baseboard")).toBe(true);
+    expect(created.data.travelFee).toBe(50);
+    expect(created.data.total).toBe(430);
+    const held = await holdSlot(store, customer, created.data.id, "earliest");
+    expect(held.ok).toBe(true);
+    if (!held.ok) return;
+    expect(held.data.total).toBe(430);
+    expect(held.data.quoteMeta?.kind).toBe("library");
+    expect(held.data.lines.find((line) => line.label === "Baseboard")?.amount).toBe(345.6);
+  });
+
+  it("sends a vague unlisted job and a refer-out trade to the owner", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const vague = await createQuote(store, customer, {
+      service: "other",
+      description: "Fix some stuff",
+      params: { ...DEFAULT_PARAMS },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    expect(vague.ok).toBe(true);
+    if (!vague.ok) return;
+    expect(vague.data.status).toBe("scope_review");
+    expect(vague.data.quoteMeta?.bookable).toBe(false);
+    expect(vague.data.quoteMeta?.reviewReasons.some((reason) => reason === "Vague scope" || reason === "No library entry fits")).toBe(true);
+    const emails = await store.listEmails();
+    expect(emails.some((email) => email.to === customer.email && email.body.includes("Expected range"))).toBe(true);
+
+    const outlets = await createQuote(store, customer, {
+      service: "other",
+      description: "Replace two outlets in the kitchen",
+      params: { ...DEFAULT_PARAMS },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    expect(outlets.ok).toBe(true);
+    if (!outlets.ok) return;
+    expect(outlets.data.status).toBe("scope_review");
+    expect(outlets.data.quoteMeta?.items[0]).toMatchObject({ id: "outlet", quantity: 2 });
+    expect(outlets.data.licenseLevel).not.toBe("ok");
+  });
+
+  it("still reviews a rewire when the library toggle says we do panels", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const library = await store.listLibrary();
+    await store.saveLibrary(library.map((entry) => (entry.id === "panel-upgrade" ? { ...entry, performs: true } : entry)));
+    const created = await createQuote(store, customer, {
+      service: "other",
+      description: "Rewire the electrical panel and add a circuit",
+      params: { ...DEFAULT_PARAMS },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.data.status).toBe("scope_review");
+    expect(created.data.licenseLevel).toBe("refer");
+  });
 });

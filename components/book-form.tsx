@@ -215,7 +215,7 @@ export function BookForm({
             </Field>
           </>
         )}
-        {(service === "yard" || service === "clean" || service === "other") && (
+        {(service === "yard" || service === "clean") && (
           <Field label="Estimated hours">
             <Input type="number" min={0.5} step={0.5} value={params.hours} onChange={(e) => patch({ hours: Number(e.target.value) })} />
           </Field>
@@ -223,9 +223,9 @@ export function BookForm({
         {service === "yard" && <Toggle label="Haul away yard waste" checked={params.haul} onChange={(haul) => patch({ haul })} />}
         {service === "clean" && <Toggle label="Deep clean" checked={params.deep} onChange={(deep) => patch({ deep })} />}
         {service === "other" && (
-          <Field label="Materials you want us to buy ($)">
-            <Input type="number" min={0} step={0.01} value={params.materials} onChange={(e) => patch({ materials: Number(e.target.value) })} />
-          </Field>
+          <p className="text-sm text-muted sm:col-span-2">
+            Unlisted work is priced from the cost library at the high end of each range, and never below the labor floor. Describe the work and the quantity. If the description is vague, or the work needs a license, Dale reviews it before you can book.
+          </p>
         )}
         {service === "helper" && (
           <>
@@ -243,9 +243,11 @@ export function BookForm({
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required minLength={8} />
       </Field>
       <p className="text-sm text-muted">
-        {aiOn
-          ? "A short AI note may be added from your description. The price still comes only from Dale's rate table."
-          : "The AI key isn't connected yet, so this quote is priced entirely from the rate table."}
+        {service === "other"
+          ? "The price is calculated here from the cost library. The AI only picks which library items fit. It cannot type a dollar amount."
+          : aiOn
+            ? "A short AI note may be added from your description. The price still comes only from Dale's rate table."
+            : "The AI key isn't connected yet, so this quote is priced entirely from the rate table."}
       </p>
 
       <div className="flex flex-wrap gap-2">

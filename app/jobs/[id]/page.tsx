@@ -84,7 +84,11 @@ export default async function JobPage({
       <Flash notice={query.notice} error={query.error} />
 
       {job.status === "scope_review" && actor.role === "customer" && (
-        <Callout>Part of this job may need a licensed trade, so Dale is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral.</Callout>
+        <Callout>
+          {job.quoteMeta
+            ? `Dale is reviewing this before it can be booked. Expected range ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)}. That is not a price you can pay until he confirms the scope.`
+            : "Part of this job may need a licensed trade, so Dale is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral."}
+        </Callout>
       )}
       {job.status === "referred" && actor.role === "customer" && (
         <Callout>
@@ -100,12 +104,32 @@ export default async function JobPage({
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-4">
+          {hidePrice && job.quoteMeta && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Expected range</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="font-semibold">
+                  {usd(job.quoteMeta.rangeLow)} – {usd(job.quoteMeta.rangeHigh)}
+                </p>
+                <p className="text-muted">
+                  This range comes from the cost library. It is not a firm total, and you cannot hold a time until Dale releases the job.
+                </p>
+              </CardContent>
+            </Card>
+          )}
           {!hidePrice && (
             <Card>
               <CardHeader>
-                <CardTitle>Quote</CardTitle>
+                <CardTitle>{job.quoteMeta ? "AI estimate" : "Quote"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {job.quoteMeta && (
+                  <p className="text-sm text-muted">
+                    This price is an AI estimate based on your description and our local cost library. It uses the high end of those ranges. If the site differs from what you described, the price may need to change.
+                  </p>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -137,7 +161,9 @@ export default async function JobPage({
                 {job.payRule && <p className="text-sm text-muted">{job.payRule}</p>}
                 {job.assumptions.length > 0 && (
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-                    {job.assumptions.map((item) => (
+                    {job.assumptions
+                      .filter((item) => !job.quoteMeta || !item.startsWith("This price is an AI estimate based on your description"))
+                      .map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
@@ -169,6 +195,28 @@ export default async function JobPage({
               {job.travelLocked && <p className="text-muted">Travel is locked at {job.travelMiles ?? 0} miles ({usd(job.travelFee)}) because this job is paid.</p>}
               {job.completionNote && <p>Crew note: {job.completionNote}</p>}
               {job.problemNote && <p>Problem: {job.problemNote}</p>}
+              {actor.role === "owner" && job.quoteMeta && (
+                <div className="rounded-md border border-line bg-paper p-3">
+                  <p className="font-semibold">How this AI price was built</p>
+                  {job.quoteMeta.reasoning && <p className="mt-1">{job.quoteMeta.reasoning}</p>}
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
+                    {job.quoteMeta.items.map((item) => (
+                      <li key={item.id}>
+                        {item.name}: {item.quantity} {item.unit} × {usd(item.unitHigh)} high ({item.basis}
+                        {item.discount > 0 ? `, minus ${Math.round(item.discount * 100)}%` : ""}) = {usd(item.amount)}
+                      </li>
+                    ))}
+                  </ul>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
+                    {job.quoteMeta.math.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                  {job.quoteMeta.referralEstimate != null && (
+                    <p className="mt-2">Referral estimate for you: {usd(job.quoteMeta.referralEstimate)}. The customer sees the range, not this firm number, until you release it.</p>
+                  )}
+                </div>
+              )}
               {actor.role === "owner" && job.licenseLevel !== "ok" && (
                 <div className="rounded-md bg-copper/10 p-3">
                   <p className="font-semibold">{job.licenseTrade}</p>
@@ -429,7 +477,11 @@ function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name:
       <CardContent className="space-y-4 text-sm">
         {job.status === "scope_review" && (
           <div className="space-y-2">
-            <p>Draft total, hidden from the customer: {usd(job.total)}</p>
+            <p>
+              {job.quoteMeta
+                ? `Firm total for you: ${usd(job.total)}. The customer sees ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)} until you release the quote.`
+                : `Draft total, hidden from the customer: ${usd(job.total)}`}
+            </p>
             <form action={releaseLicenseAction}>
               <input type="hidden" name="jobId" value={job.id} />
               <SubmitButton size="sm">No license needed. Release the quote</SubmitButton>

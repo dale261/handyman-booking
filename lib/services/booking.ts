@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readJobDescription } from "@/lib/ai";
+import { matchUnlistedJob, readJobDescription } from "@/lib/ai";
 import type { Repository } from "@/lib/db/repository";
 import {
   SlotTakenError,
@@ -7,10 +7,10 @@ import {
   type JobRecord,
   type JobStatus,
   type PaymentRecord,
-  type WorkerRecord,
 } from "@/lib/db/types";
 import { areaCheck } from "@/lib/domain/area";
 import { refundBeforeWork, validateOwnerRefund } from "@/lib/domain/cancellation";
+import { isLibraryQuote, priceUnlisted, pricedWithTravel } from "@/lib/domain/library";
 import { roundCents } from "@/lib/domain/money";
 import { crewNeeded, licenseEstimate, onsiteMinutes, quoteCalc, splitPayment } from "@/lib/domain/pricing";
 import { classify } from "@/lib/domain/screening";
@@ -25,6 +25,7 @@ import {
 import { driveMinutes } from "@/lib/domain/travel";
 import {
   DEFAULT_PARAMS,
+  PREAPPROVED,
   SERVICE_LABELS,
   type QuoteParams,
   type ScreenFlag,
@@ -146,6 +147,27 @@ function applyQuote(
   source: string,
 ) {
   const estimate = source !== "openrouteservice" && source !== "osrm";
+  if (isLibraryQuote(job.quoteMeta)) {
+    const priced = pricedWithTravel(job.lines, job.quoteMeta, miles, fromLabel, settings, estimate);
+    const split = splitPayment(priced.total, settings.depositThreshold);
+    job.lines = priced.lines;
+    job.total = priced.total;
+    job.quoteMeta = priced.meta;
+    job.amountDueNow = split.now;
+    job.balanceDue = split.later;
+    job.payRule = split.rule;
+    job.travelMiles = miles;
+    job.travelFrom = fromLabel;
+    job.travelFee = priced.travelFee;
+    job.travelSource = source;
+    job.driveMinutes = driveMinutes(miles ?? 0, settings.driveFactor, settings.drivePadMinutes);
+    if (job.startMin != null) {
+      const window = visitWindow(job.startMin, job.driveMinutes, job.onsiteMinutes, settings.bufferMinutes);
+      job.reserveStartMin = window.reserveStart;
+      job.reserveEndMin = window.reserveEnd;
+    }
+    return;
+  }
   const quote = quoteCalc(job.service, job.params, settings, job.county, miles, {
     urgent: job.urgent,
     pickup: job.pickup,
@@ -300,12 +322,22 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
       if (!choice) continue;
       const info = legs.get(choice.crewId);
       if (!info) continue;
-      const quote = quoteCalc(job.service, job.params, settings, job.county, info.miles, {
-        urgent: job.urgent,
-        pickup: job.pickup,
-        travelFrom: info.fromLabel,
-      });
-      const split = splitPayment(quote.total, settings.depositThreshold);
+      let total = 0;
+      let travelFeeAmount = 0;
+      if (isLibraryQuote(job.quoteMeta)) {
+        const priced = pricedWithTravel(job.lines, job.quoteMeta, info.miles, info.fromLabel, settings, false);
+        total = priced.total;
+        travelFeeAmount = priced.travelFee;
+      } else {
+        const quote = quoteCalc(job.service, job.params, settings, job.county, info.miles, {
+          urgent: job.urgent,
+          pickup: job.pickup,
+          travelFrom: info.fromLabel,
+        });
+        total = quote.total;
+        travelFeeAmount = quote.lines.find((line) => line.kind === "travel")?.amount ?? 0;
+      }
+      const split = splitPayment(total, settings.depositThreshold);
       slots.push({
         date,
         startMin: start,
@@ -315,8 +347,8 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
         memberIds: choice.memberIds,
         travelFrom: info.fromLabel,
         travelMiles: info.miles,
-        travelFee: quote.lines.find((line) => line.kind === "travel")?.amount ?? 0,
-        total: quote.total,
+        travelFee: travelFeeAmount,
+        total,
         dueNow: split.now,
         balance: split.later,
         tie: choice.distanceTie,
@@ -479,36 +511,114 @@ export async function createQuote(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    applyQuote(job, settings, measured.miles, measured.fromLabel, measured.source);
-    const ai = await readJobDescription(input.service, description);
-    if (ai.scopeHint) job.assumptions = [`From your description: ${ai.scopeHint}`, ...job.assumptions];
-    if (ai.assumptions.length) job.assumptions = [...job.assumptions, ...ai.assumptions];
-    const flag = screenJob(job, settings, ai.licenseNote);
-    job.licenseLevel = flag.level;
-    job.licenseTrade = flag.trade;
-    job.licenseWhy = flag.why;
-    job.licenseRule = flag.rule;
-    if (flag.level !== "ok") job.status = "scope_review";
-    else if (!area.auto) job.status = "pending_area";
-    else job.status = "quoted";
+    if (PREAPPROVED.includes(input.service)) {
+      applyQuote(job, settings, measured.miles, measured.fromLabel, measured.source);
+      const ai = await readJobDescription(input.service, description);
+      if (ai.scopeHint) job.assumptions = [`From your description: ${ai.scopeHint}`, ...job.assumptions];
+      if (ai.assumptions.length) job.assumptions = [...job.assumptions, ...ai.assumptions];
+      const flag = screenJob(job, settings, ai.licenseNote);
+      job.licenseLevel = flag.level;
+      job.licenseTrade = flag.trade;
+      job.licenseWhy = flag.why;
+      job.licenseRule = flag.rule;
+      if (flag.level !== "ok") job.status = "scope_review";
+      else if (!area.auto) job.status = "pending_area";
+      else job.status = "quoted";
+    } else {
+      const library = await repo.listLibrary();
+      const match = await matchUnlistedJob(description, library);
+      const priced = priceUnlisted({
+        items: match.selection.items,
+        estimatedHours: match.selection.estimatedHours,
+        materials: match.selection.materials,
+        confidence: match.selection.confidence,
+        vague: match.selection.vague,
+        reasoning: match.reasoning,
+        assumptions: match.assumptions,
+        zip: area.zip,
+        county: area.county,
+        settings,
+        library,
+        miles: measured.miles,
+        travelFrom: measured.fromLabel,
+        milesAreEstimate: measured.source !== "openrouteservice" && measured.source !== "osrm",
+        urgent: job.urgent,
+        pickup: job.pickup,
+      });
+      const split = splitPayment(priced.total, settings.depositThreshold);
+      job.scope = priced.scope;
+      job.lines = priced.lines;
+      job.assumptions = priced.assumptions;
+      job.total = priced.total;
+      job.amountDueNow = split.now;
+      job.balanceDue = split.later;
+      job.payRule = split.rule;
+      job.travelMiles = measured.miles;
+      job.travelFrom = measured.fromLabel;
+      job.travelFee = priced.lines.find((item) => item.kind === "travel")?.amount ?? 0;
+      job.travelSource = measured.source;
+      job.driveMinutes = driveMinutes(measured.miles, settings.driveFactor, settings.drivePadMinutes);
+      job.quoteMeta = priced.quoteMeta;
+      job.params = { ...job.params, hours: priced.quoteMeta.estimatedHours };
+      job.onsiteMinutes = onsiteMinutes(job.service, job.params, settings);
+      const flag = classify(
+        job.service,
+        job.description,
+        job.params,
+        licenseEstimate({ scope: job.scope, lines: job.lines, assumptions: job.assumptions, total: job.total }),
+        settings,
+      );
+      const hardRefer = flag.level === "refer";
+      const catchAll = flag.trade === "Not on the pre-approved list";
+      const book = priced.quoteMeta.bookable && !hardRefer && !match.licenseConcern;
+      if (!book) {
+        job.status = "scope_review";
+        job.referralNote = "";
+        const reasons = priced.quoteMeta.reviewReasons;
+        if (hardRefer || (flag.level === "review" && !catchAll)) {
+          job.licenseLevel = flag.level;
+          job.licenseTrade = flag.trade;
+          job.licenseWhy = [flag.why, ...reasons].filter(Boolean).join(" ");
+          job.licenseRule = flag.rule;
+        } else if (match.licenseConcern) {
+          job.licenseLevel = "review";
+          job.licenseTrade = "Possible license (AI screen)";
+          job.licenseWhy = match.licenseConcern;
+          job.licenseRule = "The cost library priced the job, and the AI asked for a person to look.";
+        } else {
+          job.licenseLevel = "review";
+          job.licenseTrade = reasons[0] ?? "Owner review";
+          job.licenseWhy = reasons.join(" ");
+          job.licenseRule = "Cost library. Low confidence or a vague scope is reviewed before anyone can book.";
+        }
+      } else {
+        job.licenseLevel = "ok";
+        job.licenseTrade = "Cost library";
+        job.licenseWhy = "Priced from the high end of the cost library and above the labor floor.";
+        job.licenseRule = "Dale's rule";
+        job.status = area.auto ? "quoted" : "pending_area";
+      }
+    }
 
     const saved = await repo.saveJob(job, { skipOverlap: true });
     if (saved.status === "scope_review") {
+      const range = saved.quoteMeta
+        ? ` Expected range ${usd(saved.quoteMeta.rangeLow)} to ${usd(saved.quoteMeta.rangeHigh)}.`
+        : "";
+      const referral =
+        saved.quoteMeta?.referralEstimate != null ? ` Referral estimate ${usd(saved.quoteMeta.referralEstimate)}.` : "";
       await notify(
         repo,
         settings,
         "approval",
-        `License review needed: ${flag.trade}`,
-        `${user.fullName}: "${description}". ${flag.why}`,
+        `License review needed: ${saved.licenseTrade}`,
+        `${user.fullName}: "${description}". ${saved.licenseWhy}${referral}${range}`,
         saved.id,
       );
-      await mail(
-        repo,
-        user.email,
-        "Thanks! We're reviewing your request",
-        `Hi ${user.fullName}, thanks for the details. Part of this job may need a licensed trade, so the owner is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral.${footer(settings)}`,
-        saved.id,
-      );
+      const customerNote = saved.quoteMeta
+        ? `Hi ${user.fullName}, thanks for the details. Dale is reviewing this before it can be booked.${range} That range is not a price you can pay until he confirms it. We'll get back to you within 1 business day.${footer(settings)}`
+        : `Hi ${user.fullName}, thanks for the details. Part of this job may need a licensed trade, so the owner is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral.${footer(settings)}`;
+      await mail(repo, user.email, "Thanks! We're reviewing your request", customerNote, saved.id);
     }
     return { ok: true, data: saved };
   });

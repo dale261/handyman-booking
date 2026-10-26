@@ -6,6 +6,7 @@ import {
   saveCrewAction,
   saveWorkerAction,
 } from "@/lib/actions";
+import Link from "next/link";
 import { Flash } from "@/components/flash";
 import { SettingsForm } from "@/components/settings-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -33,7 +34,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div>
         <h1 className="font-display text-3xl font-semibold text-pine">Rates and crews</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Sample crews are labeled “(sample)”. Rename them or delete them and add your own. The first job of each crew’s day is measured from the shop address below.
+          Sample crews are labeled “(sample)”. Rename them or delete them and add your own. The first job of each crew’s day is measured from the shop address below. Unlisted jobs use the{" "}
+          <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>, not these rate-sheet numbers.
         </p>
       </div>
       <Flash notice={query.notice} error={query.error} />

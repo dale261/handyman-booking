@@ -49,7 +49,13 @@ export default async function JobsPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {job.status !== "scope_review" && job.status !== "referred" && <span className="text-sm font-semibold">{usd(job.total)}</span>}
+                    {job.status === "scope_review" || job.status === "referred" ? (
+                      job.quoteMeta ? (
+                        <span className="text-sm font-semibold">est. {usd(job.quoteMeta.rangeLow)}–{usd(job.quoteMeta.rangeHigh)}</span>
+                      ) : null
+                    ) : (
+                      <span className="text-sm font-semibold">{usd(job.total)}</span>
+                    )}
                     <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
                   </div>
                 </CardContent>

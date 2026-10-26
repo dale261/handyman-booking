@@ -32,6 +32,7 @@ export function Shell({
                 <Nav href="/owner/queue">Queue</Nav>
                 <Nav href="/owner/jobs">Jobs</Nav>
                 <Nav href="/owner/settings">Rates</Nav>
+                <Nav href="/owner/library">Library</Nav>
                 <Nav href="/owner/area">ZIP map</Nav>
               </>
             )}
@@ -59,7 +60,7 @@ export function Shell({
             This copy is saving to a file on this computer. Sample one-click sign-in is on. Do not put this mode on the public internet. Connect Supabase before customers use it.
             {keys.resend ? " Email is live." : " Emails print in the terminal."}
             {keys.paypal ? " PayPal is live." : " PayPal is a demo button until keys are added."}
-            {keys.openai ? " AI quote notes are on." : " Quotes use the rate table until an OpenAI key is added."}
+            {keys.openai ? " AI matching is on for unlisted jobs." : " Unlisted jobs use the keyword library until an OpenAI key is added."}
             {keys.ors ? " Road miles use OpenRouteService." : keys.osrm ? " Road miles use OSRM." : " Road miles are straight-line distance × the road factor until a routing key is added."}
           </p>
         </div>

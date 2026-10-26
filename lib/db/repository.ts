@@ -1,3 +1,4 @@
+import type { LibraryEntry } from "@/lib/domain/library-data";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewRecord,
@@ -17,6 +18,8 @@ export interface Repository {
   run<T>(fn: () => Promise<T>): Promise<T>;
   getSettings(): Promise<Settings>;
   saveSettings(settings: Settings): Promise<void>;
+  listLibrary(): Promise<LibraryEntry[]>;
+  saveLibrary(entries: LibraryEntry[]): Promise<void>;
   listZips(): Promise<ZipRecord[]>;
   listCrews(): Promise<CrewRecord[]>;
   saveCrew(crew: CrewRecord): Promise<void>;

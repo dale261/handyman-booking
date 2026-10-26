@@ -17,7 +17,7 @@ export default async function HomePage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-copper">Cadillac, Michigan</p>
           <h1 className="font-display text-4xl font-semibold tracking-tight text-pine sm:text-5xl">Handyman work, priced before anyone drives out.</h1>
           <p className="max-w-xl text-lg text-ink/80">
-            eX Construction LC is Dale Orvis&apos;s crew. Tell us the job, answer a few questions, and get an itemized quote from the rate sheet. Hold a time for {settings.holdHours} hours while you pay.
+            eX Construction LC is Dale Orvis&apos;s crew. Listed work is priced from the rate sheet. Other handyman work is priced from a local cost library, at the high end, and only books immediately when the description is clear. Hold a time for {settings.holdHours} hours while you pay.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-paper">
@@ -34,7 +34,7 @@ export default async function HomePage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>Painting, including large jobs. Household cleaning. TV mounting and window coverings. Furniture assembly. Hire a helper.</p>
-            <p className="text-muted">Anything else is reviewed first. If it needs a licensed trade, Dale says so and can refer you out with a note.</p>
+            <p className="text-muted">Other handyman work can be priced from our local cost library at the high end of each range. Vague jobs, and anything that needs a license, go to Dale before anyone can book.</p>
           </CardContent>
         </Card>
       </section>

@@ -1,4 +1,5 @@
-import type { QuoteLine, QuoteParams, ScreenLevel, ServiceId, Settings } from "@/lib/domain/types";
+import type { QuoteMeta } from "@/lib/domain/library";
+import type { QuoteLine, QuoteParams, ScreenLevel, ServiceId } from "@/lib/domain/types";
 
 export type Role = "customer" | "worker" | "owner";
 
@@ -137,6 +138,8 @@ export type JobRecord = {
   paypalOrderId: string | null;
   completionNote: string;
   problemNote: string;
+  /** Set for unlisted library quotes. Rate-sheet jobs leave this empty. */
+  quoteMeta?: QuoteMeta | null;
   createdAt: string;
   updatedAt: string;
 };

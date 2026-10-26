@@ -106,6 +106,9 @@ function Section({ title, jobs, empty }: { title: string; jobs: JobRecord[]; emp
             <Link key={job.id} href={`/jobs/${job.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm">
               <span>
                 <span className="font-semibold">{job.customerName}</span> · {job.scope || job.description}
+                {job.quoteMeta && (job.status === "scope_review" || job.status === "referred")
+                  ? ` · est. ${usd(job.quoteMeta.rangeLow)}–${usd(job.quoteMeta.rangeHigh)}`
+                  : ""}
               </span>
               <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
             </Link>

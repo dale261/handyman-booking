@@ -7,6 +7,8 @@ import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewRecord, Role, WorkerRecord } from "@/lib/db/types";
+import { mergeLibrary } from "@/lib/domain/library";
+import type { LibraryGroup } from "@/lib/domain/library-data";
 import { normalizeSettings, SETTING_FIELDS } from "@/lib/domain/settings";
 import type { QuoteParams, ServiceId, Settings } from "@/lib/domain/types";
 import { DEFAULT_PARAMS } from "@/lib/domain/types";
@@ -382,6 +384,41 @@ export async function saveSettingsAction(form: FormData) {
   next.builderThreshold = current.builderThreshold;
   await repo.saveSettings(normalizeSettings(next));
   redirect("/owner/settings?notice=" + encodeURIComponent("Rates and rules saved."));
+}
+
+function nullableField(form: FormData, key: string): number | null | undefined {
+  if (!form.has(key)) return undefined;
+  const raw = String(form.get(key) ?? "").trim();
+  if (raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+export async function saveLibraryAction(form: FormData) {
+  await requireRole("owner");
+  const repo = getRepository();
+  const current = await repo.listLibrary();
+  const groupAction = field(form, "groupAction");
+  const [group, flag] = groupAction.split(":");
+  const groupKey = group === "handy" || group === "trades" || group === "build" ? (group as LibraryGroup) : null;
+  const next = current.map((entry) => {
+    const performs =
+      groupKey && entry.group === groupKey ? flag === "1" : form.get(`do_${entry.id}`) === "on";
+    return {
+      ...entry,
+      name: field(form, `name_${entry.id}`) || entry.name,
+      unit: field(form, `unit_${entry.id}`) || entry.unit,
+      nationalLow: nullableField(form, `nl_${entry.id}`) === undefined ? entry.nationalLow : nullableField(form, `nl_${entry.id}`) ?? null,
+      nationalHigh: nullableField(form, `nh_${entry.id}`) === undefined ? entry.nationalHigh : nullableField(form, `nh_${entry.id}`) ?? null,
+      localLow: nullableField(form, `ll_${entry.id}`) === undefined ? entry.localLow : nullableField(form, `ll_${entry.id}`) ?? null,
+      localHigh: nullableField(form, `lh_${entry.id}`) === undefined ? entry.localHigh : nullableField(form, `lh_${entry.id}`) ?? null,
+      source: field(form, `src_${entry.id}`) || entry.source,
+      notes: form.has(`notes_${entry.id}`) ? field(form, `notes_${entry.id}`) : entry.notes,
+      performs,
+    };
+  });
+  await repo.saveLibrary(mergeLibrary(next));
+  redirect("/owner/library?notice=" + encodeURIComponent(groupKey ? "Group updated and library saved." : "Cost library saved."));
 }
 
 export async function saveCrewAction(form: FormData) {

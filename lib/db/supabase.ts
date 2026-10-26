@@ -1,4 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { mergeLibrary } from "@/lib/domain/library";
+import { LIBRARY_SEED, type LibraryEntry } from "@/lib/domain/library-data";
 import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
@@ -61,6 +63,40 @@ export class SupabaseRepository implements Repository {
     const settings = normalizeSettings(data.data as Partial<Settings>);
     if (!settings.ownerNotifyEmail && data.owner_email) settings.ownerNotifyEmail = data.owner_email;
     return settings;
+  }
+
+  async listLibrary() {
+    try {
+      const data = await this.must(this.db().from("cost_library").select("*").order("sort_order"));
+      const rows = (data as Record<string, unknown>[]).map(libraryFromRow);
+      return mergeLibrary(rows);
+    } catch (error) {
+      console.warn("[library] cost_library is unavailable, using the built-in seed", error);
+      return LIBRARY_SEED.map((entry) => ({ ...entry, keywords: [...entry.keywords], suppressIds: [...entry.suppressIds] }));
+    }
+  }
+
+  async saveLibrary(entries: LibraryEntry[]) {
+    const next = mergeLibrary(entries);
+    await this.must(
+      this.db().from("cost_library").upsert(
+        next.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          group_key: entry.group,
+          unit: entry.unit,
+          national_low: entry.nationalLow,
+          national_high: entry.nationalHigh,
+          local_low: entry.localLow,
+          local_high: entry.localHigh,
+          source: entry.source,
+          notes: entry.notes,
+          keywords: entry.keywords,
+          performs: entry.performs,
+          sort_order: entry.sortOrder,
+        })),
+      ),
+    );
   }
 
   async saveSettings(settings: Settings) {
@@ -326,6 +362,26 @@ export class SupabaseRepository implements Repository {
   async saveRoute(key: string, miles: number, source: string) {
     await this.must(this.db().from("route_cache").upsert({ route_key: key, miles, source }));
   }
+}
+
+function libraryFromRow(row: Record<string, unknown>): LibraryEntry {
+  const numOrNull = (value: unknown) => (value == null || value === "" ? null : Number(value));
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ""),
+    group: row.group_key === "trades" || row.group_key === "build" ? row.group_key : "handy",
+    unit: String(row.unit ?? ""),
+    nationalLow: numOrNull(row.national_low),
+    nationalHigh: numOrNull(row.national_high),
+    localLow: numOrNull(row.local_low),
+    localHigh: numOrNull(row.local_high),
+    source: String(row.source ?? ""),
+    notes: String(row.notes ?? ""),
+    keywords: Array.isArray(row.keywords) ? (row.keywords as string[]) : [],
+    performs: Boolean(row.performs),
+    sortOrder: Number(row.sort_order ?? 0),
+    suppressIds: [],
+  };
 }
 
 function profileToUser(row: ProfileRow, workerId: string | null): UserRecord {
