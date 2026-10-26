@@ -1,0 +1,162 @@
+zip,city,county,counties_spanned,status,flag_reason,county_note,miles_from_cadillac,source
+48632,Lake,Clare,Clare;Isabella;Osceola,owner_review,"Straddles area-code edge: part in Clare, Isabella County",,33.1,ZCTA
+48850,Lakeview,Montcalm,Montcalm;Mecosta,owner_review,Straddles area-code edge: part in Montcalm County,,57.0,ZCTA
+48886,Six Lakes,Montcalm,Montcalm;Mecosta,owner_review,Straddles area-code edge: part in Montcalm County,,59.0,ZCTA
+49303,Bailey,Muskegon,Muskegon;Newaygo,auto_book,,Spans 231 counties: Muskegon / Newaygo,71.5,ZCTA
+49304,Baldwin,Lake,Lake,auto_book,,,33.4,ZCTA
+49305,Barryton,Mecosta,Mecosta;Isabella,owner_review,Straddles area-code edge: part in Isabella County,,36.7,ZCTA
+49307,Big Rapids,Mecosta,Mecosta;Newaygo,auto_book,,Spans 231 counties: Mecosta / Newaygo,38.4,ZCTA
+49309,Bitely,Newaygo,Newaygo;Lake,auto_book,,Spans 231 counties: Newaygo / Lake,41.4,ZCTA
+49310,Blanchard,Isabella,Isabella;Mecosta;Montcalm,owner_review,"Straddles area-code edge: part in Isabella, Montcalm County",,54.0,ZCTA
+49312,Brohman,Newaygo,Newaygo,auto_book,,,43.9,ZCTA
+49318,Casnovia,Muskegon,Muskegon;Ottawa;Kent,owner_review,"Straddles area-code edge: part in Ottawa, Kent County",,73.8,ZCTA
+49320,Chippewa Lake,Mecosta,Mecosta,auto_book,,,35.0,ZCTA
+49327,Grant,Newaygo,Newaygo,auto_book,,,67.9,ZCTA
+49329,Howard City,Montcalm,Montcalm;Newaygo,owner_review,Straddles area-code edge: part in Montcalm County,,58.6,ZCTA
+49330,Kent City,Kent,Kent;Newaygo;Ottawa;Muskegon,owner_review,"Straddles area-code edge: part in Kent, Ottawa County",,71.8,ZCTA
+49332,Mecosta,Mecosta,Mecosta,auto_book,,,44.1,ZCTA
+49336,Morley,Mecosta,Mecosta;Montcalm,owner_review,Straddles area-code edge: part in Montcalm County,,51.4,ZCTA
+49337,Newaygo,Newaygo,Newaygo;Montcalm;Mecosta,owner_review,Straddles area-code edge: part in Montcalm County,,58.4,ZCTA
+49338,Paris,Newaygo,Newaygo;Mecosta,auto_book,,Spans 231 counties: Newaygo / Mecosta,34.7,ZCTA
+49339,Pierson,Montcalm,Montcalm;Newaygo,owner_review,Straddles area-code edge: part in Montcalm County,,63.8,ZCTA
+49340,Remus,Mecosta,Mecosta;Isabella,owner_review,Straddles area-code edge: part in Isabella County,,46.1,ZCTA
+49342,Rodney,Mecosta,Mecosta,auto_book,,,39.0,ZCTA
+49343,Sand Lake,Kent,Kent;Newaygo;Montcalm,owner_review,"Straddles area-code edge: part in Kent, Montcalm County",,66.3,ZCTA
+49346,Stanwood,Mecosta,Mecosta;Newaygo,auto_book,,Spans 231 counties: Mecosta / Newaygo,45.4,ZCTA
+49349,White Cloud,Newaygo,Newaygo,auto_book,,,49.8,ZCTA
+49402,Branch,Lake,Lake;Mason;Oceana,auto_book,,Spans 231 counties: Lake / Mason / Oceana,38.2,ZCTA
+49403,Conklin,Ottawa,Ottawa;Muskegon;Kent,owner_review,"Straddles area-code edge: part in Ottawa, Kent County",,80.1,ZCTA
+49404,Coopersville,Ottawa,Ottawa;Muskegon,owner_review,Straddles area-code edge: part in Ottawa County,,86.6,ZCTA
+49405,Custer,Mason,Mason,auto_book,,,45.6,ZCTA
+49410,Fountain,Mason,Mason,auto_book,,,39.0,ZCTA
+49411,Free Soil,Mason,Mason;Manistee,auto_book,,Spans 231 counties: Mason / Manistee,43.4,ZCTA
+49412,Fremont,Newaygo,Newaygo;Oceana,auto_book,,Spans 231 counties: Newaygo / Oceana,60.6,ZCTA
+49413,Fremont,Newaygo,Newaygo,owner_review,PO box or unique ZIP (no street-address area),,52.1,GeoNames
+49415,Fruitport,Muskegon,Muskegon;Ottawa,owner_review,Straddles area-code edge: part in Ottawa County,,84.0,ZCTA
+49420,Hart,Oceana,Oceana,auto_book,,,57.2,ZCTA
+49421,Hesperia,Oceana,Oceana;Newaygo,auto_book,,Spans 231 counties: Oceana / Newaygo,56.0,ZCTA
+49425,Holton,Muskegon,Muskegon;Oceana;Newaygo,auto_book,,Spans 231 counties: Muskegon / Oceana / Newaygo,66.4,ZCTA
+49431,Ludington,Mason,Mason,auto_book,,,53.1,ZCTA
+49436,Mears,Oceana,Oceana,auto_book,,,66.1,ZCTA
+49437,Montague,Muskegon,Muskegon;Oceana,auto_book,,Spans 231 counties: Muskegon / Oceana,73.3,ZCTA
+49440,Muskegon,Muskegon,Muskegon,auto_book,,,82.0,ZCTA
+49441,Muskegon,Muskegon,Muskegon,auto_book,,,86.0,ZCTA
+49442,Muskegon,Muskegon,Muskegon,auto_book,,,78.8,ZCTA
+49443,Muskegon,Muskegon,Muskegon,auto_book,,,82.1,ZCTA
+49444,Muskegon,Muskegon,Muskegon,auto_book,,,84.2,ZCTA
+49445,Muskegon,Muskegon,Muskegon,auto_book,,,79.9,ZCTA
+49446,New Era,Oceana,Oceana,auto_book,,,68.6,ZCTA
+49448,Nunica,Ottawa,Ottawa;Muskegon,owner_review,Straddles area-code edge: part in Ottawa County,,86.7,ZCTA
+49449,Pentwater,Oceana,Oceana;Mason,auto_book,,Spans 231 counties: Oceana / Mason,58.4,ZCTA
+49451,Ravenna,Muskegon,Muskegon;Ottawa,owner_review,Straddles area-code edge: part in Ottawa County,,77.1,ZCTA
+49452,Rothbury,Oceana,Oceana,auto_book,,,66.9,ZCTA
+49454,Scottville,Mason,Mason,auto_book,,,48.7,ZCTA
+49455,Shelby,Oceana,Oceana,auto_book,,,65.8,ZCTA
+49456,Spring Lake,Ottawa,Ottawa;Muskegon,owner_review,Straddles area-code edge: part in Ottawa County,,89.9,ZCTA
+49457,Twin Lake,Muskegon,Muskegon;Newaygo,auto_book,,Spans 231 counties: Muskegon / Newaygo,72.4,ZCTA
+49458,Walhalla,Mason,Mason,auto_book,,,41.3,ZCTA
+49459,Walkerville,Oceana,Oceana;Newaygo,auto_book,,Spans 231 counties: Oceana / Newaygo,49.9,ZCTA
+49461,Whitehall,Muskegon,Muskegon,auto_book,,,75.9,ZCTA
+49463,Sylvan Beach,Muskegon,Muskegon,owner_review,PO box or unique ZIP (no street-address area),,79.3,GeoNames
+49601,Cadillac,Wexford,Wexford;Lake;Missaukee,auto_book,,Spans 231 counties: Wexford / Lake / Missaukee,5.4,ZCTA
+49610,Acme,Grand Traverse,Grand Traverse,owner_review,PO box or unique ZIP (no street-address area),,37.4,GeoNames
+49611,Alba,Antrim,Antrim,auto_book,,,54.1,ZCTA
+49612,Alden,Antrim,Antrim;Kalkaska,auto_book,,Spans 231 counties: Antrim / Kalkaska,43.1,ZCTA
+49613,Arcadia,Manistee,Manistee;Benzie,auto_book,,Spans 231 counties: Manistee / Benzie,43.5,ZCTA
+49614,Bear Lake,Manistee,Manistee,auto_book,,,37.4,ZCTA
+49615,Bellaire,Antrim,Antrim,auto_book,,,50.2,ZCTA
+49616,Benzonia,Benzie,Benzie,auto_book,,,40.9,ZCTA
+49617,Beulah,Benzie,Benzie,auto_book,,,41.2,ZCTA
+49618,Boon,Wexford,Wexford,auto_book,,,10.5,ZCTA
+49619,Brethren,Manistee,Manistee,auto_book,,,29.3,ZCTA
+49620,Buckley,Grand Traverse,Grand Traverse;Wexford,auto_book,,Spans 231 counties: Grand Traverse / Wexford,23.6,ZCTA
+49621,Cedar,Leelanau,Leelanau,auto_book,,,46.3,ZCTA
+49622,Central Lake,Antrim,Antrim,auto_book,,,57.5,ZCTA
+49623,Chase,Lake,Lake,auto_book,,,27.7,ZCTA
+49625,Copemish,Manistee,Manistee;Wexford,auto_book,,Spans 231 counties: Manistee / Wexford,26.9,ZCTA
+49626,Eastlake,Manistee,Manistee,auto_book,,,44.0,ZCTA
+49627,Eastport,Antrim,Antrim,auto_book,,,57.0,ZCTA
+49628,Elberta,Benzie,Benzie,auto_book,,,48.7,ZCTA
+49629,Elk Rapids,Antrim,Antrim,auto_book,,,46.1,ZCTA
+49630,Empire,Leelanau,Leelanau;Benzie,auto_book,,Spans 231 counties: Leelanau / Benzie,49.3,ZCTA
+49631,Evart,Osceola,Osceola;Mecosta,auto_book,,Spans 231 counties: Osceola / Mecosta,24.4,ZCTA
+49632,Falmouth,Missaukee,Missaukee,auto_book,,,21.5,ZCTA
+49633,Fife Lake,Kalkaska,Kalkaska;Grand Traverse;Wexford;Missaukee,auto_book,,Spans 231 counties: Kalkaska / Grand Traverse / Wexford / Missaukee,23.3,ZCTA
+49634,Filer City,Manistee,Manistee,auto_book,,,44.1,ZCTA
+49635,Frankfort,Benzie,Benzie,auto_book,,,46.5,ZCTA
+49636,Glen Arbor,Leelanau,Leelanau,auto_book,,,49.4,ZCTA
+49637,Grawn,Grand Traverse,Grand Traverse,auto_book,,,29.7,ZCTA
+49638,Harrietta,Wexford,Wexford;Manistee,auto_book,,Spans 231 counties: Wexford / Manistee,17.7,ZCTA
+49639,Hersey,Osceola,Osceola;Mecosta,auto_book,,Spans 231 counties: Osceola / Mecosta,28.0,ZCTA
+49640,Honor,Benzie,Benzie;Leelanau,auto_book,,Spans 231 counties: Benzie / Leelanau,45.2,ZCTA
+49642,Idlewild,Lake,Lake,auto_book,,,31.9,ZCTA
+49643,Interlochen,Benzie,Benzie;Grand Traverse,auto_book,,Spans 231 counties: Benzie / Grand Traverse,34.1,ZCTA
+49644,Irons,Lake,Lake;Mason;Manistee,auto_book,,Spans 231 counties: Lake / Mason / Manistee,27.4,ZCTA
+49645,Kaleva,Manistee,Manistee,auto_book,,,32.0,ZCTA
+49646,Kalkaska,Kalkaska,Kalkaska,auto_book,,,36.8,ZCTA
+49648,Kewadin,Antrim,Antrim,auto_book,,,51.6,ZCTA
+49649,Kingsley,Grand Traverse,Grand Traverse;Wexford,auto_book,,Spans 231 counties: Grand Traverse / Wexford,22.4,ZCTA
+49650,Lake Ann,Benzie,Benzie,auto_book,,,41.4,ZCTA
+49651,Lake City,Missaukee,Missaukee,auto_book,,,17.5,ZCTA
+49653,Lake Leelanau,Leelanau,Leelanau,auto_book,,,52.3,ZCTA
+49654,Leland,Leelanau,Leelanau,auto_book,,,69.6,ZCTA
+49655,Leroy,Osceola,Osceola;Lake,auto_book,,Spans 231 counties: Osceola / Lake,15.8,ZCTA
+49656,Luther,Lake,Lake,auto_book,,,19.2,ZCTA
+49657,Mc Bain,Missaukee,Missaukee,auto_book,,,11.8,ZCTA
+49659,Mancelona,Antrim,Antrim;Kalkaska,auto_book,,Spans 231 counties: Antrim / Kalkaska,48.3,ZCTA
+49660,Manistee,Manistee,Manistee;Mason,auto_book,,Spans 231 counties: Manistee / Mason,40.1,ZCTA
+49663,Manton,Wexford,Wexford;Missaukee,auto_book,,Spans 231 counties: Wexford / Missaukee,12.7,ZCTA
+49664,Maple City,Leelanau,Leelanau,auto_book,,,50.3,ZCTA
+49665,Marion,Osceola,Osceola;Clare;Missaukee,owner_review,Straddles area-code edge: part in Clare County,,17.7,ZCTA
+49666,Mayfield,Grand Traverse,Grand Traverse,owner_review,PO box or unique ZIP (no street-address area),,26.6,GeoNames
+49667,Merritt,Missaukee,Missaukee,auto_book,,,25.3,ZCTA
+49668,Mesick,Wexford,Wexford;Manistee,auto_book,,Spans 231 counties: Wexford / Manistee,18.3,ZCTA
+49670,Northport,Leelanau,Leelanau,auto_book,,,61.8,ZCTA
+49673,Old Mission,Grand Traverse,Grand Traverse,owner_review,PO box or unique ZIP (no street-address area),,48.8,GeoNames
+49674,Omena,Leelanau,Leelanau,auto_book,,,56.2,ZCTA
+49675,Onekama,Manistee,Manistee,auto_book,,,41.8,ZCTA
+49676,Rapid City,Kalkaska,Kalkaska;Antrim,auto_book,,Spans 231 counties: Kalkaska / Antrim,40.0,ZCTA
+49677,Reed City,Osceola,Osceola;Lake;Newaygo,auto_book,,Spans 231 counties: Osceola / Lake / Newaygo,25.8,ZCTA
+49679,Sears,Osceola,Osceola;Mecosta,auto_book,,Spans 231 counties: Osceola / Mecosta,29.0,ZCTA
+49680,South Boardman,Kalkaska,Kalkaska,auto_book,,,28.1,ZCTA
+49682,Suttons Bay,Leelanau,Leelanau,auto_book,,,50.7,ZCTA
+49683,Thompsonville,Benzie,Benzie;Manistee;Grand Traverse;Wexford,auto_book,,Spans 231 counties: Benzie / Manistee / Grand Traverse / Wexford,32.7,ZCTA
+49684,Traverse City,Leelanau,Leelanau;Grand Traverse;Benzie,auto_book,,Spans 231 counties: Leelanau / Grand Traverse / Benzie,38.3,ZCTA
+49685,Traverse City,Grand Traverse,Grand Traverse,auto_book,,,39.9,ZCTA
+49686,Traverse City,Grand Traverse,Grand Traverse,auto_book,,,32.8,ZCTA
+49688,Tustin,Osceola,Osceola;Lake,auto_book,,Spans 231 counties: Osceola / Lake,9.6,ZCTA
+49689,Wellston,Manistee,Manistee;Wexford,auto_book,,Spans 231 counties: Manistee / Wexford,25.0,ZCTA
+49690,Williamsburg,Grand Traverse,Grand Traverse;Kalkaska;Antrim,auto_book,,Spans 231 counties: Grand Traverse / Kalkaska / Antrim,37.1,ZCTA
+49696,Traverse City,Grand Traverse,Grand Traverse,auto_book,,,39.9,ZCTA
+49701,Mackinaw City,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,109.8,ZCTA
+49705,Afton,Cheboygan,Cheboygan,auto_book,,,89.1,ZCTA
+49706,Alanson,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,87.4,ZCTA
+49711,Bay Shore,Charlevoix,Charlevoix,owner_review,PO box or unique ZIP (no street-address area),,77.9,GeoNames
+49712,Boyne City,Charlevoix,Charlevoix;Antrim,auto_book,,Spans 231 counties: Charlevoix / Antrim,68.9,ZCTA
+49713,Boyne Falls,Charlevoix,Charlevoix;Emmet;Antrim,auto_book,,Spans 231 counties: Charlevoix / Emmet / Antrim,71.7,ZCTA
+49716,Brutus,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,93.1,ZCTA
+49717,Burt Lake,Cheboygan,Cheboygan,auto_book,,,88.8,ZCTA
+49718,Carp Lake,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,105.8,ZCTA
+49720,Charlevoix,Charlevoix,Charlevoix;Antrim,auto_book,,Spans 231 counties: Charlevoix / Antrim,71.5,ZCTA
+49721,Cheboygan,Cheboygan,Cheboygan,auto_book,,,102.8,ZCTA
+49722,Conway,Emmet,Emmet,auto_book,,,85.4,ZCTA
+49723,Cross Village,Emmet,Emmet,owner_review,PO box or unique ZIP (no street-address area),,96.5,GeoNames
+49727,East Jordan,Antrim,Antrim;Charlevoix,auto_book,,Spans 231 counties: Antrim / Charlevoix,62.1,ZCTA
+49729,Ellsworth,Antrim,Antrim;Charlevoix,auto_book,,Spans 231 counties: Antrim / Charlevoix,63.2,ZCTA
+49730,Elmira,Antrim,Antrim;Otsego;Charlevoix,owner_review,Straddles area-code edge: part in Otsego County,,60.7,ZCTA
+49737,Good Hart,Emmet,Emmet,owner_review,PO box or unique ZIP (no street-address area),,92.8,GeoNames
+49738,Grayling,Crawford,Crawford;Kalkaska;Otsego,owner_review,"Straddles area-code edge: part in Crawford, Otsego County",,49.8,ZCTA
+49740,Harbor Springs,Emmet,Emmet,auto_book,,,90.0,ZCTA
+49749,Indian River,Cheboygan,Cheboygan,auto_book,,,90.8,ZCTA
+49755,Levering,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,99.9,ZCTA
+49761,Mullett Lake,Cheboygan,Cheboygan,owner_review,PO box or unique ZIP (no street-address area),,100.1,GeoNames
+49764,Oden,Emmet,Emmet,auto_book,,,85.7,ZCTA
+49765,Onaway,Presque Isle,Presque Isle;Cheboygan,owner_review,Straddles area-code edge: part in Presque Isle County,,93.6,ZCTA
+49769,Pellston,Emmet,Emmet;Cheboygan,auto_book,,Spans 231 counties: Emmet / Cheboygan,94.9,ZCTA
+49770,Petoskey,Emmet,Emmet;Charlevoix;Cheboygan,auto_book,,Spans 231 counties: Emmet / Charlevoix / Cheboygan,78.6,ZCTA
+49782,Beaver Island,Charlevoix,Charlevoix,auto_book,,,98.5,ZCTA
+49791,Topinabee,Cheboygan,Cheboygan,auto_book,,,94.0,ZCTA
+49792,Tower,Cheboygan,Cheboygan,owner_review,PO box or unique ZIP (no street-address area),,93.7,GeoNames
+49795,Vanderbilt,Otsego,Otsego;Charlevoix;Cheboygan,owner_review,Straddles area-code edge: part in Otsego County,,74.6,ZCTA
+49796,Walloon Lake,Charlevoix,Charlevoix,auto_book,,,72.9,ZCTA
+49799,Wolverine,Cheboygan,Cheboygan,auto_book,,,80.6,ZCTA

@@ -1,0 +1,2519 @@
+[
+  {
+    "zip": "48632",
+    "city": "Lake",
+    "county": "Clare",
+    "countiesSpanned": [
+      "Clare",
+      "Isabella",
+      "Osceola"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Clare, Isabella County",
+    "countyNote": "",
+    "milesFromCadillac": 33.1,
+    "lat": 43.858387,
+    "lng": -85.020525,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "48850",
+    "city": "Lakeview",
+    "county": "Montcalm",
+    "countiesSpanned": [
+      "Montcalm",
+      "Mecosta"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 57,
+    "lat": 43.435272,
+    "lng": -85.246061,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "48886",
+    "city": "Six Lakes",
+    "county": "Montcalm",
+    "countiesSpanned": [
+      "Montcalm",
+      "Mecosta"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 59,
+    "lat": 43.415719,
+    "lng": -85.159692,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49303",
+    "city": "Bailey",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Muskegon / Newaygo",
+    "milesFromCadillac": 71.5,
+    "lat": 43.271549,
+    "lng": -85.860632,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49304",
+    "city": "Baldwin",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 33.4,
+    "lat": 43.907821,
+    "lng": -85.872637,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49305",
+    "city": "Barryton",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta",
+      "Isabella"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Isabella County",
+    "countyNote": "",
+    "milesFromCadillac": 36.7,
+    "lat": 43.752024,
+    "lng": -85.151106,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49307",
+    "city": "Big Rapids",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Mecosta / Newaygo",
+    "milesFromCadillac": 38.4,
+    "lat": 43.699062,
+    "lng": -85.489194,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49309",
+    "city": "Bitely",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo",
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Newaygo / Lake",
+    "milesFromCadillac": 41.4,
+    "lat": 43.759789,
+    "lng": -85.876901,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49310",
+    "city": "Blanchard",
+    "county": "Isabella",
+    "countiesSpanned": [
+      "Isabella",
+      "Mecosta",
+      "Montcalm"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Isabella, Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 54,
+    "lat": 43.513812,
+    "lng": -85.04746,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49312",
+    "city": "Brohman",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 43.9,
+    "lat": 43.688445,
+    "lng": -85.807978,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49318",
+    "city": "Casnovia",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Ottawa",
+      "Kent"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa, Kent County",
+    "countyNote": "",
+    "milesFromCadillac": 73.8,
+    "lat": 43.227276,
+    "lng": -85.820431,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49320",
+    "city": "Chippewa Lake",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 35,
+    "lat": 43.753585,
+    "lng": -85.275467,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49327",
+    "city": "Grant",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 67.9,
+    "lat": 43.323527,
+    "lng": -85.845311,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49329",
+    "city": "Howard City",
+    "county": "Montcalm",
+    "countiesSpanned": [
+      "Montcalm",
+      "Newaygo"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 58.6,
+    "lat": 43.406472,
+    "lng": -85.484884,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49330",
+    "city": "Kent City",
+    "county": "Kent",
+    "countiesSpanned": [
+      "Kent",
+      "Newaygo",
+      "Ottawa",
+      "Muskegon"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Kent, Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 71.8,
+    "lat": 43.241536,
+    "lng": -85.736679,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49332",
+    "city": "Mecosta",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 44.1,
+    "lat": 43.623061,
+    "lng": -85.249119,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49336",
+    "city": "Morley",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta",
+      "Montcalm"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 51.4,
+    "lat": 43.508359,
+    "lng": -85.435658,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49337",
+    "city": "Newaygo",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo",
+      "Montcalm",
+      "Mecosta"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 58.4,
+    "lat": 43.437013,
+    "lng": -85.71233,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49338",
+    "city": "Paris",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo",
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Newaygo / Mecosta",
+    "milesFromCadillac": 34.7,
+    "lat": 43.771679,
+    "lng": -85.602298,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49339",
+    "city": "Pierson",
+    "county": "Montcalm",
+    "countiesSpanned": [
+      "Montcalm",
+      "Newaygo"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 63.8,
+    "lat": 43.331355,
+    "lng": -85.496459,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49340",
+    "city": "Remus",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta",
+      "Isabella"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Isabella County",
+    "countyNote": "",
+    "milesFromCadillac": 46.1,
+    "lat": 43.61793,
+    "lng": -85.110768,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49342",
+    "city": "Rodney",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 39,
+    "lat": 43.690435,
+    "lng": -85.315591,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49343",
+    "city": "Sand Lake",
+    "county": "Kent",
+    "countiesSpanned": [
+      "Kent",
+      "Newaygo",
+      "Montcalm"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Kent, Montcalm County",
+    "countyNote": "",
+    "milesFromCadillac": 66.3,
+    "lat": 43.297226,
+    "lng": -85.535097,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49346",
+    "city": "Stanwood",
+    "county": "Mecosta",
+    "countiesSpanned": [
+      "Mecosta",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Mecosta / Newaygo",
+    "milesFromCadillac": 45.4,
+    "lat": 43.594885,
+    "lng": -85.421128,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49349",
+    "city": "White Cloud",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 49.8,
+    "lat": 43.575337,
+    "lng": -85.748732,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49402",
+    "city": "Branch",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake",
+      "Mason",
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Lake / Mason / Oceana",
+    "milesFromCadillac": 38.2,
+    "lat": 43.933194,
+    "lng": -86.029225,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49403",
+    "city": "Conklin",
+    "county": "Ottawa",
+    "countiesSpanned": [
+      "Ottawa",
+      "Muskegon",
+      "Kent"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa, Kent County",
+    "countyNote": "",
+    "milesFromCadillac": 80.1,
+    "lat": 43.140975,
+    "lng": -85.857766,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49404",
+    "city": "Coopersville",
+    "county": "Ottawa",
+    "countiesSpanned": [
+      "Ottawa",
+      "Muskegon"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 86.6,
+    "lat": 43.063438,
+    "lng": -85.952185,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49405",
+    "city": "Custer",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 45.6,
+    "lat": 43.914692,
+    "lng": -86.191237,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49410",
+    "city": "Fountain",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 39,
+    "lat": 44.032042,
+    "lng": -86.12615,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49411",
+    "city": "Free Soil",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason",
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Mason / Manistee",
+    "milesFromCadillac": 43.4,
+    "lat": 44.100414,
+    "lng": -86.251761,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49412",
+    "city": "Fremont",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo",
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Newaygo / Oceana",
+    "milesFromCadillac": 60.6,
+    "lat": 43.468461,
+    "lng": -85.948247,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49413",
+    "city": "Fremont",
+    "county": "Newaygo",
+    "countiesSpanned": [
+      "Newaygo"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 52.1,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49415",
+    "city": "Fruitport",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Ottawa"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 84,
+    "lat": 43.150964,
+    "lng": -86.114307,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49420",
+    "city": "Hart",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 57.2,
+    "lat": 43.719985,
+    "lng": -86.282313,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49421",
+    "city": "Hesperia",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Oceana / Newaygo",
+    "milesFromCadillac": 56,
+    "lat": 43.599532,
+    "lng": -86.069216,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49425",
+    "city": "Holton",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Oceana",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Muskegon / Oceana / Newaygo",
+    "milesFromCadillac": 66.4,
+    "lat": 43.428946,
+    "lng": -86.089199,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49431",
+    "city": "Ludington",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 53.1,
+    "lat": 43.985802,
+    "lng": -86.406481,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49436",
+    "city": "Mears",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 66.1,
+    "lat": 43.678308,
+    "lng": -86.466113,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49437",
+    "city": "Montague",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Muskegon / Oceana",
+    "milesFromCadillac": 73.3,
+    "lat": 43.463596,
+    "lng": -86.384631,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49440",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 82,
+    "lat": 43.23747,
+    "lng": -86.253396,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49441",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 86,
+    "lat": 43.182952,
+    "lng": -86.282017,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49442",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 78.8,
+    "lat": 43.241841,
+    "lng": -86.135719,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49443",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 82.1,
+    "lat": null,
+    "lng": null,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49444",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 84.2,
+    "lat": 43.178683,
+    "lng": -86.199103,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49445",
+    "city": "Muskegon",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 79.9,
+    "lat": 43.292537,
+    "lng": -86.293883,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49446",
+    "city": "New Era",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 68.6,
+    "lat": 43.551402,
+    "lng": -86.37875,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49448",
+    "city": "Nunica",
+    "county": "Ottawa",
+    "countiesSpanned": [
+      "Ottawa",
+      "Muskegon"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 86.7,
+    "lat": 43.094383,
+    "lng": -86.071643,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49449",
+    "city": "Pentwater",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana",
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Oceana / Mason",
+    "milesFromCadillac": 58.4,
+    "lat": 43.793624,
+    "lng": -86.388577,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49451",
+    "city": "Ravenna",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Ottawa"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 77.1,
+    "lat": 43.213069,
+    "lng": -85.967762,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49452",
+    "city": "Rothbury",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 66.9,
+    "lat": 43.506998,
+    "lng": -86.260209,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49454",
+    "city": "Scottville",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 48.7,
+    "lat": 43.946348,
+    "lng": -86.285058,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49455",
+    "city": "Shelby",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 65.8,
+    "lat": 43.610287,
+    "lng": -86.378251,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49456",
+    "city": "Spring Lake",
+    "county": "Ottawa",
+    "countiesSpanned": [
+      "Ottawa",
+      "Muskegon"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Ottawa County",
+    "countyNote": "",
+    "milesFromCadillac": 89.9,
+    "lat": 43.089103,
+    "lng": -86.20687,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49457",
+    "city": "Twin Lake",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Muskegon / Newaygo",
+    "milesFromCadillac": 72.4,
+    "lat": 43.351479,
+    "lng": -86.145156,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49458",
+    "city": "Walhalla",
+    "county": "Mason",
+    "countiesSpanned": [
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 41.3,
+    "lat": 43.921128,
+    "lng": -86.095158,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49459",
+    "city": "Walkerville",
+    "county": "Oceana",
+    "countiesSpanned": [
+      "Oceana",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Oceana / Newaygo",
+    "milesFromCadillac": 49.9,
+    "lat": 43.741385,
+    "lng": -86.112182,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49461",
+    "city": "Whitehall",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 75.9,
+    "lat": 43.376249,
+    "lng": -86.319267,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49463",
+    "city": "Sylvan Beach",
+    "county": "Muskegon",
+    "countiesSpanned": [
+      "Muskegon"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 79.3,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49601",
+    "city": "Cadillac",
+    "county": "Wexford",
+    "countiesSpanned": [
+      "Wexford",
+      "Lake",
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Wexford / Lake / Missaukee",
+    "milesFromCadillac": 5.4,
+    "lat": 44.245955,
+    "lng": -85.510205,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49610",
+    "city": "Acme",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 37.4,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49611",
+    "city": "Alba",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 54.1,
+    "lat": 44.973672,
+    "lng": -84.974462,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49612",
+    "city": "Alden",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim",
+      "Kalkaska"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Antrim / Kalkaska",
+    "milesFromCadillac": 43.1,
+    "lat": 44.864922,
+    "lng": -85.239456,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49613",
+    "city": "Arcadia",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee",
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Manistee / Benzie",
+    "milesFromCadillac": 43.5,
+    "lat": 44.50612,
+    "lng": -86.206892,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49614",
+    "city": "Bear Lake",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 37.4,
+    "lat": 44.435034,
+    "lng": -86.114343,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49615",
+    "city": "Bellaire",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 50.2,
+    "lat": 44.964551,
+    "lng": -85.206629,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49616",
+    "city": "Benzonia",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 40.9,
+    "lat": 44.579933,
+    "lng": -86.090298,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49617",
+    "city": "Beulah",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 41.2,
+    "lat": 44.643232,
+    "lng": -86.031754,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49618",
+    "city": "Boon",
+    "county": "Wexford",
+    "countiesSpanned": [
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 10.5,
+    "lat": 44.293465,
+    "lng": -85.605694,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49619",
+    "city": "Brethren",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 29.3,
+    "lat": 44.293058,
+    "lng": -85.991212,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49620",
+    "city": "Buckley",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse",
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Grand Traverse / Wexford",
+    "milesFromCadillac": 23.6,
+    "lat": 44.523533,
+    "lng": -85.691242,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49621",
+    "city": "Cedar",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 46.3,
+    "lat": 44.86873,
+    "lng": -85.770347,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49622",
+    "city": "Central Lake",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 57.5,
+    "lat": 45.07741,
+    "lng": -85.260935,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49623",
+    "city": "Chase",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 27.7,
+    "lat": 43.908889,
+    "lng": -85.691816,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49625",
+    "city": "Copemish",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee",
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Manistee / Wexford",
+    "milesFromCadillac": 26.9,
+    "lat": 44.433447,
+    "lng": -85.88303,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49626",
+    "city": "Eastlake",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 44,
+    "lat": 44.239211,
+    "lng": -86.290782,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49627",
+    "city": "Eastport",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 57,
+    "lat": 45.075635,
+    "lng": -85.355823,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49628",
+    "city": "Elberta",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 48.7,
+    "lat": 44.623934,
+    "lng": -86.240157,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49629",
+    "city": "Elk Rapids",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 46.1,
+    "lat": 44.918988,
+    "lng": -85.390286,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49630",
+    "city": "Empire",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau",
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Leelanau / Benzie",
+    "milesFromCadillac": 49.3,
+    "lat": 44.818252,
+    "lng": -86.009304,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49631",
+    "city": "Evart",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Mecosta",
+    "milesFromCadillac": 24.4,
+    "lat": 43.912709,
+    "lng": -85.262924,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49632",
+    "city": "Falmouth",
+    "county": "Missaukee",
+    "countiesSpanned": [
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 21.5,
+    "lat": 44.239007,
+    "lng": -84.967889,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49633",
+    "city": "Fife Lake",
+    "county": "Kalkaska",
+    "countiesSpanned": [
+      "Kalkaska",
+      "Grand Traverse",
+      "Wexford",
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Kalkaska / Grand Traverse / Wexford / Missaukee",
+    "milesFromCadillac": 23.3,
+    "lat": 44.558687,
+    "lng": -85.206185,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49634",
+    "city": "Filer City",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 44.1,
+    "lat": 44.214838,
+    "lng": -86.2903,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49635",
+    "city": "Frankfort",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 46.5,
+    "lat": 44.617255,
+    "lng": -86.192428,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49636",
+    "city": "Glen Arbor",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 49.4,
+    "lat": 44.844693,
+    "lng": -85.96231,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49637",
+    "city": "Grawn",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 29.7,
+    "lat": 44.621616,
+    "lng": -85.709787,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49638",
+    "city": "Harrietta",
+    "county": "Wexford",
+    "countiesSpanned": [
+      "Wexford",
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Wexford / Manistee",
+    "milesFromCadillac": 17.7,
+    "lat": 44.286973,
+    "lng": -85.755675,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49639",
+    "city": "Hersey",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Mecosta",
+    "milesFromCadillac": 28,
+    "lat": 43.84701,
+    "lng": -85.408527,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49640",
+    "city": "Honor",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie",
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Benzie / Leelanau",
+    "milesFromCadillac": 45.2,
+    "lat": 44.715246,
+    "lng": -86.04869,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49642",
+    "city": "Idlewild",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 31.9,
+    "lat": 43.8689,
+    "lng": -85.761035,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49643",
+    "city": "Interlochen",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie",
+      "Grand Traverse"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Benzie / Grand Traverse",
+    "milesFromCadillac": 34.1,
+    "lat": 44.639738,
+    "lng": -85.828944,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49644",
+    "city": "Irons",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake",
+      "Mason",
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Lake / Mason / Manistee",
+    "milesFromCadillac": 27.4,
+    "lat": 44.098869,
+    "lng": -85.910662,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49645",
+    "city": "Kaleva",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 32,
+    "lat": 44.362133,
+    "lng": -86.029373,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49646",
+    "city": "Kalkaska",
+    "county": "Kalkaska",
+    "countiesSpanned": [
+      "Kalkaska"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 36.8,
+    "lat": 44.724482,
+    "lng": -85.055762,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49648",
+    "city": "Kewadin",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 51.6,
+    "lat": 44.997686,
+    "lng": -85.338808,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49649",
+    "city": "Kingsley",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse",
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Grand Traverse / Wexford",
+    "milesFromCadillac": 22.4,
+    "lat": 44.563373,
+    "lng": -85.525432,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49650",
+    "city": "Lake Ann",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 41.4,
+    "lat": 44.739836,
+    "lng": -85.887151,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49651",
+    "city": "Lake City",
+    "county": "Missaukee",
+    "countiesSpanned": [
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 17.5,
+    "lat": 44.390519,
+    "lng": -85.104789,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49653",
+    "city": "Lake Leelanau",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 52.3,
+    "lat": 44.973631,
+    "lng": -85.723949,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49654",
+    "city": "Leland",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 69.6,
+    "lat": 45.146182,
+    "lng": -86.051574,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49655",
+    "city": "Leroy",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Lake",
+    "milesFromCadillac": 15.8,
+    "lat": 44.024932,
+    "lng": -85.43205,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49656",
+    "city": "Luther",
+    "county": "Lake",
+    "countiesSpanned": [
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 19.2,
+    "lat": 44.067819,
+    "lng": -85.692017,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49657",
+    "city": "Mc Bain",
+    "county": "Missaukee",
+    "countiesSpanned": [
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 11.8,
+    "lat": 44.212501,
+    "lng": -85.169164,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49659",
+    "city": "Mancelona",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim",
+      "Kalkaska"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Antrim / Kalkaska",
+    "milesFromCadillac": 48.3,
+    "lat": 44.895507,
+    "lng": -85.019828,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49660",
+    "city": "Manistee",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee",
+      "Mason"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Manistee / Mason",
+    "milesFromCadillac": 40.1,
+    "lat": 44.22514,
+    "lng": -86.210203,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49663",
+    "city": "Manton",
+    "county": "Wexford",
+    "countiesSpanned": [
+      "Wexford",
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Wexford / Missaukee",
+    "milesFromCadillac": 12.7,
+    "lat": 44.435317,
+    "lng": -85.390105,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49664",
+    "city": "Maple City",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 50.3,
+    "lat": 44.887981,
+    "lng": -85.898639,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49665",
+    "city": "Marion",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Clare",
+      "Missaukee"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Clare County",
+    "countyNote": "",
+    "milesFromCadillac": 17.7,
+    "lat": 44.095202,
+    "lng": -85.118154,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49666",
+    "city": "Mayfield",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 26.6,
+    "lat": 44.622053,
+    "lng": -85.554144,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49667",
+    "city": "Merritt",
+    "county": "Missaukee",
+    "countiesSpanned": [
+      "Missaukee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 25.3,
+    "lat": 44.363328,
+    "lng": -84.914644,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49668",
+    "city": "Mesick",
+    "county": "Wexford",
+    "countiesSpanned": [
+      "Wexford",
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Wexford / Manistee",
+    "milesFromCadillac": 18.3,
+    "lat": 44.405467,
+    "lng": -85.702659,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49670",
+    "city": "Northport",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 61.8,
+    "lat": 45.126997,
+    "lng": -85.662573,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49673",
+    "city": "Old Mission",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 48.8,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49674",
+    "city": "Omena",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 56.2,
+    "lat": 45.055769,
+    "lng": -85.578277,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49675",
+    "city": "Onekama",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 41.8,
+    "lat": 44.384164,
+    "lng": -86.225376,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49676",
+    "city": "Rapid City",
+    "county": "Kalkaska",
+    "countiesSpanned": [
+      "Kalkaska",
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Kalkaska / Antrim",
+    "milesFromCadillac": 40,
+    "lat": 44.825304,
+    "lng": -85.288336,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49677",
+    "city": "Reed City",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Lake",
+      "Newaygo"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Lake / Newaygo",
+    "milesFromCadillac": 25.8,
+    "lat": 43.894733,
+    "lng": -85.552563,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49679",
+    "city": "Sears",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Mecosta"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Mecosta",
+    "milesFromCadillac": 29,
+    "lat": 43.875013,
+    "lng": -85.145788,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49680",
+    "city": "South Boardman",
+    "county": "Kalkaska",
+    "countiesSpanned": [
+      "Kalkaska"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 28.1,
+    "lat": 44.646003,
+    "lng": -85.262702,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49682",
+    "city": "Suttons Bay",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 50.7,
+    "lat": 44.968062,
+    "lng": -85.626851,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49683",
+    "city": "Thompsonville",
+    "county": "Benzie",
+    "countiesSpanned": [
+      "Benzie",
+      "Manistee",
+      "Grand Traverse",
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Benzie / Manistee / Grand Traverse / Wexford",
+    "milesFromCadillac": 32.7,
+    "lat": 44.540521,
+    "lng": -85.926894,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49684",
+    "city": "Traverse City",
+    "county": "Leelanau",
+    "countiesSpanned": [
+      "Leelanau",
+      "Grand Traverse",
+      "Benzie"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Leelanau / Grand Traverse / Benzie",
+    "milesFromCadillac": 38.3,
+    "lat": 44.76234,
+    "lng": -85.703568,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49685",
+    "city": "Traverse City",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 39.9,
+    "lat": null,
+    "lng": null,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49686",
+    "city": "Traverse City",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 32.8,
+    "lat": 44.713673,
+    "lng": -85.557838,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49688",
+    "city": "Tustin",
+    "county": "Osceola",
+    "countiesSpanned": [
+      "Osceola",
+      "Lake"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Osceola / Lake",
+    "milesFromCadillac": 9.6,
+    "lat": 44.117006,
+    "lng": -85.450376,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49689",
+    "city": "Wellston",
+    "county": "Manistee",
+    "countiesSpanned": [
+      "Manistee",
+      "Wexford"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Manistee / Wexford",
+    "milesFromCadillac": 25,
+    "lat": 44.213228,
+    "lng": -85.902445,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49690",
+    "city": "Williamsburg",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse",
+      "Kalkaska",
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Grand Traverse / Kalkaska / Antrim",
+    "milesFromCadillac": 37.1,
+    "lat": 44.788534,
+    "lng": -85.399597,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49696",
+    "city": "Traverse City",
+    "county": "Grand Traverse",
+    "countiesSpanned": [
+      "Grand Traverse"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 39.9,
+    "lat": null,
+    "lng": null,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49701",
+    "city": "Mackinaw City",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 109.8,
+    "lat": 45.771329,
+    "lng": -84.739198,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49705",
+    "city": "Afton",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 89.1,
+    "lat": 45.355095,
+    "lng": -84.460991,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49706",
+    "city": "Alanson",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 87.4,
+    "lat": 45.438274,
+    "lng": -84.779397,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49711",
+    "city": "Bay Shore",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 77.9,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49712",
+    "city": "Boyne City",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix",
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Charlevoix / Antrim",
+    "milesFromCadillac": 68.9,
+    "lat": 45.209259,
+    "lng": -85.009296,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49713",
+    "city": "Boyne Falls",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix",
+      "Emmet",
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Charlevoix / Emmet / Antrim",
+    "milesFromCadillac": 71.7,
+    "lat": 45.210925,
+    "lng": -84.842257,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49716",
+    "city": "Brutus",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 93.1,
+    "lat": 45.517286,
+    "lng": -84.748136,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49717",
+    "city": "Burt Lake",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 88.8,
+    "lat": 45.434968,
+    "lng": -84.691217,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49718",
+    "city": "Carp Lake",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 105.8,
+    "lat": 45.735082,
+    "lng": -84.859828,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49720",
+    "city": "Charlevoix",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix",
+      "Antrim"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Charlevoix / Antrim",
+    "milesFromCadillac": 71.5,
+    "lat": 45.280509,
+    "lng": -85.245046,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49721",
+    "city": "Cheboygan",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 102.8,
+    "lat": 45.582257,
+    "lng": -84.460476,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49722",
+    "city": "Conway",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 85.4,
+    "lat": 45.427456,
+    "lng": -84.862324,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49723",
+    "city": "Cross Village",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 96.5,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49727",
+    "city": "East Jordan",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim",
+      "Charlevoix"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Antrim / Charlevoix",
+    "milesFromCadillac": 62.1,
+    "lat": 45.125273,
+    "lng": -85.105817,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49729",
+    "city": "Ellsworth",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim",
+      "Charlevoix"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Antrim / Charlevoix",
+    "milesFromCadillac": 63.2,
+    "lat": 45.163731,
+    "lng": -85.292999,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49730",
+    "city": "Elmira",
+    "county": "Antrim",
+    "countiesSpanned": [
+      "Antrim",
+      "Otsego",
+      "Charlevoix"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Otsego County",
+    "countyNote": "",
+    "milesFromCadillac": 60.7,
+    "lat": 45.044034,
+    "lng": -84.867529,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49737",
+    "city": "Good Hart",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 92.8,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49738",
+    "city": "Grayling",
+    "county": "Crawford",
+    "countiesSpanned": [
+      "Crawford",
+      "Kalkaska",
+      "Otsego"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Crawford, Otsego County",
+    "countyNote": "",
+    "milesFromCadillac": 49.8,
+    "lat": 44.698328,
+    "lng": -84.609421,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49740",
+    "city": "Harbor Springs",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 90,
+    "lat": 45.524807,
+    "lng": -85.008345,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49749",
+    "city": "Indian River",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 90.8,
+    "lat": 45.425743,
+    "lng": -84.567774,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49755",
+    "city": "Levering",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 99.9,
+    "lat": 45.634591,
+    "lng": -84.801026,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49761",
+    "city": "Mullett Lake",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 100.1,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49764",
+    "city": "Oden",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 85.7,
+    "lat": 45.424174,
+    "lng": -84.827403,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49765",
+    "city": "Onaway",
+    "county": "Presque Isle",
+    "countiesSpanned": [
+      "Presque Isle",
+      "Cheboygan"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Presque Isle County",
+    "countyNote": "",
+    "milesFromCadillac": 93.6,
+    "lat": 45.328392,
+    "lng": -84.24252,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49769",
+    "city": "Pellston",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Cheboygan",
+    "milesFromCadillac": 94.9,
+    "lat": 45.570812,
+    "lng": -84.861754,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49770",
+    "city": "Petoskey",
+    "county": "Emmet",
+    "countiesSpanned": [
+      "Emmet",
+      "Charlevoix",
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "Spans 231 counties: Emmet / Charlevoix / Cheboygan",
+    "milesFromCadillac": 78.6,
+    "lat": 45.331202,
+    "lng": -84.897145,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49782",
+    "city": "Beaver Island",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 98.5,
+    "lat": 45.674252,
+    "lng": -85.542708,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49791",
+    "city": "Topinabee",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 94,
+    "lat": 45.486753,
+    "lng": -84.595768,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49792",
+    "city": "Tower",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "owner_review",
+    "flagReason": "PO box or unique ZIP (no street-address area)",
+    "countyNote": "",
+    "milesFromCadillac": 93.7,
+    "lat": null,
+    "lng": null,
+    "source": "GeoNames"
+  },
+  {
+    "zip": "49795",
+    "city": "Vanderbilt",
+    "county": "Otsego",
+    "countiesSpanned": [
+      "Otsego",
+      "Charlevoix",
+      "Cheboygan"
+    ],
+    "status": "owner_review",
+    "flagReason": "Straddles area-code edge: part in Otsego County",
+    "countyNote": "",
+    "milesFromCadillac": 74.6,
+    "lat": 45.160679,
+    "lng": -84.579688,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49796",
+    "city": "Walloon Lake",
+    "county": "Charlevoix",
+    "countiesSpanned": [
+      "Charlevoix"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 72.9,
+    "lat": 45.25817,
+    "lng": -84.956489,
+    "source": "ZCTA"
+  },
+  {
+    "zip": "49799",
+    "city": "Wolverine",
+    "county": "Cheboygan",
+    "countiesSpanned": [
+      "Cheboygan"
+    ],
+    "status": "auto_book",
+    "flagReason": "",
+    "countyNote": "",
+    "milesFromCadillac": 80.6,
+    "lat": 45.262433,
+    "lng": -84.580375,
+    "source": "ZCTA"
+  }
+]
