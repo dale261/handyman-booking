@@ -15,14 +15,14 @@ export default async function AreaPage({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-pine">Service area</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">Service area</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           {zips.length} ZIP codes around Cadillac, in the 231 area code. ZIPs set to book right away can be held and invoiced immediately. The rest, and any ZIP that is not on this list, wait for you. Miles are straight-line from Cadillac and are only a fallback when road miles are unavailable.
         </p>
       </div>
       <form className="flex max-w-md gap-2">
         <Input name="q" defaultValue={query} placeholder="ZIP, city, or county" aria-label="Filter ZIPs" />
-        <button type="submit" className="h-10 rounded-md bg-pine px-4 text-sm font-semibold text-paper">Search</button>
+        <button type="submit" className="h-10 rounded-md bg-pine px-4 text-sm font-semibold text-white">Search</button>
       </form>
       <Card>
         <CardContent className="overflow-x-auto">

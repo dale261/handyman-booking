@@ -1,13 +1,18 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-paper: #f3efe4;
-  --color-ink: #1c1915;
-  --color-pine: #1f4d3a;
+  /* Sampled from the logo: orange #e55a02, charcoal #313233.
+     pine is that orange darkened so white button labels and small links clear WCAG AA. */
+  --color-paper: #f7f6f4;
+  --color-ink: #313233;
+  --color-charcoal: #313233;
+  --color-orange: #e55a02;
+  --color-pine: #b54600;
+  --color-pine-deep: #993d00;
   --color-copper: #a65d32;
-  --color-line: #e3d9c6;
-  --color-card: #fffdf8;
-  --color-muted: #6b645b;
+  --color-line: #e6e4df;
+  --color-card: #ffffff;
+  --color-muted: #5c5955;
   --font-sans: var(--font-source), ui-sans-serif, sans-serif;
   --font-display: var(--font-fraunces), Georgia, serif;
 }
@@ -26,5 +31,5 @@ h3,
 }
 
 ::selection {
-  background: #d7e4db;
+  background: #f6d3bc;
 }

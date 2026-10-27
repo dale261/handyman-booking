@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-pine">Rates and crews</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">Rates and crews</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Sample crews are labeled “(sample)”. Rename them, or delete them and add your own. The first job of each crew’s day is measured from the shop address below. Other handyman work uses the{" "}
           <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>. Today’s AI quote calls are counted below. Those two limits are spending caps, not prices.

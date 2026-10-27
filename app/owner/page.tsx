@@ -19,7 +19,7 @@ export default async function OwnerDayPage({ searchParams }: { searchParams: Pro
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-pine">Day route</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">Day route</h1>
           <p className="text-sm text-muted">{formatDate(date)}. Road miles can still change until a job is paid. After that, the travel charge stays.</p>
         </div>
         <div className="flex items-center gap-2 text-sm">

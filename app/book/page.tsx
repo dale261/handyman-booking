@@ -42,7 +42,7 @@ export default async function BookPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-pine">Request a quote</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">Request a quote</h1>
         <p className="mt-2 text-sm text-muted">Tell us the job. You&apos;ll see a price before anyone drives out.</p>
       </div>
       <Card>

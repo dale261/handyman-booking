@@ -77,7 +77,7 @@ export default async function JobPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted">{job.invoiceNumber ? `Invoice #${job.invoiceNumber}` : "No invoice yet"}</p>
-          <h1 className="font-display text-3xl font-semibold text-pine">{hidePrice ? "We're reviewing your request" : job.scope || "Job"}</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">{hidePrice ? "We're reviewing your request" : job.scope || "Job"}</h1>
           <p className="text-sm text-muted">{job.jobSiteAddress}</p>
         </div>
         <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
@@ -252,7 +252,7 @@ export default async function JobPage({
                         <a
                           key={date}
                           href={`/jobs/${job.id}?date=${date}`}
-                          className={date === selectedDate ? "shrink-0 rounded-full bg-pine px-3 py-1 text-sm font-semibold text-paper" : "shrink-0 rounded-full border border-line bg-card px-3 py-1 text-sm"}
+                          className={date === selectedDate ? "shrink-0 rounded-full bg-pine px-3 py-1 text-sm font-semibold text-white" : "shrink-0 rounded-full border border-line bg-card px-3 py-1 text-sm"}
                         >
                           {formatDate(date)}
                         </a>

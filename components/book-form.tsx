@@ -154,7 +154,7 @@ export function BookForm({
               onClick={() => chooseService(id)}
               className={
                 service === id
-                  ? "rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-paper"
+                  ? "rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-white"
                   : "rounded-full border border-line bg-card px-3 py-1.5 text-sm font-semibold"
               }
             >

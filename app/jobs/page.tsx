@@ -27,8 +27,8 @@ export default async function JobsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-3xl font-semibold text-pine">Your jobs</h1>
-        <Link href="/book" className="rounded-md bg-pine px-4 py-2 text-sm font-semibold text-paper">
+        <h1 className="font-display text-3xl font-semibold text-ink">Your jobs</h1>
+        <Link href="/book" className="rounded-md bg-pine px-4 py-2 text-sm font-semibold text-white">
           New quote
         </Link>
       </div>

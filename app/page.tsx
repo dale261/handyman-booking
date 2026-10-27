@@ -14,13 +14,13 @@ export default async function HomePage() {
     <div className="space-y-10">
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
         <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-copper">Cadillac, Michigan</p>
-          <h1 className="font-display text-4xl font-semibold tracking-tight text-pine sm:text-5xl">Handyman work, instant quoting and scheduling.</h1>
+          <p className="text-sm font-semibold uppercase tracking-wide text-pine">Cadillac, Michigan</p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">Handyman work, instant quoting and scheduling.</h1>
           <p className="max-w-xl text-lg text-ink/80">
             eX Construction is a handyman crew out of Cadillac, MI. Try our quoting tool, approve the price and time, and let us handle the rest. Clear jobs can be booked right away. If we need a closer look, or the job requires additional licensing, we&apos;ll review it first and get back to you promptly with a resolution or a referral. Great work starts here.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-paper">
+            <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-white">
               Get a quote
             </Link>
             <Link href="/signup" className="inline-flex h-12 items-center rounded-md border border-line bg-card px-6 font-semibold">

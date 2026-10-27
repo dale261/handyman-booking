@@ -26,7 +26,7 @@ export default async function WorkerPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-3xl font-semibold text-pine">{me ? me.fullName : "Crew work"}</h1>
+      <h1 className="font-display text-3xl font-semibold text-ink">{me ? me.fullName : "Crew work"}</h1>
       <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Open a job to start it or mark it done.</p>
       {jobs.length === 0 ? (
         <Card>

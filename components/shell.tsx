@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/lib/actions";
 import type { Actor } from "@/lib/db/types";
@@ -17,10 +18,13 @@ export function Shell({
 }) {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line bg-card/80">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/" className="font-display text-lg font-semibold tracking-tight text-pine">
-            eX Construction
+      <header className="bg-charcoal text-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
+            <Image src="/brand/logo-header.png" alt="eX Construction" width={36} height={36} className="h-9 w-9" priority />
+            <span aria-hidden="true" className="font-display text-lg font-semibold tracking-tight">
+              eX Construction
+            </span>
           </Link>
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             <Nav href="/book">Get a quote</Nav>
@@ -40,7 +44,7 @@ export function Shell({
               <>
                 <Nav href="/account">{actor.fullName.split(" ")[0] || "Account"}</Nav>
                 <form action={signOut}>
-                  <Button type="submit" variant="ghost" size="sm">
+                  <Button type="submit" variant="ghost" size="sm" className="text-white hover:bg-white/10">
                     Sign out
                   </Button>
                 </form>
@@ -75,7 +79,7 @@ export function Shell({
 
 function Nav({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="rounded-md px-2.5 py-1.5 font-semibold text-ink hover:bg-black/5">
+    <Link href={href} className="rounded-md px-2.5 py-1.5 font-semibold text-white/90 hover:bg-white/10 hover:text-white">
       {children}
     </Link>
   );

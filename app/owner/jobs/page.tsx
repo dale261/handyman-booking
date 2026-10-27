@@ -10,7 +10,7 @@ export default async function OwnerJobsPage() {
   const jobs = (await getRepository().listJobs()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-3xl font-semibold text-pine">All jobs</h1>
+      <h1 className="font-display text-3xl font-semibold text-ink">All jobs</h1>
       {jobs.length === 0 ? (
         <p className="text-sm text-muted">No jobs yet. The first real invoice will be number 1000.</p>
       ) : (
