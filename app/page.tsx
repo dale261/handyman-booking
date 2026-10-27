@@ -17,7 +17,7 @@ export default async function HomePage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-copper">Cadillac, Michigan</p>
           <h1 className="font-display text-4xl font-semibold tracking-tight text-pine sm:text-5xl">Handyman work, instant quoting and scheduling.</h1>
           <p className="max-w-xl text-lg text-ink/80">
-            eX Construction is Dale Orvis&apos;s crew in Cadillac. Tell us the job and you&apos;ll see a price before we drive out. Clear jobs can be booked right away. If we need a closer look, Dale will review it first. Your time is held for {settings.holdHours} hours while you pay.
+            eX Construction is a handyman crew out of Cadillac, MI. Try our quoting tool, approve the price and time, and let us handle the rest. Clear jobs can be booked right away. If we need a closer look, or the job requires additional licensing, we&apos;ll review it first and get back to you promptly with a resolution or a referral. Great work starts here.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-paper">
