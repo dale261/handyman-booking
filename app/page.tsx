@@ -51,7 +51,7 @@ export default async function HomePage() {
             <CardTitle>2. See the price</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted">
-            You&apos;ll see the work, materials, travel, and any area charge on separate lines. Under {usd(settings.depositThreshold)} is paid in full. That amount or more is half down.
+            You&apos;ll see the work, materials, travel, and any area charge on separate lines. Under {usd(settings.depositThreshold)} is paid in full. That amount or more requires half down.
           </CardContent>
         </Card>
         <Card>
