@@ -5,7 +5,7 @@ import { flushEmails } from "@/lib/email";
 import { appUrl } from "@/lib/format";
 import { capturePayPalOrder } from "@/lib/paypal";
 import { allowRequest, ANON_LIMIT } from "@/lib/rate-limit";
-import { payJob } from "@/lib/services/booking";
+import { amountPayable, payJob } from "@/lib/services/booking";
 
 export async function GET(request: Request) {
   if (!(await allowRequest(ANON_LIMIT, request.headers))) {
@@ -30,7 +30,8 @@ export async function GET(request: Request) {
 
   try {
     const capture = await capturePayPalOrder(orderId);
-    const expected = job.status === "held" ? job.amountDueNow : job.status === "balance_due" ? job.balanceDue : 0;
+    const expected = amountPayable(job);
+    const alreadyBooked = job.status === "booked";
     if (expected <= 0) return back("error", "Nothing is due on this job right now.");
     if (Math.abs(capture.amount - expected) > 0.02) {
       return back("error", `PayPal charged ${capture.amount.toFixed(2)}, which doesn't match the ${expected.toFixed(2)} due. We didn't apply the payment.`);
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     const result = await payJob(repo, actor, jobId, "paypal", capture.captureId);
     await flushEmails(repo).catch((error) => console.error("[email] flush failed", error));
     if (!result.ok) return back("error", result.error);
-    return back("notice", "Payment received. You're booked.");
+    return back("notice", alreadyBooked ? "Payment received." : "Payment received. You're booked.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "PayPal capture failed.";
     return back("error", message);

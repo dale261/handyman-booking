@@ -9,6 +9,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   held: "Waiting on payment",
   released: "Time released",
   booked: "Booked",
+  price_change: "Waiting on your OK for a price change",
   in_progress: "Work in progress",
   awaiting_approval: "Please approve the work",
   disputed: "Problem reported",
@@ -21,7 +22,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
 
 export function statusTone(status: JobStatus): "ok" | "wait" | "stop" | "plain" {
   if (["booked", "completed", "reviewed", "quoted"].includes(status)) return "ok";
-  if (["held", "pending_area", "scope_review", "awaiting_approval", "balance_due", "cancel_requested", "disputed", "in_progress"].includes(status)) return "wait";
+  if (["held", "pending_area", "scope_review", "price_change", "awaiting_approval", "balance_due", "cancel_requested", "disputed", "in_progress"].includes(status)) return "wait";
   if (["referred", "declined", "cancelled"].includes(status)) return "stop";
   return "plain";
 }

@@ -12,6 +12,7 @@ export type JobStatus =
   | "held"
   | "released"
   | "booked"
+  | "price_change"
   | "in_progress"
   | "awaiting_approval"
   | "disputed"
@@ -79,6 +80,16 @@ export type TimeOffRecord = {
 
 export type PhotoRef = { id: string; name: string };
 
+export type PriceChangeOutcome = "pending" | "approved" | "declined" | "cancel_on_site";
+
+export type PriceChange = {
+  at: string;
+  reason: string;
+  previousTotal: number;
+  proposedTotal: number;
+  outcome: PriceChangeOutcome;
+};
+
 export type JobRecord = {
   id: string;
   customerId: string;
@@ -140,6 +151,8 @@ export type JobRecord = {
   problemNote: string;
   /** Set for unlisted library quotes. Rate-sheet jobs leave this empty. */
   quoteMeta?: QuoteMeta | null;
+  /** On-site price changes. Missing on jobs saved before this field existed. */
+  priceChanges?: PriceChange[];
   createdAt: string;
   updatedAt: string;
 };

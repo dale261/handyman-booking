@@ -5,6 +5,7 @@ import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { formatDate, formatMinutes, usd } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
+import { customerListPrice } from "@/lib/domain/copy";
 import { SERVICE_LABELS } from "@/lib/domain/types";
 
 export default async function JobsPage() {
@@ -49,13 +50,9 @@ export default async function JobsPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {job.status === "scope_review" || job.status === "referred" ? (
-                      job.quoteMeta ? (
-                        <span className="text-sm font-semibold">about {usd(job.quoteMeta.rangeLow)}–{usd(job.quoteMeta.rangeHigh)}</span>
-                      ) : null
-                    ) : (
-                      <span className="text-sm font-semibold">{usd(job.total)}</span>
-                    )}
+                    {customerListPrice(job.status, job.total, usd) ? (
+                      <span className="text-sm font-semibold">{customerListPrice(job.status, job.total, usd)}</span>
+                    ) : null}
                     <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
                   </div>
                 </CardContent>

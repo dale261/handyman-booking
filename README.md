@@ -116,7 +116,7 @@ Anything else is priced from the cost library under **Library**:
 
 - The quote uses the high end of each matching range. A ZIP starting with 496 takes 4% off a national figure. A ZIP starting with 497 takes 5% off. A local Michigan range is used as printed, with no extra discount.
 - The quote cannot go below your hourly rate times the estimated hours times 1.25, plus estimated materials. Travel and the area premium are added after that. The customer pays whichever is higher, the library price or that floor, and never less than the job minimum.
-- If the description is vague, or the match is not confident, the job waits for you. The customer sees an expected range, not a price they can pay.
+- If the description is vague, or the match is not confident, the job waits for you. The customer does not see a price range. You still see the range and any referral estimate. They see that you are reviewing it and will send one firm price, usually within 1 business day, and they approve that price before anything is booked or paid.
 - Licensed trades and builder work start as refer-out. A builder-scope total of $600 or more also waits for you, even if you flip that switch on. You can release a job with **No license needed** when you have looked at it.
 
 The model only picks library items, quantities, hours, materials, and whether it is confident. The dollar amount is calculated in the app. With no OpenAI key, the same rules run from keywords in the description.
@@ -190,11 +190,12 @@ Leave **RRP certified** off until you actually have the EPA firm certification. 
 
 1. The customer has an account with a phone number and billing address.
 2. They pick a service, answer that service’s questions, and describe the job.
-3. Painting, cleaning, mounting, assembly, and hire-a-helper quote from the rate sheet immediately. Other handyman work can quote from the cost library when the description is clear and the library says we do it. Vague jobs, licensed trades, and builder work at $600 or more wait for you. You confirm no license is needed, or you refer it out with a note you write yourself.
+3. Painting, cleaning, mounting, assembly, and hire-a-helper quote from the rate sheet immediately. Other handyman work can quote from the cost library when the description is clear and the library says we do it. The customer sees one firm price. Vague jobs, licensed trades, and builder work at $600 or more wait for you, and the customer sees no range while they wait. You confirm no license is needed, or you refer it out with a note you write yourself. When you release the quote, they approve that one price.
 4. A ZIP that is not on the auto-book list also waits for you. The customer can request a time, but the 24-hour payment clock and the invoice start only after you approve the address.
 5. Under $1,500 is paid in full. $1,500 or more is half down, and the leftover cent stays on the balance. The balance is due after the customer approves the finished work.
 6. Before work starts, cancel or reschedule keeps $50 (or whatever cancel fee you saved) and refunds the rest. If they paid that fee or less, the refund is $0.
-7. After work starts, the customer can only request a cancellation. You approve or decline and type the refund yourself. The box starts empty on purpose.
-8. The area premium (20% in Grand Traverse, Leelanau, Emmet, and Charlevoix) applies to labor and service, including helpers. It is never applied to travel.
+7. On site, before work starts, you or the crew can cancel and refund everything except that job's travel charge. The usual cancel fee does not also apply. Or you can enter a new total and a short reason. The customer approves or declines. A higher price follows the same deposit rule on the new total. A lower price refunds the difference. Declining refunds everything except travel. Work cannot start while that approval is waiting, or while an extra amount from the new price is still unpaid.
+8. After work starts, the customer can only request a cancellation. You approve or decline and type the refund yourself. The box starts empty on purpose.
+9. The area premium (20% in Grand Traverse, Leelanau, Emmet, and Charlevoix) applies to labor and service, including helpers. It is never applied to travel.
 
 The closest free crew is assigned automatically. A tie goes to the crew with fewer jobs that day. You can reassign. A paid job keeps its locked travel.

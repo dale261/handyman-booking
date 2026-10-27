@@ -20,14 +20,18 @@ import { createPayPalOrder } from "@/lib/paypal";
 import { appUrl } from "@/lib/format";
 import { blocksSchedule } from "@/lib/domain/scheduling";
 import {
+  amountPayable,
   approveWork,
   cancelBeforeWork,
+  cancelOnSite,
   completeWork,
   createQuote,
   decideArea,
+  decidePriceChange,
   holdSlot,
   markRefundSent,
   payJob,
+  proposePriceChange,
   reassignCrew,
   referOut,
   releaseHold,
@@ -261,7 +265,7 @@ export async function startPayPalAction(form: FormData) {
   const job = await repo.getJob(jobId);
   if (!job) jobBack(jobId, "error", "Job not found.");
   if (actor.role === "customer" && job.customerId !== actor.id) jobBack(jobId, "error", "That job belongs to another customer.");
-  const amount = job.status === "held" ? job.amountDueNow : job.status === "balance_due" ? job.balanceDue : 0;
+  const amount = amountPayable(job);
   if (amount <= 0) jobBack(jobId, "error", "Nothing is due on this job right now.");
   let approveUrl = "";
   try {
@@ -280,6 +284,28 @@ export async function startPayPalAction(form: FormData) {
     jobBack(jobId, "error", message);
   }
   redirect(approveUrl);
+}
+
+export async function cancelOnSiteAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "Cancelled on site. Everything except travel will be refunded.", (repo, actor) => cancelOnSite(repo, actor, jobId));
+}
+
+export async function revisePriceAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "The customer was asked to approve the new price.", (repo, actor) =>
+    proposePriceChange(repo, actor, jobId, String(form.get("total") ?? ""), field(form, "reason")),
+  );
+}
+
+export async function decidePriceChangeAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const decision = field(form, "decision") === "decline" ? "decline" : "approve";
+  await mutate(
+    jobId,
+    decision === "approve" ? "New price approved." : "Price change declined. Travel is kept and the rest is refunded.",
+    (repo, actor) => decidePriceChange(repo, actor, jobId, decision),
+  );
 }
 
 export async function startWorkAction(form: FormData) {

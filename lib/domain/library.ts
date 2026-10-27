@@ -549,9 +549,7 @@ export function priceUnlisted(input: PriceUnlistedInput): PricedUnlisted {
   );
 
   const names = priced.map((item) => item.name);
-  const scope = priced.length
-    ? `Estimate: ${names.join(", ")}`
-    : `Estimate: about ${hours} hours of labor`;
+  const scope = priced.length ? names.join(", ") : `About ${hours} hours of labor`;
 
   const assumptions = [CUSTOMER_PRICE_NOTE, ...(input.assumptions ?? []).filter(Boolean).slice(0, 8)];
   if (bookable) assumptions.push("You can book this price and hold a time.");

@@ -127,6 +127,7 @@ const BLOCKING = new Set([
   "held",
   "pending_area",
   "booked",
+  "price_change",
   "in_progress",
   "awaiting_approval",
   "disputed",

@@ -59,7 +59,7 @@ export default async function HomePage() {
             <CardTitle>3. Hold a time</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted">
-            Pick a time, or take the earliest opening. It stays yours for {settings.holdHours} hours while you pay. Cancel before work starts and we keep {usd(settings.cancelFee)}.
+            Pick a time, or take the earliest opening. It stays yours for {settings.holdHours} hours while you pay. Cancel before work starts and we keep {usd(settings.cancelFee)}. If we find something different on site, you can approve a new price or get refunded everything except travel.
           </CardContent>
         </Card>
       </section>

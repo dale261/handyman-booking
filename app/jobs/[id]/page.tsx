@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import {
   approveWorkAction,
   cancelAction,
+  cancelOnSiteAction,
   completeWorkAction,
+  decidePriceChangeAction,
   decideAreaAction,
   demoPayAction,
   holdSlotAction,
@@ -17,6 +19,7 @@ import {
   resolveCancelAction,
   resumeProblemAction,
   reviewAction,
+  revisePriceAction,
   startPayPalAction,
   startWorkAction,
 } from "@/lib/actions";
@@ -29,7 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { CUSTOMER_PRICE_NOTE } from "@/lib/domain/library";
+import { applyRevisedTotal } from "@/lib/domain/cancellation";
+import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
 import { formatDate, formatMinutes, usd } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
@@ -58,6 +62,7 @@ export default async function JobPage({
   ]);
   const paid = amountPaid(payments, job.id);
   const hidePrice = actor.role === "customer" && (job.status === "scope_review" || job.status === "referred");
+  const firmPrice = job.status !== "scope_review" && job.status !== "referred";
   const canSchedule = ["quoted", "released", "pending_area"].includes(job.status) && job.licenseLevel === "ok";
   let slots: SlotOption[] = [];
   let slotError = "";
@@ -71,6 +76,13 @@ export default async function JobPage({
   const daySlots = slots.filter((slot) => slot.date === selectedDate);
   const crewName = crews.find((crew) => crew.id === job.crewId)?.name;
   const due = job.status === "balance_due" ? job.balanceDue : job.amountDueNow;
+  const canPay = due > 0 && (job.status === "held" || job.status === "balance_due" || job.status === "booked");
+  const pendingChange = [...(job.priceChanges ?? [])].reverse().find((change) => change.outcome === "pending");
+  const revisionPreview =
+    job.status === "price_change"
+      ? applyRevisedTotal({ paid, newTotal: job.total, threshold: settings.depositThreshold })
+      : null;
+  const crewCanChange = (actor.role === "owner" || actor.role === "worker") && (job.status === "booked" || job.status === "price_change") && job.amountDueNow === 0;
 
   return (
     <div className="space-y-4">
@@ -84,13 +96,8 @@ export default async function JobPage({
       </div>
       <Flash notice={query.notice} error={query.error} />
 
-      {job.status === "scope_review" && actor.role === "customer" && (
-        <Callout>
-          {job.quoteMeta
-            ? `Dale will review this before you can book. Plan on ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)}. You can't pay that until he confirms the job.`
-            : "Part of this may need a licensed trade, so Dale is looking at it himself. We'll get back to you within 1 business day."}
-        </Callout>
-      )}
+      {job.status === "scope_review" && actor.role === "customer" && <Callout>{REVIEW_WAIT}</Callout>}
+      {job.status === "price_change" && <Callout>Waiting on your OK for a price change. Work stays parked until you approve or decline.</Callout>}
       {job.status === "referred" && actor.role === "customer" && (
         <Callout>
           This job needs a licensed contractor, so we can&apos;t take it.{job.referralNote ? ` ${job.referralNote}` : " We're glad to help with anything else."}
@@ -105,28 +112,13 @@ export default async function JobPage({
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-4">
-          {hidePrice && job.quoteMeta && (
-            <Card>
-              <CardHeader>
-                <CardTitle>What to plan on</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="font-semibold">
-                  {usd(job.quoteMeta.rangeLow)} – {usd(job.quoteMeta.rangeHigh)}
-                </p>
-                <p className="text-muted">
-                  This is not a bill yet. You can hold a time after Dale confirms the job.
-                </p>
-              </CardContent>
-            </Card>
-          )}
           {!hidePrice && (
             <Card>
               <CardHeader>
-                <CardTitle>{job.quoteMeta ? "Estimate" : "Quote"}</CardTitle>
+                <CardTitle>{job.status === "price_change" ? "Revised price" : firmPrice ? "Your price" : "Draft price"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {job.quoteMeta && <p className="text-sm text-muted">{CUSTOMER_PRICE_NOTE}</p>}
+                {firmPrice && <p className="text-sm text-muted">{LOCKED_PRICE}</p>}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -152,19 +144,57 @@ export default async function JobPage({
                     </tbody>
                   </table>
                 </div>
-                <p className="text-sm">
-                  Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(paid in full)."}
-                </p>
+                {job.status === "price_change" ? (
+                  <p className="text-sm">This price is waiting on your OK. Nothing else is charged until you approve it.</p>
+                ) : paid > 0 ? (
+                  <p className="text-sm">
+                    Paid <strong>{usd(paid)}</strong>.
+                    {job.amountDueNow > 0 ? ` Still due now: ${usd(job.amountDueNow)}.` : ""}
+                    {job.balanceDue > 0 ? ` ${usd(job.balanceDue)} is due after you approve the finished work.` : job.amountDueNow === 0 ? " Nothing else is due right now." : ""}
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(paid in full)."}
+                  </p>
+                )}
                 {job.payRule && <p className="text-sm text-muted">{job.payRule}</p>}
                 {job.assumptions.length > 0 && (
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     {job.assumptions
-                      .filter((item) => !job.quoteMeta || !item.startsWith("This is an estimate based on your description"))
+                      .filter(
+                        (item) =>
+                          !item.startsWith("This is an estimate based on your description") &&
+                          !item.startsWith("Dale will review this before you can book"),
+                      )
                       .map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {(job.priceChanges ?? []).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Price changes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  {(job.priceChanges ?? []).map((change) => (
+                    <li key={`${change.at}-${change.outcome}`}>
+                      {change.outcome === "pending"
+                        ? "Waiting on your OK"
+                        : change.outcome === "approved"
+                          ? "Approved"
+                          : change.outcome === "declined"
+                            ? "Declined"
+                            : "Cancelled on site"}
+                      . Was {usd(change.previousTotal)}. New price {usd(change.proposedTotal)}. {change.reason}
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}
@@ -209,9 +239,10 @@ export default async function JobPage({
                       <li key={note}>{note}</li>
                     ))}
                   </ul>
-                  {job.quoteMeta.referralEstimate != null && (
-                    <p className="mt-2">Your working number: {usd(job.quoteMeta.referralEstimate)}. The customer sees {usd(job.quoteMeta.rangeLow)} to {usd(job.quoteMeta.rangeHigh)} until you release the quote.</p>
-                  )}
+                  <p className="mt-2">
+                    Range {usd(job.quoteMeta.rangeLow)} to {usd(job.quoteMeta.rangeHigh)}
+                    {job.quoteMeta.referralEstimate != null ? `. Referral estimate ${usd(job.quoteMeta.referralEstimate)}` : ""}. The customer does not see this range. They get one firm price when you release the quote.
+                  </p>
                 </div>
               )}
               {actor.role === "owner" && job.licenseLevel !== "ok" && (
@@ -288,7 +319,7 @@ export default async function JobPage({
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>Paid so far: {usd(paid)}</p>
-              {(job.status === "held" || job.status === "balance_due") && (
+              {canPay && (
                 <div className="space-y-2">
                   <p className="font-semibold">Due now: {usd(due)}</p>
                   {paypalConfigured() ? (
@@ -321,6 +352,7 @@ export default async function JobPage({
                   )}
                 </div>
               )}
+              {firmPrice && <p className="text-muted">{LOCKED_PRICE}</p>}
               {payments.length === 0 ? (
                 <p className="text-muted">No payments yet.</p>
               ) : (
@@ -346,7 +378,7 @@ export default async function JobPage({
                 <CardTitle>Before work starts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p>Cancel or reschedule before work starts and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0.</p>
+                <p>Cancel or reschedule before work starts and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0. If we find something different on site, you can approve a new price or get refunded everything except travel.</p>
                 <div className="flex flex-wrap gap-2">
                   <form action={cancelAction}>
                     <input type="hidden" name="jobId" value={job.id} />
@@ -371,7 +403,74 @@ export default async function JobPage({
             </form>
           )}
 
-          {(actor.role === "worker" || actor.role === "owner") && job.status === "booked" && (
+          {job.status === "price_change" && pendingChange && revisionPreview && (actor.role === "customer" || actor.role === "owner") && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Approve the new price</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p>{pendingChange.reason}</p>
+                <p>
+                  Was {usd(pendingChange.previousTotal)}. New price {usd(pendingChange.proposedTotal)}.
+                </p>
+                {revisionPreview.refund > 0 ? (
+                  <p>If you approve, we refund {usd(revisionPreview.refund)} and the crew can start.</p>
+                ) : revisionPreview.amountDueNow > 0 ? (
+                  <p>
+                    If you approve, you pay {usd(revisionPreview.amountDueNow)} now
+                    {revisionPreview.balanceDue > 0 ? ` and ${usd(revisionPreview.balanceDue)} after you approve the finished work` : ""}. The crew starts after that payment.
+                  </p>
+                ) : (
+                  <p>If you approve, nothing more is due right now and the crew can start.</p>
+                )}
+                <p>If you decline, we refund everything except the {usd(job.travelFee)} travel charge and cancel the job.</p>
+                <div className="flex flex-wrap gap-2">
+                  <form action={decidePriceChangeAction}>
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <input type="hidden" name="decision" value="approve" />
+                    <SubmitButton size="sm">Approve</SubmitButton>
+                  </form>
+                  <form action={decidePriceChangeAction}>
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <input type="hidden" name="decision" value="decline" />
+                    <SubmitButton size="sm" variant="danger">Decline</SubmitButton>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {crewCanChange && (
+            <Card>
+              <CardHeader>
+                <CardTitle>On site, before work starts</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {job.status === "booked" && (
+                  <form action={revisePriceAction} className="space-y-2">
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <p>Revise the price if the job is different from what they described. They approve or decline before anyone starts.</p>
+                    <Input name="total" inputMode="decimal" aria-label="New total in dollars" placeholder="New total" required />
+                    <Textarea name="reason" required minLength={3} placeholder="Short reason, such as extra drywall repair" />
+                    <SubmitButton size="sm">Revise price</SubmitButton>
+                  </form>
+                )}
+                <form action={cancelOnSiteAction} className="space-y-2">
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <p>Cancel on site and refund everything except the {usd(job.travelFee)} travel charge. The usual {usd(settings.cancelFee)} cancel fee does not also apply.</p>
+                  <SubmitButton size="sm" variant="danger">Cancel on site</SubmitButton>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {(actor.role === "worker" || actor.role === "owner") && job.status === "price_change" && (
+            <p className="text-sm text-muted">Work can&apos;t start until the customer approves the price change.</p>
+          )}
+          {(actor.role === "worker" || actor.role === "owner") && job.status === "booked" && job.amountDueNow > 0 && (
+            <p className="text-sm text-muted">Work can&apos;t start until the customer pays the extra {usd(job.amountDueNow)}.</p>
+          )}
+          {(actor.role === "worker" || actor.role === "owner") && job.status === "booked" && job.amountDueNow === 0 && (
             <form action={startWorkAction}>
               <input type="hidden" name="jobId" value={job.id} />
               <SubmitButton>Start work</SubmitButton>
@@ -488,7 +587,7 @@ function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name:
           <div className="space-y-2">
             <p>
               {job.quoteMeta
-                ? `Your number: ${usd(job.total)}. The customer sees ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)} until you release the quote.`
+                ? `Your number: ${usd(job.total)}. Range ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)}. The customer does not see a range. Release one firm price when you're ready.`
                 : `Draft total, hidden from the customer: ${usd(job.total)}`}
             </p>
             <form action={releaseLicenseAction}>

@@ -28,6 +28,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
       </div>
       <Flash notice={query.notice} />
       <Section title="License review" jobs={jobs.filter((job) => job.status === "scope_review")} empty="Nothing is waiting on a license decision." />
+      <Section title="Price changes waiting on the customer" jobs={jobs.filter((job) => job.status === "price_change")} empty="No price change is waiting on a customer." />
       <Section title="Address review" jobs={jobs.filter((job) => job.status === "pending_area")} empty="No addresses are waiting on you." />
       <Section title="Cancellation requests" jobs={jobs.filter((job) => job.status === "cancel_requested")} empty="No cancellation is waiting on you." />
       <Section title="Problems" jobs={jobs.filter((job) => job.status === "disputed")} empty="No open problems." />

@@ -79,3 +79,20 @@ export async function capturePayPalOrder(orderId: string): Promise<{ captureId: 
   if (!capture?.id || !Number.isFinite(amount)) throw new Error("PayPal capture was incomplete");
   return { captureId: capture.id, amount, status: capture.status || body.status || "" };
 }
+
+/** Refund one captured PayPal payment. Caller decides what to do if this throws. */
+export async function refundPayPalCapture(captureId: string, amount: number): Promise<{ id: string; status: string }> {
+  const token = await accessToken();
+  const res = await fetch(`${baseUrl()}/v2/payments/captures/${encodeURIComponent(captureId)}/refund`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount: { currency_code: "USD", value: amount.toFixed(2) },
+    }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`PayPal refund failed (${res.status})`);
+  const body = (await res.json()) as { id?: string; status?: string };
+  if (!body.id) throw new Error("PayPal refund was incomplete");
+  return { id: body.id, status: body.status || "" };
+}
