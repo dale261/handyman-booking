@@ -27,7 +27,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       <div>
         <h1 className="font-display text-3xl font-semibold text-pine">Cost library</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Unlisted jobs use the high end of these ranges. A ZIP in 496 takes 4% off a national figure, and a ZIP in 497 takes 5% off. Local Michigan figures are used as printed. The quote also cannot fall below your hourly rate times the estimated hours times 1.25, plus materials, travel, and the area premium. Those rules live in the booking math. This page is the ranges and the we-do-it switch.
+          These are the research ranges for work that isn&apos;t on the rate sheet. Quotes use the high end. A ZIP in 496 takes 4% off a national figure, and a ZIP in 497 takes 5% off. Local Michigan figures are used as printed. The quote also stays at or above your hourly rate times the estimated hours times 1.25, plus materials. Travel and the area charge are added after that. This page is where you edit the ranges and the we-do-it switch.
         </p>
       </div>
       <Flash notice={query.notice} error={query.error} />

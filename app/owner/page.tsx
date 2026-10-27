@@ -20,7 +20,7 @@ export default async function OwnerDayPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-semibold text-pine">Day route</h1>
-          <p className="text-sm text-muted">{formatDate(date)}. Live miles are the drive right now. Billed miles stay put once a job is paid.</p>
+          <p className="text-sm text-muted">{formatDate(date)}. Road miles can still change until a job is paid. After that, the travel charge stays.</p>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Link className="rounded-md border border-line bg-card px-3 py-1.5 font-semibold" href={`/owner?date=${prev}`}>Previous</Link>

@@ -89,7 +89,7 @@ export async function signUp(form: FormData) {
       redirect("/signup?error=" + encodeURIComponent(error?.message || "Could not create the account."));
     }
     if (!data.session) {
-      redirect("/login?notice=" + encodeURIComponent("Check your email to confirm the account. Dale: turn off email confirmation in Supabase, then sign up again."));
+      redirect("/login?notice=" + encodeURIComponent("Check your email to confirm the account. If no message arrives, ask Dale."));
     }
     const existing = await repo.getUser(data.user.id);
     await repo.saveUser({
@@ -139,7 +139,7 @@ export async function signIn(form: FormData) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) redirect("/login?error=" + encodeURIComponent("Email or password doesn't match."));
     const user = await repo.getUserByEmail(email);
-    if (!user) redirect("/login?error=" + encodeURIComponent("Signed in, but this email has no profile yet. Ask Dale to check the owner email setting."));
+    if (!user) redirect("/login?error=" + encodeURIComponent("You're signed in, but we don't have a profile for this email yet. Ask Dale to check the owner email."));
     redirect(next || homeFor(user.role));
   }
 
@@ -235,17 +235,17 @@ export async function submitQuote(input: {
 export async function holdSlotAction(form: FormData) {
   const jobId = field(form, "jobId");
   const when = field(form, "when") === "earliest" ? "earliest" : { date: field(form, "date"), startMin: Number(form.get("startMin")) };
-  await mutate(jobId, when === "earliest" ? "Earliest opening is held." : "That time is held.", (repo, actor) => holdSlot(repo, actor, jobId, when));
+  await mutate(jobId, when === "earliest" ? "Your earliest time is held." : "That time is held.", (repo, actor) => holdSlot(repo, actor, jobId, when));
 }
 
 export async function releaseHoldAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Hold released.", (repo, actor) => releaseHold(repo, actor, jobId));
+  await mutate(jobId, "The hold is released. You can pick another time.", (repo, actor) => releaseHold(repo, actor, jobId));
 }
 
 export async function demoPayAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Payment recorded (demo, no PayPal key yet).", (repo, actor) => payJob(repo, actor, jobId, "paypal", `demo-${randomUUID()}`));
+  await mutate(jobId, "Payment recorded. PayPal isn't connected here yet, so nothing was charged.", (repo, actor) => payJob(repo, actor, jobId, "paypal", `demo-${randomUUID()}`));
 }
 
 export async function manualPayAction(form: FormData) {
@@ -270,7 +270,7 @@ export async function startPayPalAction(form: FormData) {
       invoiceNumber: job.invoiceNumber,
       jobId,
       returnUrl: `${appUrl()}/api/paypal/return?job=${jobId}`,
-      cancelUrl: `${appUrl()}/jobs/${jobId}?notice=${encodeURIComponent("PayPal checkout was cancelled.")}`,
+      cancelUrl: `${appUrl()}/jobs/${jobId}?notice=${encodeURIComponent("PayPal checkout was canceled. Nothing was charged.")}`,
     });
     job.paypalOrderId = order.id;
     await repo.saveJob(job, { skipOverlap: true });
@@ -295,14 +295,14 @@ export async function completeWorkAction(form: FormData) {
 
 export async function approveWorkAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Work approved.", (repo, actor) => approveWork(repo, actor, jobId));
+  await mutate(jobId, "Thanks. The work is approved.", (repo, actor) => approveWork(repo, actor, jobId));
 }
 
 export async function reportProblemAction(form: FormData) {
   const jobId = field(form, "jobId");
   const note = field(form, "note");
-  if (note.length < 3) jobBack(jobId, "error", "Describe the problem so Dale can see it.");
-  await mutate(jobId, "Problem sent to the owner.", (repo, actor) => reportProblem(repo, actor, jobId, note));
+  if (note.length < 3) jobBack(jobId, "error", "Tell Dale what needs another look.");
+  await mutate(jobId, "Dale has your note.", (repo, actor) => reportProblem(repo, actor, jobId, note));
 }
 
 export async function cancelAction(form: FormData) {
@@ -317,7 +317,7 @@ export async function cancelAction(form: FormData) {
 
 export async function requestCancelAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Cancellation request sent to the owner.", (repo, actor) => requestCancel(repo, actor, jobId));
+  await mutate(jobId, "Dale has your cancellation request.", (repo, actor) => requestCancel(repo, actor, jobId));
 }
 
 export async function resolveCancelAction(form: FormData) {

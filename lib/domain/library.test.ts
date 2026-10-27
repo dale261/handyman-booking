@@ -60,7 +60,7 @@ describe("cost library pricing", () => {
     expect(quote.quoteMeta.items[0].unitHigh).toBe(480);
     expect(quote.quoteMeta.librarySum).toBe(480);
     expect(quote.quoteMeta.laborFloor).toBe(950);
-    expect(quote.lines.some((line) => line.label === "Profit floor" && line.amount === 470)).toBe(true);
+    expect(quote.lines.some((line) => line.label === "Time on the job" && line.amount === 470)).toBe(true);
     expect(quote.lines.some((line) => line.kind === "premium")).toBe(false);
     expect(quote.lines.find((line) => line.kind === "travel")?.amount).toBe(50);
     expect(quote.total).toBe(1000);
@@ -93,7 +93,7 @@ describe("cost library pricing", () => {
     });
     expect(home.quoteMeta.librarySum).toBe(345.6);
     expect(home.quoteMeta.laborFloor).toBe(237.5);
-    expect(home.lines.some((line) => line.label === "Profit floor")).toBe(false);
+    expect(home.lines.some((line) => line.label === "Time on the job")).toBe(false);
     expect(home.total).toBe(395.6);
 
     const north = price({
@@ -278,7 +278,7 @@ describe("cost library pricing", () => {
     });
     const shifted = pricedWithTravel(quote.lines, quote.quoteMeta, 80, "the previous job", settings, false);
     expect(shifted.lines.find((line) => line.label === "Shelving")?.amount).toBe(480);
-    expect(shifted.lines.find((line) => line.label === "Profit floor")?.amount).toBe(470);
+    expect(shifted.lines.find((line) => line.label === "Time on the job")?.amount).toBe(470);
     expect(shifted.travelFee).toBe(80);
     expect(shifted.total).toBe(quote.total + 30);
     expect(shifted.meta.rangeHigh).toBe(quote.quoteMeta.rangeHigh + 30);

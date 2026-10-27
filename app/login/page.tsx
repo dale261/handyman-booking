@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <CardTitle>Sample sign-in</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p>These accounts exist only on this computer, before Supabase is connected. They have no password.</p>
+            <p>These sample accounts are only on this computer, before the database is connected. They have no password.</p>
             <div className="flex flex-wrap gap-2">
               <Demo role="customer" label="Sample customer" />
               <Demo role="worker" label="Worker A" />

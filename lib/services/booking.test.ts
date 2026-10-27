@@ -306,7 +306,7 @@ describe("booking flow", () => {
     expect(vague.data.quoteMeta?.bookable).toBe(false);
     expect(vague.data.quoteMeta?.reviewReasons.some((reason) => reason === "Vague scope" || reason === "No library entry fits")).toBe(true);
     const emails = await store.listEmails();
-    expect(emails.some((email) => email.to === customer.email && email.body.includes("Expected range"))).toBe(true);
+    expect(emails.some((email) => email.to === customer.email && email.body.includes("Dale will review"))).toBe(true);
 
     const outlets = await createQuote(store, customer, {
       service: "other",

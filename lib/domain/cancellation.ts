@@ -18,8 +18,8 @@ export function refundBeforeWork(paid: number, cancelFee: number): RefundQuote {
   const refund = roundCents(p - fee);
   const note =
     p <= feeCap
-      ? `Paid $${feeCap} or less: the whole amount is kept as the processing fee, so the refund is $0`
-      : `$${feeCap} processing fee kept; the rest is refunded via PayPal`;
+      ? `You paid $${feeCap} or less, so we keep it and the refund is $0`
+      : `We keep $${feeCap}. The rest will be refunded through PayPal`;
   return { paid: p, fee, refund, note };
 }
 

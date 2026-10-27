@@ -20,7 +20,7 @@ export function Shell({
       <header className="border-b border-line bg-card/80">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/" className="font-display text-lg font-semibold tracking-tight text-pine">
-            eX Construction LC
+            eX Construction
           </Link>
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             <Nav href="/book">Get a quote</Nav>
@@ -57,17 +57,17 @@ export function Shell({
       {ready && keys?.localDemo && (
         <div className="border-b border-copper/30 bg-copper/10">
           <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-ink">
-            This copy is saving to a file on this computer. Sample one-click sign-in is on. Do not put this mode on the public internet. Connect Supabase before customers use it.
+            This copy saves to a file on this computer. Sample sign-in is on. Don&apos;t put this on the public internet. Connect Supabase before customers use it.
             {keys.resend ? " Email is live." : " Emails print in the terminal."}
             {keys.paypal ? " PayPal is live." : " PayPal is a demo button until keys are added."}
-            {keys.openai ? " AI matching is on for unlisted jobs." : " Unlisted jobs use the keyword library until an OpenAI key is added."}
+            {keys.openai ? " AI notes are on for quotes." : " Quotes use the saved prices until an OpenAI key is added."}
             {keys.ors ? " Road miles use OpenRouteService." : keys.osrm ? " Road miles use OSRM." : " Road miles are straight-line distance × the road factor until a routing key is added."}
           </p>
         </div>
       )}
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
       <footer className="border-t border-line py-8 text-center text-sm text-muted">
-        eX Construction LC · 1339 N Mitchell St, Cadillac, MI · Handyman booking for the 231
+        eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work around Cadillac
       </footer>
     </div>
   );

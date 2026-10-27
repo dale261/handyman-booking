@@ -37,13 +37,13 @@ describe("deposit split", () => {
     expect(splitPayment(1499, 1500)).toEqual({
       now: 1499,
       later: 0,
-      rule: "Under $1,500: full payment due to confirm",
+      rule: "Jobs under $1,500 are paid in full to book.",
     });
     expect(splitPayment(1499.99, 1500).later).toBe(0);
     const exact = splitPayment(1500, 1500);
     expect(exact.now).toBe(750);
     expect(exact.later).toBe(750);
-    expect(exact.rule).toMatch(/Exactly \$1,500/);
+    expect(exact.rule).toMatch(/half down/);
     const over = splitPayment(2400, 1500);
     expect(over.now).toBe(1200);
     expect(over.later).toBe(1200);

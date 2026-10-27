@@ -17,7 +17,7 @@ export default async function AreaPage({ searchParams }: { searchParams: Promise
       <div>
         <h1 className="font-display text-3xl font-semibold text-pine">Service area</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          {zips.length} ZIPs in the 231 area code. Auto-book ZIPs can be held and invoiced immediately. Owner-review ZIPs, and any ZIP that is not on this list, wait for you. Miles are straight-line from Cadillac and are only a fallback when road miles are unavailable.
+          {zips.length} ZIP codes around Cadillac, in the 231 area code. ZIPs set to book right away can be held and invoiced immediately. The rest, and any ZIP that is not on this list, wait for you. Miles are straight-line from Cadillac and are only a fallback when road miles are unavailable.
         </p>
       </div>
       <form className="flex max-w-md gap-2">

@@ -68,13 +68,11 @@ export function BookForm({
   workers,
   helperMax,
   helperMaxHours,
-  aiOn,
 }: {
   billingAddress: string;
   workers: WorkerOption[];
   helperMax: number;
   helperMaxHours: number;
-  aiOn: boolean;
 }) {
   const [service, setService] = useState<ServiceId>("tv");
   const [params, setParams] = useState<QuoteParams>(DEFAULT_PARAMS);
@@ -242,7 +240,7 @@ export function BookForm({
         {service === "clean" && <Toggle label="Deep clean" checked={params.deep} onChange={(deep) => patch({ deep })} />}
         {service === "other" && (
           <p className="text-sm text-muted sm:col-span-2">
-            Unlisted work is priced from the cost library at the high end of each range, and never below the labor floor. Describe the work and the quantity. If the description is vague, or the work needs a license, Dale reviews it before you can book.
+            Tell us the work and the quantity, like 40 feet of baseboard. If we need more detail, or the job needs a license, Dale will review it before you can book.
           </p>
         )}
         {service === "helper" && (
@@ -268,10 +266,8 @@ export function BookForm({
       </Field>
       <p className="text-sm text-muted">
         {service === "other"
-          ? "The price is calculated here from the cost library. The AI only picks which library items fit. It cannot type a dollar amount."
-          : aiOn
-            ? "A short AI note may be added from your description. The price still comes only from Dale's rate table."
-            : "The AI key isn't connected yet, so this quote is priced entirely from the rate table."}
+          ? "This is an estimate based on your description and local pricing. If the job turns out different on site, we'll talk with you before changing anything."
+          : "We'll price this from the work you describe. A note from your description doesn't change the price."}
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -302,7 +298,7 @@ export function BookForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex items-center gap-3">
             <Switch checked={urgent} onCheckedChange={setUrgent} id="urgent" />
-            <Label htmlFor="urgent">Need it soon (urgency fee)</Label>
+            <Label htmlFor="urgent">Need it soon</Label>
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={pickup} onCheckedChange={setPickup} id="pickup" />
@@ -311,7 +307,7 @@ export function BookForm({
         </div>
       )}
 
-      <Field label="Preferred worker (optional)">
+      <Field label="Preferred crew member (optional)">
         <select
           className="flex h-10 w-full rounded-md border border-line bg-card px-3 text-sm"
           value={preferredWorkerId}
@@ -344,7 +340,7 @@ export function BookForm({
 
       {error && <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</p>}
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Pricing the job…" : "Get my quote"}
+        {pending ? "Working on your quote…" : "Get my quote"}
       </Button>
     </form>
   );

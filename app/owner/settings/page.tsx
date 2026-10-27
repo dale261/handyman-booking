@@ -39,8 +39,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div>
         <h1 className="font-display text-3xl font-semibold text-pine">Rates and crews</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Sample crews are labeled “(sample)”. Rename them or delete them and add your own. The first job of each crew’s day is measured from the shop address below. Unlisted jobs use the{" "}
-          <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>, not these rate-sheet numbers. AI quote calls are counted below. The two AI limits are spending caps, not prices.
+          Sample crews are labeled “(sample)”. Rename them, or delete them and add your own. The first job of each crew’s day is measured from the shop address below. Other handyman work uses the{" "}
+          <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>. Today’s AI quote calls are counted below. Those two limits are spending caps, not prices.
         </p>
       </div>
       <Flash notice={query.notice} error={query.error} />
@@ -53,7 +53,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <span className="font-semibold text-ink">{aiCalls}</span> of {settings.aiDailyCap} model calls used on {formatDate(day)} (Eastern time). Each customer can use {settings.aiCustomerDailyCap} a day.
           </p>
           <p className="text-muted">
-            At the cap, listed services still quote from the rate sheet. Unlisted jobs use the keyword library and wait for you. Set either limit to 0 to turn the model off. The count resets at midnight Eastern.
+            At the cap, listed services still quote from your rates. Other jobs match from the description and wait for you. Set either limit to 0 to turn the model off. The count resets at midnight Eastern.
           </p>
           {usageRows.length === 0 ? (
             <p>No AI quote calls yet today.</p>

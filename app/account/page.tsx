@@ -22,7 +22,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <form action={updateAccount} className="grid gap-4">
           <Flash notice={query.notice} error={query.error} />
           <p className="text-sm text-muted">
-            Signed in as {user.email}. Role: {user.role}.
+            Signed in as {user.email}.
           </p>
           <div className="grid gap-1.5">
             <Label htmlFor="fullName">Full name</Label>

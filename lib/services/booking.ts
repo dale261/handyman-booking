@@ -97,7 +97,14 @@ export function amountPaid(payments: PaymentRecord[], jobId: string): number {
 }
 
 function footer(settings: Settings): string {
-  return `\n\neX Construction LC\n${settings.shopAddress}`;
+  return `\n\neX Construction\n${settings.shopAddress}`;
+}
+
+function paidWith(method: string): string {
+  if (method === "paypal") return "PayPal";
+  if (method === "check") return "check";
+  if (method === "cash") return "cash";
+  return method;
 }
 
 async function ownerInbox(repo: Repository, settings: Settings): Promise<string> {
@@ -436,7 +443,7 @@ export async function createQuote(
     const user = await repo.getUser(actor.id);
     if (!user) return fail("Account not found.");
     if (!user.fullName.trim() || !user.phone.trim() || !user.billingAddress.trim() || !/^\d{5}$/.test(user.billingZip)) {
-      return fail("Add your name, phone, and billing address (with ZIP) before requesting a quote.");
+      return fail("Add your name, phone, and billing address, including the ZIP, before you request a quote.");
     }
     if (!SERVICE_IDS.includes(input.service)) return fail("Pick a service.");
     const description = input.description.trim();
@@ -446,7 +453,7 @@ export async function createQuote(
     const jobSiteAddress = input.differentSite ? input.jobSiteAddress.trim() : user.billingAddress;
     const zips = await repo.listZips();
     const area = areaCheck(input.differentSite ? jobSiteAddress : user.billingZip || user.billingAddress, zips);
-    if (!area.found) return fail("Add a 5-digit ZIP to the job-site address.");
+    if (!area.found) return fail("Add a 5-digit ZIP to the job site address.");
 
     const settings = await repo.getSettings();
     let lat = area.lat;
@@ -615,7 +622,7 @@ export async function createQuote(
       } else {
         job.licenseLevel = "ok";
         job.licenseTrade = "Cost library";
-        job.licenseWhy = "Priced from the high end of the cost library and above the labor floor.";
+        job.licenseWhy = "Priced from the cost library and checked against the labor minimum.";
         job.licenseRule = "Dale's rule";
         job.status = area.auto ? "quoted" : "pending_area";
       }
@@ -623,8 +630,8 @@ export async function createQuote(
 
     const saved = await repo.saveJob(job, { skipOverlap: true });
     if (saved.status === "scope_review") {
-      const range = saved.quoteMeta
-        ? ` Expected range ${usd(saved.quoteMeta.rangeLow)} to ${usd(saved.quoteMeta.rangeHigh)}.`
+      const ownerEstimate = saved.quoteMeta
+        ? ` Saved estimate ${usd(saved.quoteMeta.rangeLow)} to ${usd(saved.quoteMeta.rangeHigh)}.`
         : "";
       const referral =
         saved.quoteMeta?.referralEstimate != null ? ` Referral estimate ${usd(saved.quoteMeta.referralEstimate)}.` : "";
@@ -632,14 +639,14 @@ export async function createQuote(
         repo,
         settings,
         "approval",
-        `License review needed: ${saved.licenseTrade}`,
-        `${user.fullName}: "${description}". ${saved.licenseWhy}${referral}${range}`,
+        `Needs your review: ${saved.licenseTrade}`,
+        `${user.fullName}: "${description}". ${saved.licenseWhy}${referral}${ownerEstimate}`,
         saved.id,
       );
       const customerNote = saved.quoteMeta
-        ? `Hi ${user.fullName}, thanks for the details. Dale is reviewing this before it can be booked.${range} That range is not a price you can pay until he confirms it. We'll get back to you within 1 business day.${footer(settings)}`
-        : `Hi ${user.fullName}, thanks for the details. Part of this job may need a licensed trade, so the owner is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral.${footer(settings)}`;
-      await mail(repo, user.email, "Thanks! We're reviewing your request", customerNote, saved.id);
+        ? `Hi ${user.fullName}, thanks for the details. Dale will review this before you can book. Plan on ${usd(saved.quoteMeta.rangeLow)} to ${usd(saved.quoteMeta.rangeHigh)}. You can't pay that until he confirms the job. We'll get back to you within 1 business day.${footer(settings)}`
+        : `Hi ${user.fullName}, thanks for the details. Part of this may need a licensed trade, so Dale is looking at it himself. We'll get back to you within 1 business day.${footer(settings)}`;
+      await mail(repo, user.email, "Thanks. Dale is reviewing your request", customerNote, saved.id);
     }
     return { ok: true, data: saved };
   });
@@ -652,10 +659,10 @@ export async function listOpenSlots(repo: Repository, actor: Actor, jobId: strin
     if (!job) return fail("Job not found.");
     if (actor.role === "customer" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
     if (!["quoted", "released", "pending_area"].includes(job.status)) {
-      return fail("This job isn't waiting on a time.");
+      return fail("This job isn't ready for a time yet.");
     }
     if (job.licenseLevel !== "ok" && job.status !== "pending_area") {
-      return fail("The owner is still reviewing whether we can do this work.");
+      return fail("Dale is still reviewing whether we can do this work.");
     }
     const settings = await repo.getSettings();
     const slots = await buildSlots(repo, job, settings);
@@ -676,17 +683,17 @@ export async function holdSlot(
       if (!job) return fail("Job not found.");
       if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
       if (!["quoted", "released", "pending_area"].includes(job.status)) return fail("This job can't be booked from its current step.");
-      if (job.licenseLevel !== "ok") return fail("The owner has to clear this job before a time can be held.");
+      if (job.licenseLevel !== "ok") return fail("Dale needs to review this job before you can hold a time.");
       const settings = await repo.getSettings();
       const slots = await buildSlots(repo, job, settings);
       const slot = when === "earliest" ? slots[0] : slots.find((item) => item.date === when.date && item.startMin === when.startMin);
-      if (!slot) return fail(slots.length === 0 ? "No opening in the next two weeks fits this job." : "That opening is gone. Pick another.");
+      if (!slot) return fail(slots.length === 0 ? "Nothing in the next two weeks fits this job." : "That time was just taken. Pick another.");
       placeOnSlot(job, settings, slot);
       const tentative = !job.areaAuto;
       if (tentative) {
         job.status = "pending_area";
         job.holdUntil = null;
-        job.assignNote = `${job.assignNote} Tentative until the owner approves this ZIP. The 24-hour payment clock starts at approval.`;
+        job.assignNote = `${job.assignNote} We'll hold this time once Dale approves the address. The payment window starts then.`.trim();
       } else {
         job.status = "held";
         job.holdUntil = new Date(Date.now() + settings.holdHours * 3600 * 1000).toISOString();
@@ -698,8 +705,8 @@ export async function holdSlot(
         await mail(
           repo,
           fresh.customerEmail,
-          "Booking confirmation: your slot is held for 24 hours",
-          `Hi ${fresh.customerName}, we're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. Invoice total ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(50% down)" : "(full amount)"} within ${settings.holdHours} hours to confirm, or the slot is released.\n\nPay here: ${jobUrl(fresh.id)}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is complete and you approve it.` : ""}${footer(settings)}`,
+          `Your time is held for ${settings.holdHours} hours`,
+          `Hi ${fresh.customerName}, we're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${settings.holdHours} hours to keep this time.\n\nPay here: ${jobUrl(fresh.id)}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}${footer(settings)}`,
           fresh.id,
         );
       } else {
@@ -715,7 +722,7 @@ export async function holdSlot(
           repo,
           fresh.customerEmail,
           "We received your time request",
-          `Hi ${fresh.customerName}, ${fresh.areaLabel}. Dale will look at ${fresh.jobSiteAddress} before the 24-hour payment clock starts.${fresh.scheduledDate ? ` You asked for ${formatDate(fresh.scheduledDate)} at ${formatMinutes(fresh.startMin || 0)}.` : ""}${footer(settings)}`,
+          `Hi ${fresh.customerName}, Dale will look at ${fresh.jobSiteAddress} before the payment window starts.${fresh.scheduledDate ? ` You asked for ${formatDate(fresh.scheduledDate)} at ${formatMinutes(fresh.startMin || 0)}.` : ""}${footer(settings)}`,
           fresh.id,
         );
       }
@@ -757,7 +764,7 @@ export async function payJob(
     if (!job) return fail("Job not found.");
     if (method !== "paypal" && actor.role !== "owner") return fail("Only the owner can mark cash or a check as paid.");
     if (actor.role === "customer" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
-    if (actor.role === "worker") return fail("Workers don't record payments.");
+    if (actor.role === "worker") return fail("Crew members don't record payments.");
     const payments = await repo.listPayments(jobId);
     if (paypalCaptureId && payments.some((payment) => payment.paypalCaptureId === paypalCaptureId)) {
       return { ok: true, data: job };
@@ -765,7 +772,7 @@ export async function payJob(
     const settings = await repo.getSettings();
     if (job.status === "held") {
       if (job.holdUntil && new Date(job.holdUntil).getTime() <= Date.now()) {
-        return fail("The hold expired. Pick a new time.");
+        return fail("That hold expired. Pick a new time.");
       }
       const kind = job.balanceDue > 0 ? "deposit" : "full";
       await repo.savePayment({
@@ -776,7 +783,7 @@ export async function payJob(
         method,
         status: "paid",
         closed: false,
-        note: kind === "deposit" ? "Deposit (50%)" : "Full payment",
+        note: kind === "deposit" ? "Deposit, half down" : "Paid in full",
         paypalCaptureId,
         createdAt: new Date().toISOString(),
       });
@@ -788,7 +795,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(saved.amountDueNow)} paid, you're booked`,
-        `Hi ${saved.customerName}, we received ${usd(saved.amountDueNow)} (${method}) for ${saved.scope}${saved.scheduledDate ? ` on ${formatDate(saved.scheduledDate)} at ${formatMinutes(saved.startMin || 0)}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due once the work is complete and you approve it.` : "You're paid in full."} Need to cancel or reschedule before work starts? A ${usd(settings.cancelFee)} processing fee is kept and the rest is refunded.${footer(settings)}`,
+        `Hi ${saved.customerName}, we received ${usd(saved.amountDueNow)} by ${paidWith(method)} for ${saved.scope}${saved.scheduledDate ? ` on ${formatDate(saved.scheduledDate)} at ${formatMinutes(saved.startMin || 0).replace(/\.$/, "")}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.${footer(settings)}`,
         saved.id,
       );
       await notify(
@@ -823,7 +830,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(paid)} balance paid`,
-        `Hi ${saved.customerName}, we received your ${usd(paid)} balance (${method}) for ${saved.scope}. Your job is fully paid (${usd(saved.total)} total). We'd love a review: ${jobUrl(saved.id)}${footer(settings)}`,
+        `Hi ${saved.customerName}, we received your ${usd(paid)} balance by ${paidWith(method)} for ${saved.scope}. The job is paid in full (${usd(saved.total)}). We'd love a short review: ${jobUrl(saved.id)}${footer(settings)}`,
         saved.id,
       );
       await notify(repo, settings, "pay", `Payment received: ${usd(paid)} balance`, `${saved.scope}; ${method}. Job is fully paid.`, saved.id);
@@ -875,8 +882,8 @@ export async function completeWork(
     await mail(
       repo,
       saved.customerEmail,
-      `Invoice #${saved.invoiceNumber}: your job is complete, please review and approve`,
-      `Hi ${saved.customerName}, our crew marked ${saved.scope} complete. Please check the work and approve it.${saved.balanceDue > 0 ? ` After you approve, the ${usd(saved.balanceDue)} balance is due.` : ""} Something not right? Report a problem on the job page: ${jobUrl(saved.id)}${footer(settings)}`,
+      `Invoice #${saved.invoiceNumber}: the job is done, please take a look`,
+      `Hi ${saved.customerName}, the crew finished ${saved.scope}. Please look it over and approve it.${saved.balanceDue > 0 ? ` After you approve, the ${usd(saved.balanceDue)} balance is due.` : ""} If something isn't right, tell us on the job page: ${jobUrl(saved.id)}${footer(settings)}`,
       saved.id,
     );
     await notify(
@@ -896,7 +903,7 @@ export async function approveWork(repo: Repository, actor: Actor, jobId: string)
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role !== "owner" && job.customerId !== actor.id) return fail("Only the customer can approve the work.");
-    if (job.status !== "awaiting_approval") return fail("The job isn't waiting for approval.");
+    if (job.status !== "awaiting_approval") return fail("This job isn't waiting for your approval.");
     job.status = job.balanceDue > 0 ? "balance_due" : "completed";
     return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }) };
   });
@@ -907,7 +914,7 @@ export async function reportProblem(repo: Repository, actor: Actor, jobId: strin
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (job.customerId !== actor.id && actor.role !== "owner") return fail("You can't report a problem on this job.");
-    if (!["awaiting_approval", "balance_due", "in_progress"].includes(job.status)) return fail("This job isn't in a step that can be disputed.");
+    if (!["awaiting_approval", "balance_due", "in_progress"].includes(job.status)) return fail("You can report a problem once the work is underway or finished.");
     job.priorStatus = job.status;
     job.status = "disputed";
     job.problemNote = note.trim();
@@ -943,7 +950,7 @@ export async function cancelBeforeWork(
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
-    if (job.status !== "booked") return fail("Once work has started, cancellation has to be requested and approved.");
+    if (job.status !== "booked") return fail("Once work has started, ask Dale to approve a cancellation.");
     const settings = await repo.getSettings();
     const payments = await repo.listPayments(jobId);
     const paid = amountPaid(payments, jobId);
@@ -978,7 +985,7 @@ export async function cancelBeforeWork(
       repo,
       saved.customerEmail,
       kind === "cancel" ? `Invoice #${saved.invoiceNumber}: your booking is cancelled` : `Invoice #${saved.invoiceNumber}: rescheduled, pick a new time`,
-      `Hi ${saved.customerName}, you paid ${usd(paid)} for ${saved.scope}. A ${usd(refund.fee)} processing fee is kept${refund.refund > 0 ? ` and ${usd(refund.refund)} will be refunded to your original PayPal payment.` : `. Because ${usd(settings.cancelFee)} or less was paid, the refund is $0.`}${kind === "reschedule" ? ` Pick a new time: ${jobUrl(saved.id)}` : ""}${footer(settings)}`,
+      `Hi ${saved.customerName}, you paid ${usd(paid)} for ${saved.scope}. We keep ${usd(refund.fee)}.${refund.refund > 0 ? ` ${usd(refund.refund)} will go back to your PayPal payment.` : ` You paid ${usd(settings.cancelFee)} or less, so there is no refund.`}${kind === "reschedule" ? ` Pick a new time: ${jobUrl(saved.id)}` : ""}${footer(settings)}`,
       saved.id,
     );
     await notify(
@@ -986,7 +993,7 @@ export async function cancelBeforeWork(
       settings,
       "refund",
       `Customer ${verb}: ${refund.refund > 0 ? `${usd(refund.refund)} refund to send` : `$0 refund (paid ${usd(settings.cancelFee)} or less)`}`,
-      `${saved.scope}. Paid ${usd(paid)}; ${usd(refund.fee)} kept as the processing fee.`,
+      `${saved.scope}. Paid ${usd(paid)}; ${usd(refund.fee)} kept as the cancellation fee.`,
       saved.id,
     );
     return { ok: true, data: { job: (await repo.getJob(saved.id)) ?? saved, fee: refund.fee, refund: refund.refund } };
@@ -999,7 +1006,7 @@ export async function requestCancel(repo: Repository, actor: Actor, jobId: strin
     if (!job) return fail("Job not found.");
     if (job.customerId !== actor.id && actor.role !== "owner") return fail("That job belongs to another customer.");
     if (!["in_progress", "awaiting_approval", "balance_due", "disputed"].includes(job.status)) {
-      return fail("This step doesn't take a cancellation request.");
+      return fail("You can't request a cancellation from this step.");
     }
     if (job.status === "cancel_requested") return fail("A cancellation request is already waiting.");
     job.priorStatus = job.status === "disputed" && job.priorStatus ? job.priorStatus : job.status;
@@ -1019,7 +1026,7 @@ export async function requestCancel(repo: Repository, actor: Actor, jobId: strin
       repo,
       saved.customerEmail,
       `Invoice #${saved.invoiceNumber}: we received your cancellation request`,
-      `Hi ${saved.customerName}, work on ${saved.scope} has already begun, so the owner reviews your request. We'll email you once it's approved (with any refund) or declined.${footer(settings)}`,
+      `Hi ${saved.customerName}, work on ${saved.scope} has already started, so Dale will review the cancellation. We'll email you when he decides, including any refund.${footer(settings)}`,
       saved.id,
     );
     return { ok: true, data: saved };
@@ -1046,7 +1053,7 @@ export async function resolveCancel(
         repo,
         saved.customerEmail,
         `Invoice #${saved.invoiceNumber}: cancellation request declined`,
-        `Hi ${saved.customerName}, the owner declined the cancellation request for ${saved.scope}, so the job continues as booked.${footer(settings)}`,
+        `Hi ${saved.customerName}, Dale didn't approve the cancellation for ${saved.scope}, so the job continues.${footer(settings)}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1078,7 +1085,7 @@ export async function resolveCancel(
       repo,
       saved.customerEmail,
       `Invoice #${saved.invoiceNumber}: cancellation approved`,
-      `Hi ${saved.customerName}, your cancellation of ${saved.scope} is approved. You paid ${usd(paid)}; ${check.refund > 0 ? `${usd(check.refund)} will be refunded through PayPal` : "no refund is due"} and ${usd(check.kept)} is kept for work already done.${footer(settings)}`,
+      `Hi ${saved.customerName}, your cancellation of ${saved.scope} is approved. You paid ${usd(paid)}. ${check.refund > 0 ? `${usd(check.refund)} will be refunded through PayPal, and ` : ""}${usd(check.kept)} stays with us for work already done.${footer(settings)}`,
       saved.id,
     );
     return { ok: true, data: (await repo.getJob(saved.id)) ?? saved };
@@ -1101,7 +1108,7 @@ export async function markRefundSent(repo: Repository, actor: Actor, paymentId: 
         repo,
         job.customerEmail,
         `Invoice #${job.invoiceNumber}: refund sent, ${usd(payment.amount)}`,
-        `Hi ${job.customerName}, we've refunded ${usd(payment.amount)} through PayPal. It can take a few days to show up.${footer(settings)}`,
+        `Hi ${job.customerName}, we sent a ${usd(payment.amount)} refund through PayPal. It can take a few days to show up.${footer(settings)}`,
         job.id,
       );
     }
@@ -1121,8 +1128,8 @@ export async function releaseLicense(repo: Repository, actor: Actor, jobId: stri
     await mail(
       repo,
       saved.customerEmail,
-      `Your quote: ${usd(saved.total)}`,
-      `Hi ${saved.customerName}, good news: we've confirmed we can do this job. Total ${usd(saved.total)}; ${usd(saved.amountDueNow)} due to book. Pick a time: ${jobUrl(saved.id)}${footer(settings)}`,
+      `Your quote is ready: ${usd(saved.total)}`,
+      `Hi ${saved.customerName}, good news. We can do this job. The total is ${usd(saved.total)}, and ${usd(saved.amountDueNow)} is due to book. Pick a time: ${jobUrl(saved.id)}${footer(settings)}`,
       saved.id,
     );
     return { ok: true, data: saved };
@@ -1146,7 +1153,7 @@ export async function referOut(repo: Repository, actor: Actor, jobId: string, no
       repo,
       saved.customerEmail,
       "About your request: a referral",
-      `Hi ${saved.customerName}, this job needs a licensed ${saved.licenseTrade.toLowerCase()} contractor, so we can't quote it ourselves.${saved.referralNote ? ` ${saved.referralNote}` : ""} We're happy to help with anything else.${footer(settings)}`,
+      `Hi ${saved.customerName}, this job needs a licensed contractor, so we can't take it.${saved.referralNote ? ` ${saved.referralNote}` : ""} We're glad to help with anything else.${footer(settings)}`,
       saved.id,
     );
     return { ok: true, data: saved };
@@ -1162,7 +1169,7 @@ export async function decideArea(
   return repo.run(async () => {
     if (actor.role !== "owner") return fail("Only the owner can approve an address.");
     const job = await repo.getJob(jobId);
-    if (!job || job.status !== "pending_area") return fail("This job isn't waiting on an area decision.");
+    if (!job || job.status !== "pending_area") return fail("This job isn't waiting on an address.");
     const settings = await repo.getSettings();
     if (decision === "decline") {
       const crewId = job.crewId;
@@ -1175,7 +1182,7 @@ export async function decideArea(
         repo,
         saved.customerEmail,
         "About your request",
-        `Hi ${saved.customerName}, we can't book ${saved.jobSiteAddress} automatically, and the owner declined this one. Call or write us if you want to talk it through.${footer(settings)}`,
+        `Hi ${saved.customerName}, Dale can't book the job at ${saved.jobSiteAddress}. Call or write us if you want to talk it through.${footer(settings)}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1199,10 +1206,10 @@ export async function decideArea(
     await mail(
       repo,
       fresh.customerEmail,
-      fresh.status === "held" ? "Your time is held for 24 hours" : "Your address is approved",
+      fresh.status === "held" ? `Your time is held for ${settings.holdHours} hours` : "Dale approved the address",
       fresh.status === "held"
         ? `Hi ${fresh.customerName}, Dale approved ${fresh.jobSiteAddress}. We're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}. Pay ${usd(fresh.amountDueNow)} within ${settings.holdHours} hours: ${jobUrl(fresh.id)}${footer(settings)}`
-        : `Hi ${fresh.customerName}, Dale approved ${fresh.jobSiteAddress}. Pick a time to hold your slot: ${jobUrl(fresh.id)}${footer(settings)}`,
+        : `Hi ${fresh.customerName}, Dale approved ${fresh.jobSiteAddress}. Pick a time and we'll hold it for you: ${jobUrl(fresh.id)}${footer(settings)}`,
       fresh.id,
     );
     return { ok: true, data: fresh };

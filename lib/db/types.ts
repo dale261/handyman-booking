@@ -194,7 +194,7 @@ export type SaveJobOptions = {
 
 export class SlotTakenError extends Error {
   constructor() {
-    super("That time was just taken. Pick another opening.");
+    super("That time was just taken. Pick another.");
     this.name = "SlotTakenError";
   }
 }

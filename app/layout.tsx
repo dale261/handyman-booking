@@ -12,8 +12,8 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "eX Construction LC",
-  description: "Book handyman work with eX Construction LC in Cadillac, Michigan.",
+  title: "eX Construction",
+  description: "Book handyman work with eX Construction in Cadillac, Michigan.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -37,11 +37,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             children
           ) : (
             <section className="mx-auto max-w-xl space-y-3">
-              <h1 className="font-display text-3xl font-semibold text-pine">This site is not connected yet</h1>
-              <p>
-                The public site needs Dale&apos;s free Supabase project before anyone can sign in. Until those three keys are in the host&apos;s environment, the booking file stays on a private computer and sample sign-in stays off.
-              </p>
-              <p className="text-sm text-muted">The README walks through the Supabase, Resend, PayPal, and OpenAI steps in order.</p>
+              <h1 className="font-display text-3xl font-semibold text-pine">This site isn&apos;t connected yet</h1>
+              <p>eX Construction isn&apos;t taking bookings on this address until the database is connected. Please check back soon.</p>
+              <p className="text-sm text-muted">If you&apos;re Dale, the README walks through connecting Supabase, email, PayPal, and the quote notes.</p>
             </section>
           )}
         </Shell>

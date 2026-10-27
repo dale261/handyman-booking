@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
+import { CUSTOMER_PRICE_NOTE } from "@/lib/domain/library";
 import { formatDate, formatMinutes, usd } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
@@ -86,19 +87,19 @@ export default async function JobPage({
       {job.status === "scope_review" && actor.role === "customer" && (
         <Callout>
           {job.quoteMeta
-            ? `Dale is reviewing this before it can be booked. Expected range ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)}. That is not a price you can pay until he confirms the scope.`
-            : "Part of this job may need a licensed trade, so Dale is reviewing it personally. We'll get back to you within 1 business day with a quote or a referral."}
+            ? `Dale will review this before you can book. Plan on ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)}. You can't pay that until he confirms the job.`
+            : "Part of this may need a licensed trade, so Dale is looking at it himself. We'll get back to you within 1 business day."}
         </Callout>
       )}
       {job.status === "referred" && actor.role === "customer" && (
         <Callout>
-          This job needs a licensed contractor, so we can&apos;t quote it ourselves.{job.referralNote ? ` ${job.referralNote}` : ""}
+          This job needs a licensed contractor, so we can&apos;t take it.{job.referralNote ? ` ${job.referralNote}` : " We're glad to help with anything else."}
         </Callout>
       )}
-      {job.status === "pending_area" && actor.role === "customer" && <Callout>{job.areaDetail} The 24-hour payment clock starts after Dale approves the address.</Callout>}
+      {job.status === "pending_area" && actor.role === "customer" && <Callout>{job.areaDetail} The {settings.holdHours}-hour hold starts after Dale approves the address.</Callout>}
       {job.status === "held" && job.holdUntil && (
         <Callout>
-          This time is held until {new Date(job.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}. Pay {usd(job.amountDueNow)} to confirm it.
+          This time is held until {new Date(job.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}. Pay {usd(job.amountDueNow)} to keep it.
         </Callout>
       )}
 
@@ -107,14 +108,14 @@ export default async function JobPage({
           {hidePrice && job.quoteMeta && (
             <Card>
               <CardHeader>
-                <CardTitle>Expected range</CardTitle>
+                <CardTitle>What to plan on</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p className="font-semibold">
                   {usd(job.quoteMeta.rangeLow)} – {usd(job.quoteMeta.rangeHigh)}
                 </p>
                 <p className="text-muted">
-                  This range comes from the cost library. It is not a firm total, and you cannot hold a time until Dale releases the job.
+                  This is not a bill yet. You can hold a time after Dale confirms the job.
                 </p>
               </CardContent>
             </Card>
@@ -122,20 +123,16 @@ export default async function JobPage({
           {!hidePrice && (
             <Card>
               <CardHeader>
-                <CardTitle>{job.quoteMeta ? "AI estimate" : "Quote"}</CardTitle>
+                <CardTitle>{job.quoteMeta ? "Estimate" : "Quote"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {job.quoteMeta && (
-                  <p className="text-sm text-muted">
-                    This price is an AI estimate based on your description and our local cost library. It uses the high end of those ranges. If the site differs from what you described, the price may need to change.
-                  </p>
-                )}
+                {job.quoteMeta && <p className="text-sm text-muted">{CUSTOMER_PRICE_NOTE}</p>}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted">
                         <th className="py-1 pr-3 font-semibold">Item</th>
-                        <th className="py-1 pr-3 font-semibold">How it&apos;s figured</th>
+                        <th className="py-1 pr-3 font-semibold">Details</th>
                         <th className="py-1 text-right font-semibold">Amount</th>
                       </tr>
                     </thead>
@@ -156,13 +153,13 @@ export default async function JobPage({
                   </table>
                 </div>
                 <p className="text-sm">
-                  Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(50% down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(full amount)."}
+                  Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(paid in full)."}
                 </p>
                 {job.payRule && <p className="text-sm text-muted">{job.payRule}</p>}
                 {job.assumptions.length > 0 && (
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
                     {job.assumptions
-                      .filter((item) => !job.quoteMeta || !item.startsWith("This price is an AI estimate based on your description"))
+                      .filter((item) => !job.quoteMeta || !item.startsWith("This is an estimate based on your description"))
                       .map((item) => (
                       <li key={item}>{item}</li>
                     ))}
@@ -188,16 +185,16 @@ export default async function JobPage({
                 <p>
                   {formatDate(job.scheduledDate)} at {formatMinutes(job.startMin || 0)}
                   {crewName ? ` · ${crewName}` : ""}
-                  {job.assignedBy === "auto" ? " · auto-assigned" : job.assignedBy === "owner" ? " · assigned by owner" : ""}
+                  {actor.role === "owner" && job.assignedBy === "auto" ? " · assigned automatically" : actor.role === "owner" && job.assignedBy === "owner" ? " · you assigned this crew" : ""}
                 </p>
               )}
-              {job.assignNote && <p className="text-muted">{job.assignNote}</p>}
-              {job.travelLocked && <p className="text-muted">Travel is locked at {job.travelMiles ?? 0} miles ({usd(job.travelFee)}) because this job is paid.</p>}
+              {job.assignNote && actor.role !== "customer" && <p className="text-muted">{job.assignNote}</p>}
+              {job.travelLocked && <p className="text-muted">Travel stays at {job.travelMiles ?? 0} miles ({usd(job.travelFee)}) because this job is paid.</p>}
               {job.completionNote && <p>Crew note: {job.completionNote}</p>}
               {job.problemNote && <p>Problem: {job.problemNote}</p>}
               {actor.role === "owner" && job.quoteMeta && (
                 <div className="rounded-md border border-line bg-paper p-3">
-                  <p className="font-semibold">How this AI price was built</p>
+                  <p className="font-semibold">How this estimate was built</p>
                   {job.quoteMeta.reasoning && <p className="mt-1">{job.quoteMeta.reasoning}</p>}
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
                     {job.quoteMeta.items.map((item) => (
@@ -213,7 +210,7 @@ export default async function JobPage({
                     ))}
                   </ul>
                   {job.quoteMeta.referralEstimate != null && (
-                    <p className="mt-2">Referral estimate for you: {usd(job.quoteMeta.referralEstimate)}. The customer sees the range, not this firm number, until you release it.</p>
+                    <p className="mt-2">Your working number: {usd(job.quoteMeta.referralEstimate)}. The customer sees {usd(job.quoteMeta.rangeLow)} to {usd(job.quoteMeta.rangeHigh)} until you release the quote.</p>
                   )}
                 </div>
               )}
@@ -242,7 +239,7 @@ export default async function JobPage({
               </CardHeader>
               <CardContent className="space-y-3">
                 {slots.length === 0 ? (
-                  <p className="text-sm text-muted">{slotError || "No opening in the next two weeks fits this job and the travel buffer."}</p>
+                  <p className="text-sm text-muted">{slotError || "Nothing in the next two weeks fits this job and the drive."}</p>
                 ) : (
                   <>
                     <form action={holdSlotAction}>
@@ -270,8 +267,7 @@ export default async function JobPage({
                           <div>
                             <p className="font-semibold">{formatMinutes(slot.startMin)} · {slot.crewName}</p>
                             <p className="text-muted">
-                              {slot.memberNames.join(", ")} · {slot.travelMiles.toFixed(1)} mi from {slot.travelFrom} · travel {usd(slot.travelFee)}
-                              {slot.tie ? " · tie, fewer jobs" : ""}
+                              {slot.memberNames.join(", ")} · {slot.travelMiles.toFixed(1)} miles from {slot.travelFrom} · travel {usd(slot.travelFee)}
                             </p>
                           </div>
                           <SubmitButton size="sm" variant="outline">Hold {usd(slot.dueNow)}</SubmitButton>
@@ -304,8 +300,8 @@ export default async function JobPage({
                     actor.role !== "worker" && (
                       <form action={demoPayAction}>
                         <input type="hidden" name="jobId" value={job.id} />
-                        <SubmitButton variant="copper">Record demo PayPal payment</SubmitButton>
-                        <p className="mt-1 text-xs text-muted">No PayPal keys yet. This marks the invoice paid without charging a card.</p>
+                        <SubmitButton variant="copper">Record a test payment</SubmitButton>
+                        <p className="mt-1 text-xs text-muted">PayPal isn&apos;t connected on this copy yet. This marks the invoice paid without charging a card.</p>
                       </form>
                     )
                   )}
@@ -350,7 +346,7 @@ export default async function JobPage({
                 <CardTitle>Before work starts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p>Cancel or reschedule now and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0.</p>
+                <p>Cancel or reschedule before work starts and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0.</p>
                 <div className="flex flex-wrap gap-2">
                   <form action={cancelAction}>
                     <input type="hidden" name="jobId" value={job.id} />
@@ -370,7 +366,7 @@ export default async function JobPage({
           {["in_progress", "awaiting_approval", "balance_due", "disputed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
             <form action={requestCancelAction} className="space-y-2">
               <input type="hidden" name="jobId" value={job.id} />
-              <p className="text-sm text-muted">Work has started, so a cancellation has to be approved. Dale enters any refund himself. The form will not suggest an amount.</p>
+              <p className="text-sm text-muted">Work has started, so Dale has to approve a cancellation. He enters any refund himself.</p>
               <SubmitButton variant="outline">Request cancellation</SubmitButton>
             </form>
           )}
@@ -429,7 +425,7 @@ export default async function JobPage({
                     </label>
                     <Textarea name="comment" placeholder="How did the job go?" />
                     <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="publishPhotos" /> You can show my photos with the review
+                      <input type="checkbox" name="publishPhotos" /> eX Construction can show my photos with this review
                     </label>
                     <SubmitButton>Save review</SubmitButton>
                   </form>
@@ -445,6 +441,19 @@ export default async function JobPage({
   );
 }
 
+function paymentLabel(kind: PaymentRecord["kind"]): string {
+  if (kind === "deposit") return "Deposit";
+  if (kind === "balance") return "Balance";
+  if (kind === "refund") return "Refund";
+  return "Payment";
+}
+
+function methodLabel(method: PaymentRecord["method"]): string {
+  if (method === "paypal") return "PayPal";
+  if (method === "check") return "Check";
+  return "Cash";
+}
+
 function Callout({ children }: { children: React.ReactNode }) {
   return <p className="rounded-md border border-copper/30 bg-copper/10 px-3 py-2 text-sm">{children}</p>;
 }
@@ -453,7 +462,7 @@ function PaymentRow({ payment, jobId, owner }: { payment: PaymentRecord; jobId: 
   return (
     <li className="rounded-md border border-line px-2 py-1.5">
       <p>
-        {payment.kind} · {usd(payment.amount)} · {payment.method} · {payment.status}
+        {paymentLabel(payment.kind)} · {usd(payment.amount)} · {methodLabel(payment.method)} · {payment.status === "paid" ? "paid" : payment.status === "pending" ? "pending" : payment.status === "sent" ? "sent" : payment.status}
         {payment.closed ? " · closed" : ""}
       </p>
       {payment.note && <p className="text-muted">{payment.note}</p>}
@@ -479,12 +488,12 @@ function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name:
           <div className="space-y-2">
             <p>
               {job.quoteMeta
-                ? `Firm total for you: ${usd(job.total)}. The customer sees ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)} until you release the quote.`
+                ? `Your number: ${usd(job.total)}. The customer sees ${usd(job.quoteMeta.rangeLow)} to ${usd(job.quoteMeta.rangeHigh)} until you release the quote.`
                 : `Draft total, hidden from the customer: ${usd(job.total)}`}
             </p>
             <form action={releaseLicenseAction}>
               <input type="hidden" name="jobId" value={job.id} />
-              <SubmitButton size="sm">No license needed. Release the quote</SubmitButton>
+              <SubmitButton size="sm">We can do this. Release the quote</SubmitButton>
             </form>
           </div>
         )}
@@ -511,7 +520,7 @@ function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name:
         )}
         {job.status === "cancel_requested" && (
           <div className="space-y-2">
-            <p>Work already started. Type the refund yourself. Leave the box empty and the approval will be rejected.</p>
+            <p>Work already started. Type the refund. An empty box will not approve the cancellation.</p>
             <form action={resolveCancelAction} className="space-y-2">
               <input type="hidden" name="jobId" value={job.id} />
               <input type="hidden" name="decision" value="approve" />
@@ -542,7 +551,7 @@ function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name:
                 ))}
               </select>
             </label>
-            <p className="text-muted">{job.travelLocked ? "Paid travel stays locked." : "Unpaid travel will be measured again from the new crew's previous stop."}</p>
+            <p className="text-muted">{job.travelLocked ? "Paid travel stays as it is." : "Unpaid travel will be measured again from the new crew's previous stop."}</p>
             <SubmitButton size="sm" variant="outline">Save crew</SubmitButton>
           </form>
         )}

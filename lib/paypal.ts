@@ -41,12 +41,12 @@ export async function createPayPalOrder(input: {
         {
           custom_id: input.invoiceNumber ? String(input.invoiceNumber) : input.jobId,
           invoice_id: input.invoiceNumber ? String(input.invoiceNumber) : undefined,
-          description: `eX Construction LC invoice ${input.invoiceNumber ?? ""}`.trim(),
+          description: `eX Construction invoice ${input.invoiceNumber ?? ""}`.trim(),
           amount: { currency_code: "USD", value: input.amount.toFixed(2) },
         },
       ],
       application_context: {
-        brand_name: "eX Construction LC",
+        brand_name: "eX Construction",
         user_action: "PAY_NOW",
         return_url: input.returnUrl,
         cancel_url: input.cancelUrl,

@@ -24,7 +24,7 @@ async function sendResend(email: EmailRecord): Promise<boolean> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || "eX Construction LC <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM_EMAIL || "eX Construction <onboarding@resend.dev>",
         to: [email.to],
         subject: email.subject,
         text: email.body,

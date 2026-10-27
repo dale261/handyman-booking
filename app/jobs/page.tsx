@@ -12,7 +12,7 @@ export default async function JobsPage() {
   if (actor.role === "owner") {
     return (
       <p>
-        Owners use the <Link className="font-semibold text-pine underline" href="/owner/jobs">full job list</Link>.
+        Your full list is on the <Link className="font-semibold text-pine underline" href="/owner/jobs">jobs page</Link>.
       </p>
     );
   }
@@ -34,7 +34,7 @@ export default async function JobsPage() {
       </div>
       {jobs.length === 0 ? (
         <Card>
-          <CardContent className="text-sm text-muted">No jobs yet. Request a quote and we&apos;ll price it from the rate sheet.</CardContent>
+          <CardContent className="text-sm text-muted">No jobs yet. Request a quote and we&apos;ll price it before anyone drives out.</CardContent>
         </Card>
       ) : (
         <div className="grid gap-3">
@@ -51,7 +51,7 @@ export default async function JobsPage() {
                   <div className="flex items-center gap-3">
                     {job.status === "scope_review" || job.status === "referred" ? (
                       job.quoteMeta ? (
-                        <span className="text-sm font-semibold">est. {usd(job.quoteMeta.rangeLow)}–{usd(job.quoteMeta.rangeHigh)}</span>
+                        <span className="text-sm font-semibold">about {usd(job.quoteMeta.rangeLow)}–{usd(job.quoteMeta.rangeHigh)}</span>
                       ) : null
                     ) : (
                       <span className="text-sm font-semibold">{usd(job.total)}</span>

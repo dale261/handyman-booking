@@ -3,7 +3,6 @@ import { BookForm } from "@/components/book-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { keyStatus } from "@/lib/keys";
 
 export default async function BookPage() {
   const actor = await requireActor();
@@ -11,7 +10,7 @@ export default async function BookPage() {
     return (
       <Card className="mx-auto max-w-lg">
         <CardHeader>
-          <CardTitle>Workers don&apos;t request quotes</CardTitle>
+          <CardTitle>Crew members don&apos;t request quotes</CardTitle>
         </CardHeader>
         <CardContent>
           <Link className="font-semibold text-pine underline" href="/worker">
@@ -40,12 +39,11 @@ export default async function BookPage() {
     );
   }
   const [workers, settings] = await Promise.all([repo.listWorkers(), repo.getSettings()]);
-  const keys = keyStatus();
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
         <h1 className="font-display text-3xl font-semibold text-pine">Request a quote</h1>
-        <p className="mt-2 text-sm text-muted">Prices come from the rate table. The description can add a note. It cannot change the price.</p>
+        <p className="mt-2 text-sm text-muted">Tell us the job. You&apos;ll see a price before anyone drives out.</p>
       </div>
       <Card>
         <CardContent>
@@ -54,7 +52,6 @@ export default async function BookPage() {
             workers={workers.filter((worker) => worker.active).map((worker) => ({ id: worker.id, fullName: worker.fullName }))}
             helperMax={settings.helperMax}
             helperMaxHours={settings.helperMaxHours}
-            aiOn={keys.openai}
           />
         </CardContent>
       </Card>

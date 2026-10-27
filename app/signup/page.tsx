@@ -16,7 +16,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <CardContent>
         <form action={signUp} className="grid gap-4">
           <Flash error={query.error} />
-          <p className="text-sm text-muted">We use this for the quote, the invoice, and the job site when the work is at your billing address.</p>
+          <p className="text-sm text-muted">We use this for your quote, your invoice, and the job site when the work is at this address.</p>
           <Field id="fullName" name="fullName" label="Full name" autoComplete="name" />
           <Field id="email" name="email" label="Email" type="email" autoComplete="email" />
           <Field id="phone" name="phone" label="Phone" type="tel" autoComplete="tel" />

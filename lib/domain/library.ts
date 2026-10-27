@@ -9,7 +9,7 @@ import type { QuoteLine, Settings } from "./types";
 export const LABOR_BUFFER = 1.25;
 
 export const CUSTOMER_PRICE_NOTE =
-  "This price is an AI estimate based on your description and our local cost library. It uses the high end of those ranges. If the site differs from what you described, the price may need to change.";
+  "This is an estimate based on your description and local pricing. If the job turns out different on site, we'll talk with you before changing anything.";
 
 const HOURLY_IDS = new Set(["electrician-labor", "plumber-labor"]);
 
@@ -27,6 +27,21 @@ const WORD_NUMBERS: Record<string, number> = {
 };
 
 const VAGUE_RE = /\b(not sure|whatever|misc|and other stuff|unsure|don't know|do not know|dont know)\b/i;
+
+/** Customer quote line. Says the quantity, not how the unit price was chosen. */
+function measurePhrase(quantity: number, unit: string): string {
+  const bare = unit.replace(/^per\s+/i, "");
+  const qty = Number.isInteger(quantity) ? String(quantity) : String(quantity);
+  if (bare.includes(" ") || bare.includes("(") || quantity === 1) return `${qty} ${bare}`;
+  return `${qty} ${pluralWord(bare)}`;
+}
+
+function pluralWord(word: string): string {
+  if (word.endsWith("s")) return word;
+  if (/(ch|sh|x|z)$/i.test(word)) return `${word}es`;
+  if (/[^aeiou]y$/i.test(word)) return `${word.slice(0, -1)}ies`;
+  return `${word}s`;
+}
 
 export type LibrarySelection = {
   items: { id: string; quantity: number }[];
@@ -252,7 +267,7 @@ export function keywordMatch(description: string, library: LibraryEntry[] = LIBR
     confidence: vague ? "low" : "high",
     vague,
     reasoning: noMatch
-      ? "No library entry matched the description, so this uses the hourly labor floor."
+      ? "Nothing in the library matched, so this uses the hourly minimum."
       : `Matched ${names.join(", ")} from the description.`,
   };
 }
@@ -320,7 +335,7 @@ function travelLine(miles: number | null, settings: Settings, from: string, esti
   const estimated = estimate ? " (estimated)" : "";
   return line(
     "Travel",
-    `From ${from}: ${roundCents(miles)} one-way road mi${estimated} × $${settings.mileRate}/mi, $${settings.travelMinimum} minimum${minHit ? " (minimum applies)" : ""}. Charged once for the crew. Not part of the area premium.`,
+    `From ${from}: ${roundCents(miles)} miles one way${estimated}. $${settings.mileRate} per mile, $${settings.travelMinimum} minimum${minHit ? ". The minimum applies" : ""}.`,
     fee,
     "travel",
   );
@@ -345,8 +360,8 @@ function stackExtras(
     if (premium !== 0) {
       next.push(
         line(
-          `Area premium +${pct}%`,
-          `${county} County, on labor and service only (not travel)`,
+          `Area charge +${pct}%`,
+          `${county} County. This is on the work, not the drive.`,
           premium,
           "premium",
         ),
@@ -362,7 +377,7 @@ function stackExtras(
   );
   if (beforeTravel < settings.minimumJob) {
     const topUp = roundCents(settings.minimumJob - beforeTravel);
-    next.push(line("Minimum job charge", `Brings the job to $${settings.minimumJob} before travel`, topUp, "minimum"));
+    next.push(line("Minimum job charge", `Our smallest job is $${settings.minimumJob}, before travel`, topUp, "minimum"));
     math.push(`Minimum job charge adds ${usd(topUp)} so the work is at least ${usd(settings.minimumJob)} before travel.`);
   }
 
@@ -371,7 +386,7 @@ function stackExtras(
   math.push(`Travel ${usd(travelAmount)}.`);
 
   if (urgent) {
-    next.push(line("Urgency", "Short-notice premium", settings.urgency, "urgency"));
+    next.push(line("Short notice", "You asked for a sooner visit", settings.urgency, "urgency"));
     math.push(`Urgency ${usd(settings.urgency)}.`);
   }
   if (pickup) {
@@ -467,34 +482,24 @@ export function priceUnlisted(input: PriceUnlistedInput): PricedUnlisted {
   if (priced.length === 0) {
     reviewReasons.push("No library entry fits");
     const labor = laborFloor;
-    lines.push(line("Labor", `${hours} h × ${usd(input.settings.hourly)} × ${LABOR_BUFFER} buffer`, labor, "service"));
+    lines.push(line("Labor", `About ${hours} hours on site`, labor, "service"));
     serviceForLow = roundCents(input.settings.hourly * hours);
     if (materials > 0) {
-      lines.push(line("Materials", "Estimated, at cost. Not marked up by the area premium.", materials, "materials"));
+      lines.push(line("Materials", "Materials we expect to buy for this job", materials, "materials"));
       materialsForLow = materials;
     }
     math.push(`No library line fit, so the quote is the labor floor${materials > 0 ? " plus materials at cost" : ""}.`);
   } else {
     for (const item of priced) {
       lines.push(
-        line(
-          item.name,
-          `${item.quantity} × ${usd(item.unitHigh)} high end, ${item.basis === "local" ? "local range" : item.discount > 0 ? `national minus ${Math.round(item.discount * 100)}%` : "national range"}`,
-          item.amount,
-          "service",
-        ),
+        line(item.name, measurePhrase(item.quantity, item.unit), item.amount, "service"),
       );
     }
     serviceForLow = roundCents(priced.reduce((sum, item) => sum + item.unitLow * item.quantity, 0));
     if (floor > librarySum) {
       const topUp = roundCents(floor - librarySum);
       lines.push(
-        line(
-          "Profit floor",
-          `Labor floor ${usd(floor)} is above the library high of ${usd(librarySum)}`,
-          topUp,
-          "service",
-        ),
+        line("Time on the job", "Covers the hours this work usually takes.", topUp, "service"),
       );
       math.push(`The labor floor is higher, so a profit floor of ${usd(topUp)} is added. The quoted work price is ${usd(floor)}.`);
     } else {
@@ -545,12 +550,12 @@ export function priceUnlisted(input: PriceUnlistedInput): PricedUnlisted {
 
   const names = priced.map((item) => item.name);
   const scope = priced.length
-    ? `AI estimate: ${names.join(", ")}`
-    : `AI estimate: about ${hours} labor hours (no matching library price)`;
+    ? `Estimate: ${names.join(", ")}`
+    : `Estimate: about ${hours} hours of labor`;
 
   const assumptions = [CUSTOMER_PRICE_NOTE, ...(input.assumptions ?? []).filter(Boolean).slice(0, 8)];
-  if (bookable) assumptions.push("You can book and pay this price now.");
-  else assumptions.push("Dale reviews this estimate before anyone can book or pay it.");
+  if (bookable) assumptions.push("You can book this price and hold a time.");
+  else assumptions.push("Dale will review this before you can book or pay.");
 
   const selection: LibrarySelection = {
     items: priced.length ? priced.map((item) => ({ id: item.id, quantity: item.quantity })) : [],
