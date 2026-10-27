@@ -233,6 +233,29 @@ describe("booking flow", () => {
     expect(approved.data.status).toBe("completed");
   });
 
+  it("does not attach TV-mount notes to a painting quote", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const created = await createQuote(store, customer, {
+      service: "paint",
+      description: "Mount a 55-inch TV on a drywall living-room wall",
+      params: { ...DEFAULT_PARAMS, rooms: 1, sqft: 150 },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.data.scope).toMatch(/Paint walls in 1 room/);
+    expect(created.data.scope).toMatch(/150 sq ft/);
+    const notes = created.data.assumptions.join(" ");
+    expect(notes).not.toMatch(/TV|television|mounting bracket|wall studs/i);
+    expect(notes).toMatch(/paint/i);
+  });
+
   it("books a clear unlisted job from the library high and keeps that price when the slot is held", async () => {
     const store = repo();
     const customer = await actor(store, DEMO_USERS.customer);

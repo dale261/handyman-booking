@@ -13,6 +13,17 @@ type WorkerOption = { id: string; fullName: string };
 
 const SERVICES: ServiceId[] = ["paint", "tv", "blinds", "furniture", "yard", "clean", "helper", "other"];
 
+const PLACEHOLDERS: Record<ServiceId, string> = {
+  paint: "For example: repaint the living room walls, one color",
+  tv: "For example: mount a 55-inch TV on a drywall wall",
+  blinds: "For example: hang blinds on three bedroom windows",
+  furniture: "For example: assemble a desk and a bookcase",
+  yard: "For example: spring cleanup of the front and back yard",
+  clean: "For example: routine clean of the kitchen and two bathrooms",
+  helper: "For example: two helpers to move boxes into the garage",
+  other: "For example: install 40 feet of baseboard in the hallway",
+};
+
 const SAMPLES: { label: string; service: ServiceId; description: string; params: Partial<QuoteParams> }[] = [
   {
     label: "Large interior paint job",
@@ -67,7 +78,7 @@ export function BookForm({
 }) {
   const [service, setService] = useState<ServiceId>("tv");
   const [params, setParams] = useState<QuoteParams>(DEFAULT_PARAMS);
-  const [description, setDescription] = useState("Mount a 55-inch TV on a drywall living-room wall");
+  const [description, setDescription] = useState("");
   const [differentSite, setDifferentSite] = useState(false);
   const [jobSiteAddress, setJobSiteAddress] = useState("");
   const [urgent, setUrgent] = useState(false);
@@ -79,6 +90,13 @@ export function BookForm({
 
   function patch(partial: Partial<QuoteParams>) {
     setParams((current) => ({ ...current, ...partial }));
+  }
+
+  function chooseService(id: ServiceId) {
+    if (id === service) return;
+    setService(id);
+    setDescription("");
+    setError("");
   }
 
   function loadSample(sample: (typeof SAMPLES)[number]) {
@@ -135,7 +153,7 @@ export function BookForm({
             <button
               key={id}
               type="button"
-              onClick={() => setService(id)}
+              onClick={() => chooseService(id)}
               className={
                 service === id
                   ? "rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-paper"
@@ -240,7 +258,13 @@ export function BookForm({
       </div>
 
       <Field label="Describe the job">
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required minLength={8} />
+        <Textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={PLACEHOLDERS[service]}
+          required
+          minLength={8}
+        />
       </Field>
       <p className="text-sm text-muted">
         {service === "other"

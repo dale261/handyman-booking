@@ -14,6 +14,7 @@ import { isLibraryQuote, priceUnlisted, pricedWithTravel } from "@/lib/domain/li
 import { roundCents } from "@/lib/domain/money";
 import { crewNeeded, licenseEstimate, onsiteMinutes, quoteCalc, splitPayment } from "@/lib/domain/pricing";
 import { classify } from "@/lib/domain/screening";
+import { mergeListedAssumptions, noteFitsService } from "@/lib/domain/service-notes";
 import {
   blocksSchedule,
   chooseCrew,
@@ -514,8 +515,7 @@ export async function createQuote(
     if (PREAPPROVED.includes(input.service)) {
       applyQuote(job, settings, measured.miles, measured.fromLabel, measured.source);
       const ai = await readJobDescription(input.service, description);
-      if (ai.scopeHint) job.assumptions = [`From your description: ${ai.scopeHint}`, ...job.assumptions];
-      if (ai.assumptions.length) job.assumptions = [...job.assumptions, ...ai.assumptions];
+      job.assumptions = mergeListedAssumptions(input.service, job.assumptions, ai);
       const flag = screenJob(job, settings, ai.licenseNote);
       job.licenseLevel = flag.level;
       job.licenseTrade = flag.trade;
@@ -534,7 +534,7 @@ export async function createQuote(
         confidence: match.selection.confidence,
         vague: match.selection.vague,
         reasoning: match.reasoning,
-        assumptions: match.assumptions,
+        assumptions: match.assumptions.filter((note) => noteFitsService(input.service, note)),
         zip: area.zip,
         county: area.county,
         settings,
