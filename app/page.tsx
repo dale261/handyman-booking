@@ -15,7 +15,7 @@ export default async function HomePage() {
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
         <div className="space-y-4">
           <p className="text-sm font-semibold uppercase tracking-wide text-copper">Cadillac, Michigan</p>
-          <h1 className="font-display text-4xl font-semibold tracking-tight text-pine sm:text-5xl">Handyman work, priced before anyone drives out.</h1>
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-pine sm:text-5xl">Handyman work, instant quoting and scheduling.</h1>
           <p className="max-w-xl text-lg text-ink/80">
             eX Construction is Dale Orvis&apos;s crew in Cadillac. Tell us the job and you&apos;ll see a price before we drive out. Clear jobs can be booked right away. If we need a closer look, Dale will review it first. Your time is held for {settings.holdHours} hours while you pay.
           </p>
