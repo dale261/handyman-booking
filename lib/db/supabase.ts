@@ -15,7 +15,7 @@ import type {
   WorkerRecord,
 } from "@/lib/db/types";
 import { SlotTakenError } from "@/lib/db/types";
-import type { Repository } from "@/lib/db/repository";
+import type { AiReservation, AiUsageRow, RateLimitResult, Repository } from "@/lib/db/repository";
 
 type ProfileRow = {
   id: string;
@@ -362,6 +362,76 @@ export class SupabaseRepository implements Repository {
   async saveRoute(key: string, miles: number, source: string) {
     await this.must(this.db().from("route_cache").upsert({ route_key: key, miles, source }));
   }
+
+  async reserveAiCall(customerId: string, day: string): Promise<AiReservation> {
+    const settings = await this.getSettings();
+    try {
+      const data = await this.must(
+        this.db().rpc("reserve_ai_call", {
+          p_customer: customerId,
+          p_day: day,
+          p_daily_cap: settings.aiDailyCap,
+          p_customer_cap: settings.aiCustomerDailyCap,
+        }),
+      );
+      return reservationFromRpc(data, settings.aiDailyCap, settings.aiCustomerDailyCap);
+    } catch (error) {
+      console.error("[ai] reserve_ai_call failed, treating the day as capped", error);
+      return {
+        allowed: false,
+        total: 0,
+        customerCalls: 0,
+        dailyCap: settings.aiDailyCap,
+        customerCap: settings.aiCustomerDailyCap,
+      };
+    }
+  }
+
+  async aiUsageForDay(day: string): Promise<AiUsageRow[]> {
+    try {
+      const data = await this.must(
+        this.db().from("ai_usage").select("usage_date, customer_id, calls").eq("usage_date", day),
+      );
+      return (data as { usage_date: string; customer_id: string; calls: number }[]).map((row) => ({
+        usageDate: String(row.usage_date).slice(0, 10),
+        customerId: row.customer_id,
+        calls: Number(row.calls),
+      }));
+    } catch (error) {
+      console.warn("[ai] usage table unavailable", error);
+      return [];
+    }
+  }
+
+  async hitRateLimit(bucket: string, ip: string, max: number, windowMs: number): Promise<RateLimitResult> {
+    const data = await this.must(
+      this.db().rpc("hit_ip_limit", {
+        p_bucket: bucket,
+        p_ip: ip,
+        p_max: max,
+        p_window_ms: windowMs,
+      }),
+    );
+    const row = (data ?? {}) as { allowed?: boolean; hits?: number };
+    return { allowed: Boolean(row.allowed), hits: Number(row.hits ?? 0) };
+  }
+}
+
+function reservationFromRpc(data: unknown, dailyCap: number, customerCap: number): AiReservation {
+  const row = (data ?? {}) as {
+    allowed?: boolean;
+    total?: number;
+    customerCalls?: number;
+    dailyCap?: number;
+    customerCap?: number;
+  };
+  return {
+    allowed: Boolean(row.allowed),
+    total: Number(row.total ?? 0),
+    customerCalls: Number(row.customerCalls ?? 0),
+    dailyCap: Number(row.dailyCap ?? dailyCap),
+    customerCap: Number(row.customerCap ?? customerCap),
+  };
 }
 
 function libraryFromRow(row: Record<string, unknown>): LibraryEntry {

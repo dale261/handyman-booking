@@ -168,6 +168,10 @@ export type Settings = {
   slotStepMin: number;
   /** Michigan residential builder license threshold (labor + materials). Not a price Dale sets. */
   builderThreshold: number;
+  /** Most OpenAI quote calls for the whole shop in one Detroit day. */
+  aiDailyCap: number;
+  /** Most OpenAI quote calls for one customer in one Detroit day. */
+  aiCustomerDailyCap: number;
 };
 
 export type ZipRecord = {

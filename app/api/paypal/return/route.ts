@@ -4,9 +4,15 @@ import { getRepository } from "@/lib/db/index";
 import { flushEmails } from "@/lib/email";
 import { appUrl } from "@/lib/format";
 import { capturePayPalOrder } from "@/lib/paypal";
+import { allowRequest, ANON_LIMIT } from "@/lib/rate-limit";
 import { payJob } from "@/lib/services/booking";
 
 export async function GET(request: Request) {
+  if (!(await allowRequest(ANON_LIMIT, request.headers))) {
+    return NextResponse.redirect(
+      `${appUrl()}/login?error=${encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again.")}`,
+    );
+  }
   const url = new URL(request.url);
   const jobId = url.searchParams.get("job") || "";
   const orderId = url.searchParams.get("token") || "";

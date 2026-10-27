@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { formatDate, formatMinutes } from "@/lib/format";
+import { formatDate, formatMinutes, todayDetroit } from "@/lib/format";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -22,12 +22,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   await requireRole("owner");
   const query = await searchParams;
   const repo = getRepository();
-  const [settings, crews, workers, timeOff] = await Promise.all([
+  const day = todayDetroit();
+  const [settings, crews, workers, timeOff, usage, users] = await Promise.all([
     repo.getSettings(),
     repo.listCrews(),
     repo.listWorkers(),
     repo.listTimeOff(),
+    repo.aiUsageForDay(day),
+    repo.listUsers(),
   ]);
+  const aiCalls = usage.reduce((sum, row) => sum + row.calls, 0);
+  const usageRows = usage.slice().sort((a, b) => b.calls - a.calls || a.customerId.localeCompare(b.customerId));
 
   return (
     <div className="space-y-6">
@@ -35,10 +40,38 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <h1 className="font-display text-3xl font-semibold text-pine">Rates and crews</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Sample crews are labeled “(sample)”. Rename them or delete them and add your own. The first job of each crew’s day is measured from the shop address below. Unlisted jobs use the{" "}
-          <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>, not these rate-sheet numbers.
+          <Link className="font-semibold text-pine underline" href="/owner/library">cost library</Link>, not these rate-sheet numbers. AI quote calls are counted below. The two AI limits are spending caps, not prices.
         </p>
       </div>
       <Flash notice={query.notice} error={query.error} />
+      <Card>
+        <CardHeader>
+          <CardTitle>AI quotes today</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p>
+            <span className="font-semibold text-ink">{aiCalls}</span> of {settings.aiDailyCap} model calls used on {formatDate(day)} (Eastern time). Each customer can use {settings.aiCustomerDailyCap} a day.
+          </p>
+          <p className="text-muted">
+            At the cap, listed services still quote from the rate sheet. Unlisted jobs use the keyword library and wait for you. Set either limit to 0 to turn the model off. The count resets at midnight Eastern.
+          </p>
+          {usageRows.length === 0 ? (
+            <p>No AI quote calls yet today.</p>
+          ) : (
+            <ul className="divide-y divide-line rounded-md border border-line">
+              {usageRows.map((row) => {
+                const person = users.find((user) => user.id === row.customerId);
+                return (
+                  <li key={row.customerId} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span>{person?.fullName || "Customer"}</span>
+                    <span className="font-semibold">{row.calls}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Rates and rules</CardTitle>

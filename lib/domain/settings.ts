@@ -65,6 +65,8 @@ export const DEFAULT_SETTINGS: Settings = {
   slotEndMin: 960,
   slotStepMin: 30,
   builderThreshold: 600,
+  aiDailyCap: 100,
+  aiCustomerDailyCap: 10,
 };
 
 export const PREMIUM_COUNTY_DEFAULT = DEFAULT_SETTINGS.premiumCounties;
@@ -131,6 +133,8 @@ export const SETTING_FIELDS: SettingField[] = [
   { key: "slotStartMin", label: "Earliest appointment start (minutes after midnight)", kind: "number", step: "1", group: "Schedule", example: true },
   { key: "slotEndMin", label: "Latest appointment start (minutes after midnight)", kind: "number", step: "1", group: "Schedule", example: true },
   { key: "slotStepMin", label: "Minutes between start times", kind: "number", step: "1", group: "Schedule", example: true },
+  { key: "aiDailyCap", label: "Most AI quote calls per day", kind: "number", step: "1", group: "AI quotes" },
+  { key: "aiCustomerDailyCap", label: "Most AI quote calls per customer per day", kind: "number", step: "1", group: "AI quotes" },
 ];
 
 export function normalizeSettings(input: Partial<Settings> | null | undefined): Settings {
@@ -198,5 +202,7 @@ export function normalizeSettings(input: Partial<Settings> | null | undefined): 
     slotEndMin: Math.round(num(src.slotEndMin, d.slotEndMin)),
     slotStepMin: Math.max(15, Math.round(num(src.slotStepMin, d.slotStepMin))),
     builderThreshold: num(src.builderThreshold, d.builderThreshold),
+    aiDailyCap: Math.max(0, Math.round(num(src.aiDailyCap, d.aiDailyCap))),
+    aiCustomerDailyCap: Math.max(0, Math.round(num(src.aiCustomerDailyCap, d.aiCustomerDailyCap))),
   };
 }

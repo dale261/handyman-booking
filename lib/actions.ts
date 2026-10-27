@@ -3,7 +3,9 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { clearLocalSession, createSupabaseServer, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
+import { demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
+import { allowRequest, ANON_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewRecord, Role, WorkerRecord } from "@/lib/db/types";
@@ -60,6 +62,9 @@ async function mutate(jobId: string, notice: string, work: (repo: Repository, ac
 }
 
 export async function signUp(form: FormData) {
+  if (!(await allowRequest(ANON_LIMIT))) {
+    redirect("/signup?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
+  }
   const fullName = field(form, "fullName");
   const email = field(form, "email").toLowerCase();
   const phone = field(form, "phone");
@@ -121,6 +126,9 @@ export async function signUp(form: FormData) {
 }
 
 export async function signIn(form: FormData) {
+  if (!(await allowRequest(ANON_LIMIT))) {
+    redirect("/login?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
+  }
   const email = field(form, "email").toLowerCase();
   const password = String(form.get("password") ?? "");
   const next = safeNext(field(form, "next"));
@@ -144,8 +152,11 @@ export async function signIn(form: FormData) {
 }
 
 export async function demoSignIn(form: FormData) {
-  if (process.env.NODE_ENV === "production" || supabaseConfigured()) {
-    redirect("/login?error=" + encodeURIComponent("Sample sign-in is only for local testing before Supabase is connected."));
+  if (!(await allowRequest(ANON_LIMIT))) {
+    redirect("/login?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
+  }
+  if (!demoSignInAllowed()) {
+    redirect("/login?error=" + encodeURIComponent("Sample sign-in is turned off on this site."));
   }
   const role = field(form, "role");
   const id = role === "owner" ? DEMO_USERS.owner : role === "worker" ? DEMO_USERS.worker : DEMO_USERS.customer;
@@ -207,6 +218,9 @@ export async function submitQuote(input: {
   preferredWorkerId: string | null;
   photos: { id: string; name: string }[];
 }): Promise<{ error: string } | void> {
+  if (!(await allowRequest(QUOTE_LIMIT))) {
+    return { error: "Too many quotes from this network. Wait about an hour and try again." };
+  }
   const actor = await requireActor();
   const repo = getRepository();
   const result = await createQuote(repo, actor, {

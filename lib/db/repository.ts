@@ -52,4 +52,28 @@ export interface Repository {
   saveGeo(key: string, point: { lat: number; lng: number }): Promise<void>;
   getRoute(key: string): Promise<{ miles: number; source: string } | null>;
   saveRoute(key: string, miles: number, source: string): Promise<void>;
+  /** Count one model call for this customer on this Detroit date, or refuse when a cap is already used. */
+  reserveAiCall(customerId: string, day: string): Promise<AiReservation>;
+  aiUsageForDay(day: string): Promise<AiUsageRow[]>;
+  /** True in `allowed` until this IP reaches max hits inside the window. */
+  hitRateLimit(bucket: string, ip: string, max: number, windowMs: number): Promise<RateLimitResult>;
 }
+
+export type AiUsageRow = {
+  usageDate: string;
+  customerId: string;
+  calls: number;
+};
+
+export type AiReservation = {
+  allowed: boolean;
+  total: number;
+  customerCalls: number;
+  dailyCap: number;
+  customerCap: number;
+};
+
+export type RateLimitResult = {
+  allowed: boolean;
+  hits: number;
+};

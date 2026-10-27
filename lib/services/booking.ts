@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { matchUnlistedJob, readJobDescription } from "@/lib/ai";
+import { aiModeFromReservation, type AiMode } from "@/lib/ai-cap";
 import type { Repository } from "@/lib/db/repository";
 import {
   SlotTakenError,
@@ -403,6 +404,18 @@ function screenJob(job: JobRecord, settings: Settings, aiNote: string | null): S
   return flag;
 }
 
+/** Reserve a model call only when a key is set. A missing usage table skips the model. */
+async function quoteAiMode(repo: Repository, customerId: string): Promise<AiMode> {
+  if (!process.env.OPENAI_API_KEY) return "fallback";
+  try {
+    const reservation = await repo.reserveAiCall(customerId, todayDetroit());
+    return aiModeFromReservation(true, Boolean(process.env.VITEST), reservation.allowed);
+  } catch (error) {
+    console.error("[ai] usage counter unavailable, skipping the model", error);
+    return "capped";
+  }
+}
+
 export async function createQuote(
   repo: Repository,
   actor: Actor,
@@ -512,9 +525,10 @@ export async function createQuote(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    const mode = await quoteAiMode(repo, user.id);
     if (PREAPPROVED.includes(input.service)) {
       applyQuote(job, settings, measured.miles, measured.fromLabel, measured.source);
-      const ai = await readJobDescription(input.service, description);
+      const ai = await readJobDescription(input.service, description, { allowModel: mode === "model" });
       job.assumptions = mergeListedAssumptions(input.service, job.assumptions, ai);
       const flag = screenJob(job, settings, ai.licenseNote);
       job.licenseLevel = flag.level;
@@ -526,7 +540,7 @@ export async function createQuote(
       else job.status = "quoted";
     } else {
       const library = await repo.listLibrary();
-      const match = await matchUnlistedJob(description, library);
+      const match = await matchUnlistedJob(description, library, { allowModel: mode === "model" });
       const priced = priceUnlisted({
         items: match.selection.items,
         estimatedHours: match.selection.estimatedHours,
@@ -570,25 +584,32 @@ export async function createQuote(
       );
       const hardRefer = flag.level === "refer";
       const catchAll = flag.trade === "Not on the pre-approved list";
-      const book = priced.quoteMeta.bookable && !hardRefer && !match.licenseConcern;
+      const capped = mode === "capped";
+      const book = priced.quoteMeta.bookable && !hardRefer && !match.licenseConcern && !capped;
       if (!book) {
         job.status = "scope_review";
         job.referralNote = "";
         const reasons = priced.quoteMeta.reviewReasons;
+        const withCap = capped ? [...reasons, "Daily AI quote limit reached."] : reasons;
         if (hardRefer || (flag.level === "review" && !catchAll)) {
           job.licenseLevel = flag.level;
           job.licenseTrade = flag.trade;
-          job.licenseWhy = [flag.why, ...reasons].filter(Boolean).join(" ");
+          job.licenseWhy = [flag.why, ...withCap].filter(Boolean).join(" ");
           job.licenseRule = flag.rule;
         } else if (match.licenseConcern) {
           job.licenseLevel = "review";
           job.licenseTrade = "Possible license (AI screen)";
-          job.licenseWhy = match.licenseConcern;
+          job.licenseWhy = [match.licenseConcern, ...(capped ? ["Daily AI quote limit reached."] : [])].filter(Boolean).join(" ");
           job.licenseRule = "The cost library priced the job, and the AI asked for a person to look.";
+        } else if (capped && reasons.length === 0) {
+          job.licenseLevel = "review";
+          job.licenseTrade = "Daily AI quote limit";
+          job.licenseWhy = "The daily AI quote limit was reached. This price is the keyword estimate, and it waits for the owner.";
+          job.licenseRule = "AI spending cap. Unlisted jobs go to owner review until the next day or the cap is raised.";
         } else {
           job.licenseLevel = "review";
-          job.licenseTrade = reasons[0] ?? "Owner review";
-          job.licenseWhy = reasons.join(" ");
+          job.licenseTrade = withCap[0] ?? "Owner review";
+          job.licenseWhy = withCap.join(" ");
           job.licenseRule = "Cost library. Low confidence or a vague scope is reviewed before anyone can book.";
         }
       } else {

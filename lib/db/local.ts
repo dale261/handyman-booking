@@ -19,7 +19,10 @@ import type {
   WorkerRecord,
 } from "@/lib/db/types";
 import { SlotTakenError } from "@/lib/db/types";
-import type { Repository } from "@/lib/db/repository";
+import type { AiReservation, AiUsageRow, RateLimitResult, Repository } from "@/lib/db/repository";
+
+type UsageRow = { usageDate: string; customerId: string; calls: number };
+type IpLimitRow = { bucket: string; ip: string; windowStart: number; hits: number };
 
 type FileShape = {
   users: UserRecord[];
@@ -36,6 +39,8 @@ type FileShape = {
   geo: Record<string, { lat: number; lng: number }>;
   routes: Record<string, { miles: number; source: string }>;
   invoiceSeq: number;
+  aiUsage: UsageRow[];
+  ipLimits: IpLimitRow[];
 };
 
 const als = new AsyncLocalStorage<FileShape>();
@@ -193,6 +198,8 @@ function seed(): FileShape {
     geo: {},
     routes: {},
     invoiceSeq: 1000,
+    aiUsage: [],
+    ipLimits: [],
   };
 }
 
@@ -224,6 +231,8 @@ export class LocalRepository implements Repository {
     parsed.settings = normalizeSettings(parsed.settings);
     parsed.invoiceSeq = parsed.invoiceSeq || 1000;
     parsed.library = mergeLibrary(Array.isArray(parsed.library) ? parsed.library : null);
+    parsed.aiUsage = Array.isArray(parsed.aiUsage) ? parsed.aiUsage : [];
+    parsed.ipLimits = Array.isArray(parsed.ipLimits) ? parsed.ipLimits : [];
     return parsed;
   }
 
@@ -462,6 +471,50 @@ export class LocalRepository implements Repository {
   async saveRoute(key: string, miles: number, source: string) {
     await this.run(async () => {
       this.db().routes[key] = { miles, source };
+    });
+  }
+
+  async reserveAiCall(customerId: string, day: string): Promise<AiReservation> {
+    return this.run(async () => {
+      const db = this.db();
+      const dailyCap = db.settings.aiDailyCap;
+      const customerCap = db.settings.aiCustomerDailyCap;
+      const rows = db.aiUsage.filter((row) => row.usageDate === day);
+      const total = rows.reduce((sum, row) => sum + row.calls, 0);
+      const mine = rows.find((row) => row.customerId === customerId);
+      const customerCalls = mine?.calls ?? 0;
+      if (dailyCap < 1 || customerCap < 1 || total >= dailyCap || customerCalls >= customerCap) {
+        return { allowed: false, total, customerCalls, dailyCap, customerCap };
+      }
+      if (mine) mine.calls += 1;
+      else db.aiUsage.push({ usageDate: day, customerId, calls: 1 });
+      return { allowed: true, total: total + 1, customerCalls: customerCalls + 1, dailyCap, customerCap };
+    });
+  }
+
+  async aiUsageForDay(day: string): Promise<AiUsageRow[]> {
+    return this.run(async () => this.clone(this.db().aiUsage.filter((row) => row.usageDate === day)));
+  }
+
+  async hitRateLimit(bucket: string, ip: string, max: number, windowMs: number): Promise<RateLimitResult> {
+    return this.run(async () => {
+      const now = Date.now();
+      const db = this.db();
+      db.ipLimits = db.ipLimits.filter((row) => now - row.windowStart < windowMs || (row.bucket === bucket && row.ip === ip));
+      let row = db.ipLimits.find((item) => item.bucket === bucket && item.ip === ip);
+      if (!row || now - row.windowStart >= windowMs) {
+        if (row) {
+          row.windowStart = now;
+          row.hits = 1;
+        } else {
+          row = { bucket, ip, windowStart: now, hits: 1 };
+          db.ipLimits.push(row);
+        }
+        return { allowed: max >= 1, hits: 1 };
+      }
+      if (row.hits >= max) return { allowed: false, hits: row.hits };
+      row.hits += 1;
+      return { allowed: true, hits: row.hits };
     });
   }
 }

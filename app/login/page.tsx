@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { demoSignIn, signIn } from "@/lib/actions";
-import { supabaseConfigured } from "@/lib/db/index";
+import { demoSignInAllowed } from "@/lib/demo";
 import { Flash } from "@/components/flash";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; notice?: string; next?: string }> }) {
   const query = await searchParams;
-  const showDemo = process.env.NODE_ENV !== "production" && !supabaseConfigured();
+  const showDemo = demoSignInAllowed();
 
   return (
     <div className="mx-auto grid max-w-lg gap-4">

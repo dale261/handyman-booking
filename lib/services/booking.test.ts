@@ -347,4 +347,95 @@ describe("booking flow", () => {
     expect(created.data.status).toBe("scope_review");
     expect(created.data.licenseLevel).toBe("refer");
   });
+
+  it("sends a clear unlisted job to review when the AI cap is used, and still quotes a listed job", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const settings = await store.getSettings();
+    await store.saveSettings({ ...settings, aiDailyCap: 0 });
+    const previous = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "test-key";
+    try {
+      const created = await createQuote(store, customer, {
+        service: "other",
+        description: "Install 40 feet of baseboard in the hallway",
+        params: { ...DEFAULT_PARAMS },
+        differentSite: false,
+        jobSiteAddress: "",
+        urgent: false,
+        pickup: false,
+        preferredWorkerId: null,
+        photos: [],
+      });
+      expect(created.ok).toBe(true);
+      if (!created.ok) return;
+      expect(created.data.status).toBe("scope_review");
+      expect(`${created.data.licenseTrade} ${created.data.licenseWhy}`).toMatch(/daily AI quote limit/i);
+      expect(created.data.lines.some((line) => line.label === "Baseboard")).toBe(true);
+
+      const listed = await createQuote(store, customer, {
+        service: "tv",
+        description: "Mount a 55-inch TV on a drywall living-room wall",
+        params: { ...DEFAULT_PARAMS, tvSize: "55", wall: "drywall", conceal: "none" },
+        differentSite: false,
+        jobSiteAddress: "",
+        urgent: false,
+        pickup: false,
+        preferredWorkerId: null,
+        photos: [],
+      });
+      expect(listed.ok).toBe(true);
+      if (!listed.ok) return;
+      expect(listed.data.status).toBe("quoted");
+      expect(listed.data.total).toBe(275);
+
+      const paint = await createQuote(store, customer, {
+        service: "paint",
+        description: "Paint the bedroom walls, one room, about 150 square feet",
+        params: { ...DEFAULT_PARAMS, rooms: 1, sqft: 150 },
+        differentSite: false,
+        jobSiteAddress: "",
+        urgent: false,
+        pickup: false,
+        preferredWorkerId: null,
+        photos: [],
+      });
+      expect(paint.ok).toBe(true);
+      if (!paint.ok) return;
+      expect(paint.data.status).toBe("quoted");
+      expect(paint.data.service).toBe("paint");
+    } finally {
+      if (previous === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previous;
+    }
+  });
+
+  it("still books a clear unlisted job from keywords when there is no OpenAI key", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const settings = await store.getSettings();
+    await store.saveSettings({ ...settings, aiDailyCap: 0 });
+    const previous = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      const created = await createQuote(store, customer, {
+        service: "other",
+        description: "Install 40 feet of baseboard in the hallway",
+        params: { ...DEFAULT_PARAMS },
+        differentSite: false,
+        jobSiteAddress: "",
+        urgent: false,
+        pickup: false,
+        preferredWorkerId: null,
+        photos: [],
+      });
+      expect(created.ok).toBe(true);
+      if (!created.ok) return;
+      expect(created.data.status).toBe("quoted");
+      expect(created.data.total).toBe(430);
+    } finally {
+      if (previous === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previous;
+    }
+  });
 });

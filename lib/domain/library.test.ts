@@ -35,6 +35,8 @@ function price(
 describe("cost library pricing", () => {
   it("keeps Dale's rate-sheet defaults and seeds 37 jobs", () => {
     expect(settings.hourly).toBe(95);
+    expect(settings.aiDailyCap).toBe(100);
+    expect(settings.aiCustomerDailyCap).toBe(10);
     expect(settings.paintSqft).toBe(6.5);
     expect(settings.helperRate).toBe(100);
     expect(settings.mileRate).toBe(1);

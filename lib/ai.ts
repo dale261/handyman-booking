@@ -50,9 +50,13 @@ const EMPTY: AiRead = { source: "rules", assumptions: [], licenseNote: null, sco
  * It never sets the price. If the key is missing or the call fails,
  * the quote is priced from the rate table and the keyword screen alone.
  */
-export async function readJobDescription(service: string, description: string): Promise<AiRead> {
+export async function readJobDescription(
+  service: string,
+  description: string,
+  options?: { allowModel?: boolean },
+): Promise<AiRead> {
   const key = process.env.OPENAI_API_KEY;
-  if (!key || process.env.VITEST) return EMPTY;
+  if (!key || process.env.VITEST || options?.allowModel === false) return EMPTY;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -97,7 +101,11 @@ export async function readJobDescription(service: string, description: string): 
  * A missing key, a test run, or a failed call uses the keyword matcher.
  * A successful reply with no usable ids stays empty so the hourly floor can send it to review.
  */
-export async function matchUnlistedJob(description: string, library: LibraryEntry[]): Promise<UnlistedMatch> {
+export async function matchUnlistedJob(
+  description: string,
+  library: LibraryEntry[],
+  options?: { allowModel?: boolean },
+): Promise<UnlistedMatch> {
   const rules = keywordMatch(description, library);
   const fallback: UnlistedMatch = {
     source: "rules",
@@ -113,7 +121,7 @@ export async function matchUnlistedJob(description: string, library: LibraryEntr
     licenseConcern: null,
   };
   const key = process.env.OPENAI_API_KEY;
-  if (!key || process.env.VITEST) return fallback;
+  if (!key || process.env.VITEST || options?.allowModel === false) return fallback;
   try {
     const catalog = library
       .map((entry) => `${entry.id} | ${entry.name} | ${entry.unit} | ${entry.group} | ${entry.performs ? "we do this" : "refer out"}`)

@@ -1,3 +1,4 @@
+import { demoSignInAllowed } from "@/lib/demo";
 import { supabaseConfigured } from "@/lib/db/index";
 import { resendConfigured } from "@/lib/email";
 import { paypalConfigured } from "@/lib/paypal";
@@ -20,6 +21,6 @@ export function keyStatus(): KeyStatus {
     openai: Boolean(process.env.OPENAI_API_KEY),
     ors: Boolean(process.env.ORS_API_KEY),
     osrm: Boolean(process.env.OSRM_BASE_URL),
-    localDemo: !supabaseConfigured(),
+    localDemo: demoSignInAllowed(),
   };
 }

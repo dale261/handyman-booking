@@ -4,7 +4,7 @@ Customers describe a job, get an itemized quote from your rate sheet, hold a tim
 
 The first time you run it on your own computer, it does not need any paid account. Quotes, the service-area ZIP list, invoices starting at 1000, and sample sign-in all work from a file on that computer. Emails print in the terminal. The Pay button records a demo payment. Road miles are straight-line distance times 1.25 until you add a free routing key.
 
-Do not put that demo mode on the internet. Sample sign-in would let a stranger open the owner screen. Connect the free Supabase project first, then deploy.
+Do not put that demo mode on the internet. Sample sign-in would let a stranger open the owner screen. Connect the free Supabase project first, then deploy. Once `NODE_ENV` is `production`, or the Supabase URL, anon key, and service role key are set, the sample buttons disappear unless you explicitly set `DEMO_MODE=true`. Leave that unset on the public site.
 
 ## Run it on your computer
 
@@ -29,7 +29,8 @@ Supabase is the database and the sign-in system. The free project is enough. It 
 3. Open the file `supabase/migrations/20261026120000_init.sql` from this folder, copy the whole file, paste it into the query, and run it. You should see success.
 4. Do the same with `supabase/migrations/20261026120100_seed_zips.sql`. That loads the 161 ZIP codes. Run it second. Running it twice is safe.
 5. Do the same with `supabase/migrations/20261026140000_cost_library.sql`. That loads the 37-job cost library for work that is not on the rate sheet. Run it third. Running it twice will not overwrite prices you already changed.
-6. Still in the SQL Editor, run this with your real email:
+6. Do the same with `supabase/migrations/20261027120000_ai_usage.sql`. That stores the daily AI quote counts and the IP limits. Run it after the cost library. Running it twice is safe.
+7. Still in the SQL Editor, run this with your real email:
 
 ```sql
 update public.app_settings
@@ -39,15 +40,15 @@ where id = 1;
 
 The first person who signs up with that exact email becomes the owner. Everyone else becomes a customer, unless their email matches a worker you already added.
 
-7. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
-8. Open **Project Settings**, then **API**. Copy three values:
+8. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
+9. Open **Project Settings**, then **API**. Copy three values:
    - Project URL
    - `anon` public key
    - `service_role` secret key
 
 The service role key can read every job. It stays in `.env.local` on the server. Never paste it into a web page or a public chat.
 
-9. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
+10. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=the project URL
@@ -57,8 +58,8 @@ OWNER_EMAIL=the same email you put in the SQL update
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:43123
 ```
 
-10. Stop the app (Ctrl+C) and run `npm run dev` again.
-11. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
+11. Stop the app (Ctrl+C) and run `npm run dev` again.
+12. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
 
 If you already created the account before setting `owner_email`, you are a customer. In the SQL Editor run, with your user id from **Authentication → Users**:
 
@@ -120,6 +121,8 @@ Anything else is priced from the cost library under **Library**:
 
 The model only picks library items, quantities, hours, materials, and whether it is confident. The dollar amount is calculated in the app. With no OpenAI key, the same rules run from keywords in the description.
 
+The Rates screen caps model calls at 100 a day and 10 per customer a day. Those two numbers are limits, not prices. Set either one to 0 to stop model calls. Past the cap, listed jobs still use the rate sheet. Unlisted jobs use the keyword library and wait for you. Today’s count is on that same Rates screen and resets at midnight Eastern.
+
 ## Turn on the AI match (optional)
 
 Listed services can still get a short note from the description. Unlisted jobs use the model to pick library items. It cannot set a dollar amount. If the key is missing or the call fails, the quote still works.
@@ -138,20 +141,39 @@ For real road miles, create a free key at [https://openrouteservice.org](https:/
 
 Addresses are looked up with the free OpenStreetMap search. If that lookup fails, the ZIP center is used.
 
-## Put it on the internet for free
+## Deploying to Vercel
 
-Do this only after Supabase is connected and you have signed in once as the owner. A deploy without those keys shows a “not connected” page on purpose.
+This app is set up for Vercel’s free Hobby plan, with Supabase as the database. Do this only after the SQL files have been run and you have signed in once as the owner on your computer. A deploy without the Supabase keys shows a “not connected” page on purpose.
 
-Cloudflare Pages is a free host that allows a business site. Vercel’s free Hobby plan is for personal projects, not a company, so don’t use that for eX Construction.
+Sample one-click sign-in stays off on Vercel. It turns off when `NODE_ENV` is `production` or when the Supabase URL, anon key, and service role key are all set. Leave `DEMO_MODE` unset. Setting `DEMO_MODE=true` turns the sample buttons back on, which you do not want on the public site.
 
-1. Push this folder to a private Git hosting account.
-2. In Cloudflare, create a Pages project from that repository. Build command: `npm run build`. Build output is handled by the Next.js adapter. If Cloudflare asks, use the Next.js preset (OpenNext).
-3. Add the same variables from `.env.local` in the Pages environment settings. Set `NEXT_PUBLIC_APP_URL` to the `https://` address Cloudflare gives you.
-4. Deploy, open the site, and sign in with the owner email.
+1. Push this folder to a Git host Vercel can read.
+2. In Vercel, import the repository. Framework preset: Next.js. The build command is `npm run build`.
+3. Add these environment variables. Mark the secret ones as sensitive.
 
-Netlify’s free Next.js hosting is another option with the same environment variables. Keep the service role key, Resend key, PayPal secret, and OpenAI key marked as secrets.
+Required:
 
-Supabase’s free project is the database. If it pauses, open the Supabase dashboard and restore it. The site will work again after that. No jobs are deleted by the pause.
+- `NEXT_PUBLIC_SUPABASE_URL` — Project URL from Supabase → Project Settings → API
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon public key
+- `SUPABASE_SERVICE_ROLE_KEY` — the service_role secret. Server only. Never put it in a page or a public chat.
+- `OPENAI_API_KEY` — unlisted jobs can use the model, inside the daily caps on the Rates screen (100 calls a day and 10 per customer, until you change them)
+- `OWNER_EMAIL` — the same email you set as the owner
+- `NEXT_PUBLIC_APP_URL` — the `https://` address Vercel gives you, or your custom domain. PayPal sends customers back here.
+
+Optional:
+
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` — live email. Without them, messages stay in the owner queue and are not delivered.
+- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_ENV` (`sandbox` or `live`)
+- `ORS_API_KEY` — real road miles. Without it, travel uses straight-line distance times 1.25.
+- `OPENAI_MODEL` — leave as `gpt-4.1-mini` unless you want a different model.
+
+4. In Supabase, open **Authentication → URL configuration**. Set **Site URL** to the Vercel `https://` domain. Add that same domain under **Redirect URLs**, including `https://your-app.vercel.app/**`. Sign-in fails if these still point at localhost.
+5. Deploy, open the site, and sign in with the owner email and password. The sample buttons should not be on the sign-in page.
+6. On **Rates**, the AI quotes card shows how many model calls have been used today. When the cap is hit, listed jobs still quote from the rate sheet. Unlisted jobs use the keyword library and wait for you.
+
+Run `supabase/migrations/20261027120000_ai_usage.sql` in the SQL Editor if you have not already. That table is what the daily cap and the IP limits use.
+
+If the Supabase free project pauses, open the Supabase dashboard and restore it. The site works again after that. No jobs are deleted by the pause.
 
 ## What you should change first
 
