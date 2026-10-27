@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRepository } from "@/lib/db/index";
+import { directBookingBlurb } from "@/lib/domain/direct-booking";
 import { usd } from "@/lib/format";
 
 export default async function HomePage() {
@@ -33,7 +34,7 @@ export default async function HomePage() {
             <CardTitle>What we book directly</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>Painting, including large jobs. House cleaning. TV mounting and window coverings. Furniture assembly. Hire a helper.</p>
+            <p>{directBookingBlurb()}</p>
             <p className="text-muted">Other handyman work can be priced from what you describe. If the job is unclear, or it needs a license, Dale will review it before you can book.</p>
           </CardContent>
         </Card>

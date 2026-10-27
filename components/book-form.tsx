@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { submitQuote } from "@/lib/actions";
 import { LOCKED_PRICE } from "@/lib/domain/copy";
+import { quoteToolServices } from "@/lib/domain/direct-booking";
 import { DEFAULT_PARAMS, SERVICE_LABELS, type QuoteParams, type ServiceId } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 type WorkerOption = { id: string; fullName: string };
 
-const SERVICES: ServiceId[] = ["paint", "tv", "blinds", "furniture", "yard", "clean", "helper", "other"];
+const SERVICES: ServiceId[] = quoteToolServices();
 
 const PLACEHOLDERS: Record<ServiceId, string> = {
   paint: "For example: repaint the living room walls, one color",
