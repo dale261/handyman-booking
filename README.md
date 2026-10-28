@@ -177,6 +177,8 @@ Run `supabase/migrations/20261027120000_ai_usage.sql` in the SQL Editor if you h
 
 If the Supabase free project pauses, open the Supabase dashboard and restore it. The site works again after that. No jobs are deleted by the pause.
 
+To keep it from pausing, `vercel.json` schedules a daily call to `/api/health`, which reads one settings row. Vercel sets that up on the next deploy. If you set a `CRON_SECRET` environment variable in Vercel, the route only answers Vercel's own call.
+
 ## What you should change first
 
 - Shop address, if it is ever not 1339 N Mitchell St. Latitude and longitude should match. The starting point is the shop’s map location.
