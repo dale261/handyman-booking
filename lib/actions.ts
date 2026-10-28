@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { clearLocalSession, createSupabaseServer, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
-import { demoSignInAllowed } from "@/lib/demo";
+import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
 import { DEMO_USERS } from "@/lib/db/local";
@@ -249,6 +249,9 @@ export async function releaseHoldAction(form: FormData) {
 
 export async function demoPayAction(form: FormData) {
   const jobId = field(form, "jobId");
+  if (!demoSignInAllowed()) {
+    jobBack(jobId, "error", DEMO_PAY_UNAVAILABLE);
+  }
   await mutate(jobId, "Payment recorded. PayPal isn't connected here yet, so nothing was charged.", (repo, actor) => payJob(repo, actor, jobId, "paypal", `demo-${randomUUID()}`));
 }
 
