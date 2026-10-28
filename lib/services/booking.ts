@@ -731,6 +731,14 @@ export async function holdSlot(
           `Hi ${fresh.customerName}, we're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${settings.holdHours} hours to keep this time.\n\nPay here: ${jobUrl(fresh.id)}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${footer(settings)}`,
           fresh.id,
         );
+        await notify(
+          repo,
+          settings,
+          "pay",
+          `Time held, waiting on payment: ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`,
+          `${fresh.customerName} (${fresh.customerPhone}) held ${fresh.scope} at ${fresh.jobSiteAddress}. Invoice #${fresh.invoiceNumber}. ${usd(fresh.amountDueNow)} is due within ${settings.holdHours} hours or the time is released.${paypalConfigured() ? "" : " Online payment isn't set up, so collect it yourself and mark it paid on the job page."}`,
+          fresh.id,
+        );
       } else {
         await notify(
           repo,
