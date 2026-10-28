@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { requireActor } from "@/lib/auth";
+import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
@@ -327,15 +328,15 @@ export default async function JobPage({
                       <input type="hidden" name="jobId" value={job.id} />
                       <SubmitButton>Pay with PayPal</SubmitButton>
                     </form>
-                  ) : (
-                    actor.role !== "worker" && (
-                      <form action={demoPayAction}>
-                        <input type="hidden" name="jobId" value={job.id} />
-                        <SubmitButton variant="copper">Record a test payment</SubmitButton>
-                        <p className="mt-1 text-xs text-muted">PayPal isn&apos;t connected on this copy yet. This marks the invoice paid without charging a card.</p>
-                      </form>
-                    )
-                  )}
+                  ) : actor.role !== "worker" && demoSignInAllowed() ? (
+                    <form action={demoPayAction}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <SubmitButton variant="copper">Record a test payment</SubmitButton>
+                      <p className="mt-1 text-xs text-muted">PayPal isn&apos;t connected on this copy yet. This marks the invoice paid without charging a card.</p>
+                    </form>
+                  ) : actor.role !== "worker" ? (
+                    <p>{DEMO_PAY_UNAVAILABLE}</p>
+                  ) : null}
                   {actor.role === "owner" && (
                     <div className="flex flex-wrap gap-2">
                       <form action={manualPayAction}>
