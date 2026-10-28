@@ -8,7 +8,9 @@ import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
-import type { Actor, CrewRecord, Role, WorkerRecord } from "@/lib/db/types";
+import { actorFromUser, type Actor, type CrewRecord, type Role, type WorkerRecord } from "@/lib/db/types";
+import { clearDraftCookie, readDraftCookie, writeDraftCookie } from "@/lib/draft-cookie";
+import { parseDraft } from "@/lib/domain/draft";
 import { mergeLibrary } from "@/lib/domain/library";
 import type { LibraryGroup } from "@/lib/domain/library-data";
 import { normalizeSettings, SETTING_FIELDS } from "@/lib/domain/settings";
@@ -19,6 +21,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { createPayPalOrder } from "@/lib/paypal";
 import { appUrl } from "@/lib/format";
 import { blocksSchedule } from "@/lib/domain/scheduling";
+import { publicEstimate, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
   amountPayable,
   approveWork,
@@ -65,6 +68,36 @@ async function mutate(jobId: string, notice: string, work: (repo: Repository, ac
   jobBack(jobId, "notice", notice);
 }
 
+/**
+ * A visitor who priced a job before signing up has a draft in a cookie.
+ * Turn it into a real quote now and send them to that job. Returns the
+ * page to go to, or null when there is nothing to finish.
+ */
+async function finishDraft(repo: Repository, actor: Actor): Promise<string | null> {
+  const draft = await readDraftCookie();
+  if (!draft) return null;
+  await clearDraftCookie();
+  if (actor.role !== "customer") return null;
+  const result = await createQuote(repo, actor, {
+    service: draft.service,
+    description: draft.description,
+    params: { ...DEFAULT_PARAMS, ...draft.params },
+    differentSite: false,
+    jobSiteAddress: "",
+    urgent: draft.urgent,
+    pickup: draft.pickup,
+    preferredWorkerId: null,
+    photos: [],
+  });
+  await settle(repo);
+  if (!result.ok) return "/book?error=" + encodeURIComponent(result.error);
+  if (draft.leadId) {
+    const lead = await repo.getLead(draft.leadId);
+    if (lead && !lead.jobId) await repo.saveLead({ ...lead, jobId: result.data.id, updatedAt: new Date().toISOString() });
+  }
+  return `/jobs/${result.data.id}`;
+}
+
 export async function signUp(form: FormData) {
   if (!(await allowRequest(ANON_LIMIT))) {
     redirect("/signup?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
@@ -108,7 +141,8 @@ export async function signUp(form: FormData) {
       workerId: existing?.workerId ?? null,
     });
     const user = await repo.getUser(data.user.id);
-    redirect(homeFor(user?.role ?? "customer"));
+    const finished = user ? await finishDraft(repo, actorFromUser(user)) : null;
+    redirect(finished ?? homeFor(user?.role ?? "customer"));
   }
 
   const taken = await repo.getUserByEmail(email);
@@ -126,7 +160,8 @@ export async function signUp(form: FormData) {
   };
   await repo.saveUser(user);
   await setLocalSession(user.id);
-  redirect("/jobs");
+  const finished = await finishDraft(repo, actorFromUser(user));
+  redirect(finished ?? "/jobs");
 }
 
 export async function signIn(form: FormData) {
@@ -144,7 +179,8 @@ export async function signIn(form: FormData) {
     if (error) redirect("/login?error=" + encodeURIComponent("Email or password doesn't match."));
     const user = await repo.getUserByEmail(email);
     if (!user) redirect("/login?error=" + encodeURIComponent("You're signed in, but we don't have a profile for this email yet. Ask Dale to check the owner email."));
-    redirect(next || homeFor(user.role));
+    const finished = await finishDraft(repo, actorFromUser(user));
+    redirect(finished ?? next ?? homeFor(user.role));
   }
 
   const user = await repo.getUserByEmail(email);
@@ -152,7 +188,8 @@ export async function signIn(form: FormData) {
     redirect("/login?error=" + encodeURIComponent("Email or password doesn't match."));
   }
   await setLocalSession(user.id);
-  redirect(next || homeFor(user.role));
+  const finished = await finishDraft(repo, actorFromUser(user));
+  redirect(finished ?? next ?? homeFor(user.role));
 }
 
 export async function demoSignIn(form: FormData) {
@@ -209,6 +246,40 @@ export async function updateAccount(form: FormData) {
     if (error) redirect("/account?error=" + encodeURIComponent(error.message));
   }
   redirect("/account?notice=" + encodeURIComponent("Account saved."));
+}
+
+/**
+ * Price a listed service for a visitor with no account, and save them as a lead.
+ * No AI call. The first check from a phone number sends Dale a notice.
+ */
+export async function publicEstimateAction(
+  input: unknown,
+): Promise<{ ok: true; estimate: PublicEstimate; leadId: string } | { ok: false; error: string }> {
+  if (!(await allowRequest(ANON_LIMIT))) {
+    return { ok: false, error: "Too many price checks from this network. Wait a few minutes and try again." };
+  }
+  const parsed = parseDraft(input);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const repo = getRepository();
+  const result = await publicEstimate(repo, parsed.draft);
+  if (!result.ok) return { ok: false, error: result.error };
+  const lead = await recordLead(repo, parsed.draft, result.data);
+  await settle(repo);
+  return { ok: true, estimate: result.data, leadId: lead.id };
+}
+
+/** Keep the visitor's answers while they create an account or sign in. */
+export async function startBookingAction(form: FormData) {
+  const parsed = parseDraft(field(form, "draft"));
+  if (!parsed.ok) redirect("/book?error=" + encodeURIComponent(parsed.error));
+  await writeDraftCookie(parsed.draft);
+  redirect(field(form, "next") === "login" ? "/login" : "/signup");
+}
+
+/** Drop the saved answers and start the public price page fresh. */
+export async function discardDraftAction() {
+  await clearDraftCookie();
+  redirect("/book");
 }
 
 export async function submitQuote(input: {

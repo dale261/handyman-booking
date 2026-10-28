@@ -172,7 +172,7 @@ export type PaymentRecord = {
 
 export type NotificationRecord = {
   id: string;
-  kind: "pay" | "approval" | "refund" | "done";
+  kind: "pay" | "approval" | "refund" | "done" | "lead";
   title: string;
   detail: string;
   read: boolean;
@@ -188,6 +188,23 @@ export type EmailRecord = {
   jobId: string | null;
   sent: boolean;
   createdAt: string;
+};
+
+/** Someone who gave a name and phone to see a price. jobId is set once they book. */
+export type LeadRecord = {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  service: ServiceId;
+  zip: string;
+  description: string;
+  /** The price they saw, or null when Dale had to look first. */
+  total: number | null;
+  review: boolean;
+  jobId: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ReviewRecord = {

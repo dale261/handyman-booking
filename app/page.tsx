@@ -22,7 +22,7 @@ export default async function HomePage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-white">
-              Get a quote
+              See your price
             </Link>
             <Link href="/signup" className="inline-flex h-12 items-center rounded-md border border-line bg-card px-6 font-semibold">
               Create an account
@@ -45,14 +45,14 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>1. Describe it</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted">Add your name, phone, and billing address. Photos help if you have them.</CardContent>
+          <CardContent className="text-sm text-muted">Pick the job, answer a few questions, and add your ZIP and phone. Just a name and number to see the price; the account comes when you book.</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>2. See the price</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted">
-            You&apos;ll see the work, materials, travel, and any area charge on separate lines. Under {usd(settings.depositThreshold)} is paid in full. That amount or more requires half down.
+            One firm price, with the work, materials, travel, and any area charge on separate lines. Under {usd(settings.depositThreshold)} is paid in full. That amount or more requires half down.
           </CardContent>
         </Card>
         <Card>
@@ -60,7 +60,7 @@ export default async function HomePage() {
             <CardTitle>3. Hold a time</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted">
-            Pick a time, or take the earliest opening. It stays yours for {settings.holdHours} hours while you pay. Cancel before work starts and we keep {usd(settings.cancelFee)}. If we find something different on site, you can approve a new price or get refunded everything except travel.
+            Create your account, then pick a time or take the earliest opening. It stays yours for {settings.holdHours} hours while you pay. Cancel before work starts and we keep {usd(settings.cancelFee)}. If we find something different on site, you can approve a new price or get refunded everything except travel.
           </CardContent>
         </Card>
       </section>

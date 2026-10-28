@@ -4,6 +4,7 @@ import type {
   CrewRecord,
   EmailRecord,
   JobRecord,
+  LeadRecord,
   NotificationRecord,
   PaymentRecord,
   ReviewRecord,
@@ -45,6 +46,9 @@ export interface Repository {
   getUser(id: string): Promise<UserRecord | null>;
   getUserByEmail(email: string): Promise<UserRecord | null>;
   saveUser(user: UserRecord): Promise<void>;
+  listLeads(): Promise<LeadRecord[]>;
+  getLead(id: string): Promise<LeadRecord | null>;
+  saveLead(lead: LeadRecord): Promise<void>;
   listReviews(): Promise<ReviewRecord[]>;
   getReview(jobId: string): Promise<ReviewRecord | null>;
   saveReview(review: ReviewRecord): Promise<void>;

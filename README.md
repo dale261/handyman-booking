@@ -30,7 +30,8 @@ Supabase is the database and the sign-in system. The free project is enough. It 
 4. Do the same with `supabase/migrations/20261026120100_seed_zips.sql`. That loads the 161 ZIP codes. Run it second. Running it twice is safe.
 5. Do the same with `supabase/migrations/20261026140000_cost_library.sql`. That loads the 37-job cost library for work that is not on the rate sheet. Run it third. Running it twice will not overwrite prices you already changed.
 6. Do the same with `supabase/migrations/20261027120000_ai_usage.sql`. That stores the daily AI quote counts and the IP limits. Run it after the cost library. Running it twice is safe.
-7. Still in the SQL Editor, run this with your real email:
+7. Do the same with `supabase/migrations/20261028120000_leads.sql`. That stores the leads from the public price page. Running it twice is safe.
+8. Still in the SQL Editor, run this with your real email:
 
 ```sql
 update public.app_settings
@@ -40,15 +41,15 @@ where id = 1;
 
 The first person who signs up with that exact email becomes the owner. Everyone else becomes a customer, unless their email matches a worker you already added.
 
-8. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
-9. Open **Project Settings**, then **API**. Copy three values:
+9. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
+10. Open **Project Settings**, then **API**. Copy three values:
    - Project URL
    - `anon` public key
    - `service_role` secret key
 
 The service role key can read every job. It stays in `.env.local` on the server. Never paste it into a web page or a public chat.
 
-10. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
+11. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=the project URL
@@ -58,8 +59,8 @@ OWNER_EMAIL=the same email you put in the SQL update
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:43123
 ```
 
-11. Stop the app (Ctrl+C) and run `npm run dev` again.
-12. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
+12. Stop the app (Ctrl+C) and run `npm run dev` again.
+13. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
 
 If you already created the account before setting `owner_email`, you are a customer. In the SQL Editor run, with your user id from **Authentication → Users**:
 
@@ -190,9 +191,19 @@ To keep it from pausing, `vercel.json` schedules a daily call to `/api/health`, 
 
 Leave **RRP certified** off until you actually have the EPA firm certification. While it is off, painting in a pre-1978 home goes to you for review instead of quoting itself.
 
+## Price before sign-up, with a lead for every check
+
+A visitor who is not signed in sees the public price page at `/book`: pick a listed service, answer its questions, enter the job ZIP, give a name and phone (email optional), and the price appears. No password, no address. It uses the same rate sheet and travel math as a real quote, with travel measured to the center of the ZIP and labeled as an estimate. No AI call is made for visitors. Jobs the keyword screen flags (licensed trades, pre-1978 painting while RRP is off) show no price, only that Dale will look first.
+
+Every price check is saved as a lead under **Leads** in the owner menu, with the name, phone, email, job, ZIP, and the price they saw. The first check from a phone number sends an owner notice (Queue plus email); more checks from the same phone within a day update that lead instead of adding another. Once the person books, the lead links to the job.
+
+"Book this price" keeps the answers in a one-day cookie through sign-up (or sign-in), with the name, phone, email, and ZIP already filled in. As soon as the account exists, the same answers become a real quote, travel is measured to the street address, and the customer lands on the job page to pick a time. "Something else" jobs still start with an account, because the AI quote is capped per customer.
+
+Run `supabase/migrations/20261028120000_leads.sql` in the SQL Editor once. Running it twice is safe.
+
 ## How a job moves
 
-1. The customer has an account with a phone number and billing address.
+1. The customer sees a price on the public page first, then creates an account with a phone number and billing address. Signed-in customers use the full form, with photos and a different job-site address if needed.
 2. They pick a service, answer that service’s questions, and describe the job.
 3. Painting, cleaning, mounting, assembly, and hire-a-helper quote from the rate sheet immediately. Other handyman work can quote from the cost library when the description is clear and the library says we do it. The customer sees one firm price. Vague jobs, licensed trades, and builder work at $600 or more wait for you, and the customer sees no range while they wait. You confirm no license is needed, or you refer it out with a note you write yourself. When you release the quote, they approve that one price.
 4. A ZIP that is not on the auto-book list also waits for you. The customer can request a time, but the 24-hour payment clock and the invoice start only after you approve the address.

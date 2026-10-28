@@ -7,6 +7,7 @@ import type {
   CrewRecord,
   EmailRecord,
   JobRecord,
+  LeadRecord,
   NotificationRecord,
   PaymentRecord,
   ReviewRecord,
@@ -318,6 +319,36 @@ export class SupabaseRepository implements Repository {
     }
   }
 
+  async listLeads() {
+    const data = await this.must(this.db().from("leads").select("*").order("created_at", { ascending: false }));
+    return (data as Record<string, unknown>[]).map(leadFromRow);
+  }
+
+  async getLead(id: string) {
+    const { data, error } = await this.db().from("leads").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? leadFromRow(data as Record<string, unknown>) : null;
+  }
+
+  async saveLead(lead: LeadRecord) {
+    await this.must(
+      this.db().from("leads").upsert({
+        id: lead.id,
+        full_name: lead.fullName,
+        phone: lead.phone,
+        email: lead.email,
+        service: lead.service,
+        zip: lead.zip,
+        description: lead.description,
+        total: lead.total,
+        review: lead.review,
+        job_id: lead.jobId,
+        created_at: lead.createdAt,
+        updated_at: lead.updatedAt,
+      }),
+    );
+  }
+
   async listReviews() {
     const data = await this.must(this.db().from("reviews").select("*").order("created_at", { ascending: false }));
     return (data as Record<string, unknown>[]).map(reviewFromRow);
@@ -518,6 +549,23 @@ function emailFromRow(row: Record<string, unknown>): EmailRecord {
     jobId: row.job_id ? String(row.job_id) : null,
     sent: Boolean(row.sent),
     createdAt: String(row.created_at),
+  };
+}
+
+function leadFromRow(row: Record<string, unknown>): LeadRecord {
+  return {
+    id: String(row.id),
+    fullName: String(row.full_name ?? ""),
+    phone: String(row.phone ?? ""),
+    email: String(row.email ?? ""),
+    service: row.service as LeadRecord["service"],
+    zip: String(row.zip ?? ""),
+    description: String(row.description ?? ""),
+    total: row.total == null ? null : Number(row.total),
+    review: Boolean(row.review),
+    jobId: row.job_id ? String(row.job_id) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
   };
 }
 

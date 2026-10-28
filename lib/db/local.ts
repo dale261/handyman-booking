@@ -10,6 +10,7 @@ import type {
   CrewRecord,
   EmailRecord,
   JobRecord,
+  LeadRecord,
   NotificationRecord,
   PaymentRecord,
   ReviewRecord,
@@ -34,6 +35,7 @@ type FileShape = {
   payments: PaymentRecord[];
   notifications: NotificationRecord[];
   emails: EmailRecord[];
+  leads: LeadRecord[];
   reviews: ReviewRecord[];
   library: LibraryEntry[];
   geo: Record<string, { lat: number; lng: number }>;
@@ -193,6 +195,7 @@ function seed(): FileShape {
     payments: [],
     notifications: [],
     emails: [],
+    leads: [],
     reviews: [],
     library: mergeLibrary(null),
     geo: {},
@@ -233,6 +236,7 @@ export class LocalRepository implements Repository {
     parsed.library = mergeLibrary(Array.isArray(parsed.library) ? parsed.library : null);
     parsed.aiUsage = Array.isArray(parsed.aiUsage) ? parsed.aiUsage : [];
     parsed.ipLimits = Array.isArray(parsed.ipLimits) ? parsed.ipLimits : [];
+    parsed.leads = Array.isArray(parsed.leads) ? parsed.leads : [];
     return parsed;
   }
 
@@ -438,6 +442,23 @@ export class LocalRepository implements Repository {
         const worker = db.workers.find((w) => w.id === user.workerId);
         if (worker) worker.profileId = user.id;
       }
+    });
+  }
+  async listLeads() {
+    return this.run(async () => this.clone(this.db().leads));
+  }
+  async getLead(id: string) {
+    return this.run(async () => {
+      const lead = this.db().leads.find((item) => item.id === id);
+      return lead ? this.clone(lead) : null;
+    });
+  }
+  async saveLead(lead: LeadRecord) {
+    await this.run(async () => {
+      const leads = this.db().leads;
+      const at = leads.findIndex((item) => item.id === lead.id);
+      if (at === -1) leads.unshift(this.clone(lead));
+      else leads[at] = this.clone(lead);
     });
   }
   async listReviews() {

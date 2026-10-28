@@ -7,6 +7,7 @@ import {
   type Actor,
   type JobRecord,
   type JobStatus,
+  type NotificationRecord,
   type PaymentRecord,
   type PriceChangeOutcome,
 } from "@/lib/db/types";
@@ -139,10 +140,11 @@ async function mail(repo: Repository, to: string, subject: string, body: string,
   });
 }
 
-async function notify(
+/** A notice in the owner Queue plus an email to the owner inbox. */
+export async function notify(
   repo: Repository,
   settings: Settings,
-  kind: "pay" | "approval" | "refund" | "done",
+  kind: NotificationRecord["kind"],
   title: string,
   detail: string,
   jobId: string | null,

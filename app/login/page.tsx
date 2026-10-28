@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { demoSignIn, signIn } from "@/lib/actions";
 import { demoSignInAllowed } from "@/lib/demo";
+import { DraftBanner } from "@/components/draft-banner";
 import { Flash } from "@/components/flash";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="mx-auto grid max-w-lg gap-4">
+      <DraftBanner action="login" />
       <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
