@@ -119,17 +119,17 @@ Anything else is priced from the cost library under **Library**:
 - If the description is vague, or the match is not confident, the job waits for you. The customer does not see a price range. You still see the range and any referral estimate. They see that you are reviewing it and will send one firm price, usually within 1 business day, and they approve that price before anything is booked or paid.
 - Licensed trades and builder work start as refer-out. A builder-scope total of $600 or more also waits for you, even if you flip that switch on. You can release a job with **No license needed** when you have looked at it.
 
-The model only picks library items, quantities, hours, materials, and whether it is confident. The dollar amount is calculated in the app. With no OpenAI key, the same rules run from keywords in the description.
+The model only picks library items, quantities, hours, materials, and whether it is confident. The dollar amount is calculated in the app. Unlisted jobs ask Claude first, then OpenAI, then the keyword matcher. With neither key, the same rules run from keywords in the description.
 
 The Rates screen caps model calls at 100 a day and 10 per customer a day. Those two numbers are limits, not prices. Set either one to 0 to stop model calls. Past the cap, listed jobs still use the rate sheet. Unlisted jobs use the keyword library and wait for you. Today’s count is on that same Rates screen and resets at midnight Eastern.
 
 ## Turn on the AI match (optional)
 
-Listed services can still get a short note from the description. Unlisted jobs use the model to pick library items. It cannot set a dollar amount. If the key is missing or the call fails, the quote still works.
+Listed services can still get a short note from the description. That note uses OpenAI (`gpt-4.1-mini`). Unlisted jobs use Claude to pick library items, then OpenAI if Claude is unavailable, then keywords. No model sets a dollar amount. If both keys are missing or the calls fail, the quote still works.
 
-1. Create an API key at [https://platform.openai.com](https://platform.openai.com).
-2. Put a spending limit on the key. This is a paid API. A few quotes cost very little, but the limit is what keeps it that way.
-3. Set `OPENAI_API_KEY` in `.env.local`. Leave `OPENAI_MODEL=gpt-4.1-mini` unless you want a different model.
+1. Create an Anthropic key and set `ANTHROPIC_API_KEY`. Leave `ANTHROPIC_MODEL=claude-sonnet-5-5` unless you want a different Claude model.
+2. Create an OpenAI key at [https://platform.openai.com](https://platform.openai.com). Put a spending limit on it.
+3. Set `OPENAI_API_KEY` in `.env.local`. Leave `OPENAI_MODEL=gpt-4.1-mini` unless you want a different model. Listed jobs use this key. Unlisted jobs use it only when Claude does not answer.
 
 ## Road miles (optional)
 
@@ -156,7 +156,8 @@ Required:
 - `NEXT_PUBLIC_SUPABASE_URL` — Project URL from Supabase → Project Settings → API
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon public key
 - `SUPABASE_SERVICE_ROLE_KEY` — the service_role secret. Server only. Never put it in a page or a public chat.
-- `OPENAI_API_KEY` — unlisted jobs can use the model, inside the daily caps on the Rates screen (100 calls a day and 10 per customer, until you change them)
+- `ANTHROPIC_API_KEY` — unlisted jobs ask Claude first, inside the daily caps on the Rates screen (100 calls a day and 10 per customer, until you change them)
+- `OPENAI_API_KEY` — listed jobs use this for the short note. Unlisted jobs use it when Claude does not answer. Same daily caps, one count per quote.
 - `OWNER_EMAIL` — the same email you set as the owner
 - `NEXT_PUBLIC_APP_URL` — the `https://` address Vercel gives you, or your custom domain. PayPal sends customers back here.
 
@@ -165,7 +166,8 @@ Optional:
 - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` — live email. Without them, messages stay in the owner queue and are not delivered.
 - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_ENV` (`sandbox` or `live`)
 - `ORS_API_KEY` — real road miles. Without it, travel uses straight-line distance times 1.25.
-- `OPENAI_MODEL` — leave as `gpt-4.1-mini` unless you want a different model.
+- `OPENAI_MODEL` — leave as `gpt-4.1-mini` unless you want a different model for listed-job notes and the unlisted fallback.
+- `ANTHROPIC_MODEL` — leave as `claude-sonnet-5-5` unless you want a different Claude model for unlisted jobs.
 
 4. In Supabase, open **Authentication → URL configuration**. Set **Site URL** to the Vercel `https://` domain. Add that same domain under **Redirect URLs**, including `https://your-app.vercel.app/**`. Sign-in fails if these still point at localhost.
 5. Deploy, open the site, and sign in with the owner email and password. The sample buttons should not be on the sign-in page.

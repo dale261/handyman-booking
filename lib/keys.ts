@@ -8,6 +8,7 @@ export type KeyStatus = {
   resend: boolean;
   paypal: boolean;
   openai: boolean;
+  anthropic: boolean;
   ors: boolean;
   osrm: boolean;
   localDemo: boolean;
@@ -19,6 +20,7 @@ export function keyStatus(): KeyStatus {
     resend: resendConfigured(),
     paypal: paypalConfigured(),
     openai: Boolean(process.env.OPENAI_API_KEY),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
     ors: Boolean(process.env.ORS_API_KEY),
     osrm: Boolean(process.env.OSRM_BASE_URL),
     localDemo: demoSignInAllowed(),

@@ -64,7 +64,7 @@ export function Shell({
             This copy saves to a file on this computer. Sample sign-in is on. Don&apos;t put this on the public internet. Connect Supabase before customers use it.
             {keys.resend ? " Email is live." : " Emails print in the terminal."}
             {keys.paypal ? " PayPal is live." : " PayPal is a demo button until keys are added."}
-            {keys.openai ? " AI notes are on for quotes." : " Quotes use the saved prices until an OpenAI key is added."}
+            {keys.openai || keys.anthropic ? " AI quotes are on." : " Quotes use the saved prices until an AI key is added."}
             {keys.ors ? " Road miles use OpenRouteService." : keys.osrm ? " Road miles use OSRM." : " Road miles are straight-line distance × the road factor until a routing key is added."}
           </p>
         </div>

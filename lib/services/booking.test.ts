@@ -432,7 +432,9 @@ describe("booking flow", () => {
     const settings = await store.getSettings();
     await store.saveSettings({ ...settings, aiDailyCap: 0 });
     const previous = process.env.OPENAI_API_KEY;
+    const previousAnthropic = process.env.ANTHROPIC_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
     try {
       const created = await createQuote(store, customer, {
         service: "other",
@@ -452,6 +454,8 @@ describe("booking flow", () => {
     } finally {
       if (previous === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = previous;
+      if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = previousAnthropic;
     }
   });
 

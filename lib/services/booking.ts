@@ -423,9 +423,15 @@ function screenJob(job: JobRecord, settings: Settings, aiNote: string | null): S
   return flag;
 }
 
+/** Listed notes need OpenAI. Unlisted quotes can use Claude or OpenAI. One reservation either way. */
+function quoteHasModelKey(service: ServiceId): boolean {
+  if (PREAPPROVED.includes(service)) return Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY);
+}
+
 /** Reserve a model call only when a key is set. A missing usage table skips the model. */
-async function quoteAiMode(repo: Repository, customerId: string): Promise<AiMode> {
-  if (!process.env.OPENAI_API_KEY) return "fallback";
+async function quoteAiMode(repo: Repository, customerId: string, service: ServiceId): Promise<AiMode> {
+  if (!quoteHasModelKey(service)) return "fallback";
   try {
     const reservation = await repo.reserveAiCall(customerId, todayDetroit());
     return aiModeFromReservation(true, Boolean(process.env.VITEST), reservation.allowed);
@@ -545,7 +551,7 @@ export async function createQuote(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const mode = await quoteAiMode(repo, user.id);
+    const mode = await quoteAiMode(repo, user.id, input.service);
     if (PREAPPROVED.includes(input.service)) {
       applyQuote(job, settings, measured.miles, measured.fromLabel, measured.source);
       const ai = await readJobDescription(input.service, description, { allowModel: mode === "model" });
