@@ -31,7 +31,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" name="rrpCertified" defaultChecked={settings.rrpCertified} />
-          RRP certified (pre-1978 painting can quote itself)
+          RRP certified (lead-safe). The quote form no longer asks the year the home was built; the crew checks the paint on site.
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" name="premiumEnabled" defaultChecked={settings.premiumEnabled} />

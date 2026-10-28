@@ -189,11 +189,11 @@ To keep it from pausing, `vercel.json` schedules a daily call to `/api/health`, 
 - The email address that receives owner notices.
 - The cost library switches under **Library**, when you are licensed for a trade and want it to book directly. Handyman extras start on. Trades and builder work start off.
 
-Leave **RRP certified** off until you actually have the EPA firm certification. While it is off, painting in a pre-1978 home goes to you for review instead of quoting itself.
+The quote form does not ask the year the home was built. Painting quotes itself, and the crew checks the existing paint on site; if an older home needs extra prep, the on-site price change or cancel-and-refund-except-travel flow covers it. The **RRP certified** switch only matters if that question is ever added back.
 
 ## Price before sign-up, with a lead for every check
 
-A visitor who is not signed in sees the public price page at `/book`: pick a listed service, answer its questions, enter the job ZIP, give a name and phone (email optional), and the price appears. No password, no address. It uses the same rate sheet and travel math as a real quote, with travel measured to the center of the ZIP and labeled as an estimate. No AI call is made for visitors. Jobs the keyword screen flags (licensed trades, pre-1978 painting while RRP is off) show no price, only that Dale will look first.
+A visitor who is not signed in sees the public price page at `/book`: pick a listed service, answer its questions, enter the job ZIP, give a name and phone (email optional), and the price appears. No password, no address. It uses the same rate sheet and travel math as a real quote, with travel measured to the center of the ZIP and labeled as an estimate. No AI call is made for visitors. Jobs the keyword screen flags (licensed trades) show no price, only that Dale will look first.
 
 Every price check is saved as a lead under **Leads** in the owner menu, with the name, phone, email, job, ZIP, and the price they saw. The first check from a phone number sends an owner notice (Queue plus email); more checks from the same phone within a day update that lead instead of adding another. Once the person books, the lead links to the job.
 

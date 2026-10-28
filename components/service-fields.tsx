@@ -45,7 +45,6 @@ export function ServiceFields({
             <Input type="number" min={1} value={params.colors} onChange={(e) => patch({ colors: Number(e.target.value) })} />
           </Field>
           <Toggle label="Include ceilings" checked={params.ceilings} onChange={(ceilings) => patch({ ceilings })} />
-          <Toggle label="Home built before 1978" checked={params.pre1978} onChange={(pre1978) => patch({ pre1978 })} />
         </>
       )}
       {service === "tv" && (

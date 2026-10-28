@@ -35,12 +35,6 @@ const SAMPLES: { label: string; service: ServiceId; description: string; params:
     params: { rooms: 5, sqft: 1400, height: "9", cond: "fair", doors: 10, colors: 3 },
   },
   {
-    label: "Pre-1978 house repaint",
-    service: "paint",
-    description: "Repaint two bedrooms in our 1955 farmhouse, some peeling paint on the trim",
-    params: { rooms: 2, sqft: 300, height: "8", cond: "fair", doors: 3, colors: 2, pre1978: true },
-  },
-  {
     label: "Mount a 65-inch TV",
     service: "tv",
     description: "Mount a 65-inch TV on a drywall living-room wall and hide the cords",

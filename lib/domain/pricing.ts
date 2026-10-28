@@ -96,6 +96,8 @@ export function quoteCalc(
     );
     if (p.pre1978) {
       assumptions.push("This home was built before 1978. If prep disturbs more than a small area of paint, lead-safe work applies.");
+    } else {
+      assumptions.push("We check the existing paint on site. If the home turns out to be older and needs extra prep, we'll talk with you before doing anything different.");
     }
   } else if (id === "tv") {
     const base = p.tvSize === "85" ? r.tvLarge : p.tvSize === "75" ? r.tvMid : r.tvSmall;
