@@ -7,6 +7,7 @@ create table if not exists public.leads (
   phone text not null,
   email text not null default '',
   service text not null,
+  address text not null default '',
   zip text not null,
   description text not null default '',
   total numeric(12, 2),
@@ -27,3 +28,6 @@ create policy leads_owner_read on public.leads
   using (public.current_role() = 'owner');
 
 -- No client write policy. The app writes leads with the service role.
+
+-- If the table was created by an earlier version of this file, add the address column.
+alter table public.leads add column if not exists address text not null default '';

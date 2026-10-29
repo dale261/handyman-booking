@@ -2,10 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocalRepository } from "@/lib/db/local";
-import { parseDraft, type QuoteDraft } from "@/lib/domain/draft";
+import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
+import { actorFromUser } from "@/lib/db/types";
+import { createQuote } from "@/lib/services/booking";
+import { jobSiteAddress, parseDraft, type QuoteDraft } from "@/lib/domain/draft";
+import { DEFAULT_PARAMS } from "@/lib/domain/types";
 import { DEFAULT_SETTINGS } from "@/lib/domain/settings";
-import { publicEstimate, recordLead } from "@/lib/services/estimate";
+import { publicEstimate, recentLeadForPhone, recordLead } from "@/lib/services/estimate";
 
 const dirs: string[] = [];
 
@@ -20,7 +23,7 @@ afterEach(() => {
 });
 
 function draft(input: Record<string, unknown>): QuoteDraft {
-  const parsed = parseDraft({ fullName: "Pat Tester", phone: "231-555-0100", ...input });
+  const parsed = parseDraft({ fullName: "Pat Tester", phone: "231-555-0100", address: "101 Example Ave, Cadillac, MI", ...input });
   if (!parsed.ok) throw new Error(parsed.error);
   return parsed.draft;
 }
@@ -43,7 +46,7 @@ describe("public price before sign-up", () => {
     const travel = result.data.lines.find((line) => line.kind === "travel");
     expect(travel?.amount).toBe(DEFAULT_SETTINGS.travelMinimum);
     expect(travel?.detail).toContain("estimated");
-    expect(result.data.assumptions.some((note) => note.includes("center of ZIP 49601"))).toBe(true);
+    expect(result.data.assumptions.some((note) => note.includes("from our shop to this address"))).toBe(true);
     expect(result.data.lines.some((line) => line.kind === "premium")).toBe(false);
   });
 
@@ -97,7 +100,7 @@ describe("public price before sign-up", () => {
     const travel = result.data.lines.find((line) => line.kind === "travel");
     expect(travel?.amount).toBe(DEFAULT_SETTINGS.travelMinimum);
     expect(travel?.detail).toMatch(/until we measure/);
-    expect(result.data.assumptions.some((note) => note.includes("center of ZIP"))).toBe(false);
+    expect(result.data.assumptions.some((note) => note.includes("from our shop to this address"))).toBe(false);
   });
 
   it("splits a large job into half down", async () => {
@@ -155,5 +158,37 @@ describe("public price before sign-up", () => {
     expect(other.review).toBe(true);
     expect(other.total).toBeNull();
     expect((await store.listLeads())).toHaveLength(2);
+  });
+
+  it("shows the same price the job page shows after sign-up", async () => {
+    const store = repo();
+    const asked = draft({
+      service: "furniture",
+      params: { items: 2, itemKind: "large" },
+      address: "12 Lake St, Glen Arbor, MI",
+      zip: "49636",
+      description: "Assemble a wardrobe and a sectional",
+      urgent: true,
+    });
+    const shown = await publicEstimate(store, asked);
+    if (!shown.ok) throw new Error(shown.error);
+    const user = await store.getUser(DEMO_USERS.customer);
+    if (!user) throw new Error("missing demo customer");
+    const booked = await createQuote(store, actorFromUser(user), {
+      service: asked.service,
+      description: asked.description,
+      params: { ...DEFAULT_PARAMS, ...asked.params },
+      differentSite: true,
+      jobSiteAddress: jobSiteAddress(asked),
+      urgent: asked.urgent,
+      pickup: asked.pickup,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    if (!booked.ok) throw new Error(booked.error);
+    expect(booked.data.total).toBe(shown.data.total);
+    expect(booked.data.lines.map((line) => [line.label, line.amount])).toEqual(shown.data.lines.map((line) => [line.label, line.amount]));
+    expect(booked.data.jobZip).toBe("49636");
+    expect(await recentLeadForPhone(store, asked.phone)).toBeNull();
   });
 });

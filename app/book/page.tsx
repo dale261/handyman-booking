@@ -17,7 +17,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink">See your price</h1>
-          <p className="mt-2 text-sm text-muted">Pick the job, answer a few questions, add your ZIP and a phone number. The price shows right here. The account comes when you book.</p>
+          <p className="mt-2 text-sm text-muted">Pick the job, answer a few questions, add the address and a phone number. The price shows right here, and it&apos;s the same price you&apos;ll see when you book. The account comes at the end.</p>
         </div>
         <Card>
           <CardContent>

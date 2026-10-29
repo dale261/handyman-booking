@@ -11,6 +11,9 @@ export const ANON_LIMIT = { bucket: "anon", max: 40, windowMs: 10 * 60 * 1000 };
 /** Quote requests. Booking tests call createQuote directly and are not counted here. */
 export const QUOTE_LIMIT = { bucket: "quote", max: 12, windowMs: 60 * 60 * 1000 };
 
+/** New leads from the public price page: new phone numbers per network per hour. Re-checks from the same phone are not counted. */
+export const LEAD_LIMIT = { bucket: "lead", max: 6, windowMs: 60 * 60 * 1000 };
+
 const memory = new Map<string, { windowStart: number; hits: number }>();
 
 function memoryAllow(bucket: string, ip: string, max: number, windowMs: number): boolean {

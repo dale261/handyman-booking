@@ -45,7 +45,7 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>1. Describe it</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted">Pick the job, answer a few questions, and add your ZIP and phone. Just a name and number to see the price; the account comes when you book.</CardContent>
+          <CardContent className="text-sm text-muted">Pick the job, answer a few questions, and add the address and your phone. Just a name and number to see the price; the account comes when you book.</CardContent>
         </Card>
         <Card>
           <CardHeader>

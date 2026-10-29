@@ -9,6 +9,8 @@ import { DEFAULT_PARAMS, PREAPPROVED, type QuoteParams, type ServiceId } from ".
 export type QuoteDraft = {
   service: ServiceId;
   params: QuoteParams;
+  /** Street address of the job, so travel is measured to the real door. */
+  address: string;
   zip: string;
   description: string;
   urgent: boolean;
@@ -26,6 +28,14 @@ export const DRAFT_COOKIE = "ex_quote_draft";
 export const DRAFT_MAX_AGE_SECONDS = 60 * 60 * 24;
 export const DESCRIPTION_MIN = 8;
 export const DESCRIPTION_MAX = 1000;
+export const ADDRESS_MIN = 5;
+export const ADDRESS_MAX = 160;
+
+/** The job site as one line ending in the ZIP, the way a quote stores it. */
+export function jobSiteAddress(draft: Pick<QuoteDraft, "address" | "zip">): string {
+  const address = draft.address.trim().replace(/[,\s]+$/, "");
+  return address.endsWith(draft.zip) ? address : `${address} ${draft.zip}`;
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -123,6 +133,8 @@ export function parseDraft(raw: unknown): DraftParse {
   }
   if (!PREAPPROVED.includes(service as ServiceId)) return { ok: false, error: "Pick a service." };
 
+  const address = String(src.address ?? "").trim().replace(/\s+/g, " ").slice(0, ADDRESS_MAX);
+  if (address.length < ADDRESS_MIN) return { ok: false, error: "Add the street address where the work is." };
   const zip = String(src.zip ?? "").trim();
   if (!/^\d{5}$/.test(zip)) return { ok: false, error: "Enter the 5-digit ZIP where the work is." };
 
@@ -144,6 +156,7 @@ export function parseDraft(raw: unknown): DraftParse {
     draft: {
       service: service as ServiceId,
       params: sanitizeParams(src.params),
+      address,
       zip,
       description,
       urgent: !helper && src.urgent === true,

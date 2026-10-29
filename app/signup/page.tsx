@@ -25,7 +25,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <Field id="fullName" name="fullName" label="Full name" autoComplete="name" defaultValue={draft?.fullName ?? ""} />
             <Field id="email" name="email" label="Email" type="email" autoComplete="email" defaultValue={draft?.email ?? ""} />
             <Field id="phone" name="phone" label="Phone" type="tel" autoComplete="tel" defaultValue={draft?.phone ?? ""} />
-            <Field id="billingAddress" name="billingAddress" label="Billing address" autoComplete="street-address" />
+            <Field id="billingAddress" name="billingAddress" label="Billing address" autoComplete="street-address" defaultValue={draft?.address ?? ""} />
             <Field id="billingZip" name="billingZip" label="Billing ZIP" inputMode="numeric" maxLength={5} defaultValue={draft?.zip ?? ""} />
             <Field id="password" name="password" label="Password" type="password" autoComplete="new-password" />
             <SubmitButton>Create account</SubmitButton>

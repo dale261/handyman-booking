@@ -52,7 +52,7 @@ export default async function LeadsPage() {
                   )}
                 </div>
                 <p>
-                  {SERVICE_LABELS[lead.service]} · ZIP {lead.zip} · {lead.review ? "Needed your look before a price" : `Saw ${usd(lead.total ?? 0)}`}
+                  {SERVICE_LABELS[lead.service]} · {lead.address || `ZIP ${lead.zip}`} · {lead.review ? "Needed your look before a price" : `Saw ${usd(lead.total ?? 0)}`}
                 </p>
                 <p className="text-muted">&ldquo;{lead.description}&rdquo;</p>
                 <p className="text-muted">

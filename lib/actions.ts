@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { clearLocalSession, createSupabaseServer, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
-import { allowRequest, ANON_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
+import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
 import { actorFromUser, type Actor, type CrewRecord, type Role, type WorkerRecord } from "@/lib/db/types";
 import { clearDraftCookie, readDraftCookie, writeDraftCookie } from "@/lib/draft-cookie";
-import { parseDraft } from "@/lib/domain/draft";
+import { jobSiteAddress, parseDraft } from "@/lib/domain/draft";
 import { mergeLibrary } from "@/lib/domain/library";
 import type { LibraryGroup } from "@/lib/domain/library-data";
 import { normalizeSettings, SETTING_FIELDS } from "@/lib/domain/settings";
@@ -21,7 +21,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { createPayPalOrder } from "@/lib/paypal";
 import { appUrl } from "@/lib/format";
 import { blocksSchedule } from "@/lib/domain/scheduling";
-import { publicEstimate, recordLead, type PublicEstimate } from "@/lib/services/estimate";
+import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
   amountPayable,
   approveWork,
@@ -82,8 +82,8 @@ async function finishDraft(repo: Repository, actor: Actor): Promise<string | nul
     service: draft.service,
     description: draft.description,
     params: { ...DEFAULT_PARAMS, ...draft.params },
-    differentSite: false,
-    jobSiteAddress: "",
+    differentSite: true,
+    jobSiteAddress: jobSiteAddress(draft),
     urgent: draft.urgent,
     pickup: draft.pickup,
     preferredWorkerId: null,
@@ -248,19 +248,26 @@ export async function updateAccount(form: FormData) {
   redirect("/account?notice=" + encodeURIComponent("Account saved."));
 }
 
+const TOO_MANY = "Too many price checks from this network. Wait a few minutes and try again.";
+
 /**
  * Price a listed service for a visitor with no account, and save them as a lead.
  * No AI call. The first check from a phone number sends Dale a notice.
+ * Three guards against bots: a per-network limit on checks, a tighter limit on
+ * new phone numbers, and a hidden field that only a script would fill in.
  */
 export async function publicEstimateAction(
   input: unknown,
 ): Promise<{ ok: true; estimate: PublicEstimate; leadId: string } | { ok: false; error: string }> {
-  if (!(await allowRequest(ANON_LIMIT))) {
-    return { ok: false, error: "Too many price checks from this network. Wait a few minutes and try again." };
-  }
+  if (!(await allowRequest(ANON_LIMIT))) return { ok: false, error: TOO_MANY };
+  const trap = input && typeof input === "object" ? String((input as Record<string, unknown>).website_url_confirm ?? "") : "";
+  if (trap.trim()) return { ok: false, error: TOO_MANY };
   const parsed = parseDraft(input);
   if (!parsed.ok) return { ok: false, error: parsed.error };
   const repo = getRepository();
+  if (!(await recentLeadForPhone(repo, parsed.draft.phone)) && !(await allowRequest(LEAD_LIMIT))) {
+    return { ok: false, error: TOO_MANY };
+  }
   const result = await publicEstimate(repo, parsed.draft);
   if (!result.ok) return { ok: false, error: result.error };
   const lead = await recordLead(repo, parsed.draft, result.data);

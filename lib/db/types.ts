@@ -197,6 +197,7 @@ export type LeadRecord = {
   phone: string;
   email: string;
   service: ServiceId;
+  address: string;
   zip: string;
   description: string;
   /** The price they saw, or null when Dale had to look first. */

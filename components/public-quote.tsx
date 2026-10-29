@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { publicEstimateAction, startBookingAction } from "@/lib/actions";
 import { LOCKED_PRICE } from "@/lib/domain/copy";
 import { quoteToolServices } from "@/lib/domain/direct-booking";
-import { DESCRIPTION_MAX, type QuoteDraft } from "@/lib/domain/draft";
+import { ADDRESS_MAX, DESCRIPTION_MAX, type QuoteDraft } from "@/lib/domain/draft";
 import { DEFAULT_PARAMS, SERVICE_LABELS, type QuoteParams, type ServiceId } from "@/lib/domain/types";
 import { usd } from "@/lib/format";
 import type { PublicEstimate } from "@/lib/services/estimate";
@@ -49,7 +49,9 @@ export function PublicQuote({
   const [service, setService] = useState<ServiceId>("tv");
   const [params, setParams] = useState<QuoteParams>(DEFAULT_PARAMS);
   const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("");
   const [zip, setZip] = useState("");
+  const [trap, setTrap] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [pickup, setPickup] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -63,6 +65,7 @@ export function PublicQuote({
   const draft: QuoteDraft = {
     service,
     params,
+    address: address.trim(),
     zip: zip.trim(),
     description: description.trim(),
     urgent,
@@ -89,12 +92,12 @@ export function PublicQuote({
   return (
     <div className="space-y-4">
       <form
-        className="grid gap-6"
+        className="relative grid gap-6"
         onSubmit={(event) => {
           event.preventDefault();
           setError("");
           start(async () => {
-            const result = await publicEstimateAction(draft);
+            const result = await publicEstimateAction({ ...draft, website_url_confirm: trap });
             if (result.ok) {
               setLeadId(result.leadId);
               setEstimate(result.estimate);
@@ -158,20 +161,36 @@ export function PublicQuote({
               />
             </Field>
 
-            <Field label="ZIP code where the work is">
-              <Input
-                value={zip}
-                onChange={(e) => {
-                  setZip(e.target.value.replace(/\D/g, "").slice(0, 5));
-                  setEstimate(null);
-                }}
-                inputMode="numeric"
-                pattern="\d{5}"
-                placeholder="49601"
-                required
-                className="max-w-[10rem]"
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+              <Field label="Street address where the work is">
+                <Input
+                  value={address}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    setEstimate(null);
+                  }}
+                  autoComplete="street-address"
+                  placeholder="1339 N Mitchell St, Cadillac"
+                  required
+                  minLength={5}
+                  maxLength={ADDRESS_MAX}
+                />
+              </Field>
+              <Field label="ZIP">
+                <Input
+                  value={zip}
+                  onChange={(e) => {
+                    setZip(e.target.value.replace(/\D/g, "").slice(0, 5));
+                    setEstimate(null);
+                  }}
+                  autoComplete="postal-code"
+                  inputMode="numeric"
+                  pattern="\d{5}"
+                  placeholder="49601"
+                  required
+                />
+              </Field>
+            </div>
 
             {service !== "helper" && (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -245,6 +264,13 @@ export function PublicQuote({
                   />
                 </Field>
               </div>
+            </div>
+
+            <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
+              <label>
+                Leave this empty
+                <input type="text" name="website_url_confirm" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} />
+              </label>
             </div>
 
             {error && <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</p>}

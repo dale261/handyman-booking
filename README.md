@@ -193,11 +193,13 @@ The quote form does not ask the year the home was built. Painting quotes itself,
 
 ## Price before sign-up, with a lead for every check
 
-A visitor who is not signed in sees the public price page at `/book`: pick a listed service, answer its questions, enter the job ZIP, give a name and phone (email optional), and the price appears. No password, no address. It uses the same rate sheet and travel math as a real quote, with travel measured to the center of the ZIP and labeled as an estimate. No AI call is made for visitors. Jobs the keyword screen flags (licensed trades) show no price, only that Dale will look first.
+A visitor who is not signed in sees the public price page at `/book`: pick a listed service, answer its questions, enter the job address and ZIP, give a name and phone (email optional), and the price appears. No password. It uses the same rate sheet, the same address lookup, and the same travel math as a real quote, so the number matches the job page after sign-up. No AI call is made for visitors. Jobs the keyword screen flags (licensed trades) show no price, only that Dale will look first.
+
+Bots: price checks are limited per network (40 in 10 minutes), new phone numbers are limited to 6 per network per hour, and a hidden form field that only scripts fill in rejects the check.
 
 Every price check is saved as a lead under **Leads** in the owner menu, with the name, phone, email, job, ZIP, and the price they saw. The first check from a phone number sends an owner notice (Queue plus email); more checks from the same phone within a day update that lead instead of adding another. Once the person books, the lead links to the job.
 
-"Book this price" keeps the answers in a one-day cookie through sign-up (or sign-in), with the name, phone, email, and ZIP already filled in. As soon as the account exists, the same answers become a real quote, travel is measured to the street address, and the customer lands on the job page to pick a time. "Something else" jobs still start with an account, because the AI quote is capped per customer.
+"Book this price" keeps the answers in a one-day cookie through sign-up (or sign-in), with the name, phone, email, address, and ZIP already filled in. As soon as the account exists, the same answers become a real quote at the same address and the customer lands on the job page to pick a time. "Something else" jobs still start with an account, because the AI quote is capped per customer.
 
 Run `supabase/migrations/20261028120000_leads.sql` in the SQL Editor once. Running it twice is safe.
 
