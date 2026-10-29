@@ -126,7 +126,7 @@ export async function signUp(form: FormData) {
       redirect("/signup?error=" + encodeURIComponent(error?.message || "Could not create the account."));
     }
     if (!data.session) {
-      redirect("/login?notice=" + encodeURIComponent("Check your email to confirm the account. If no message arrives, ask Dale."));
+      redirect("/login?notice=" + encodeURIComponent("Check your email to confirm the account. If no message arrives, let us know."));
     }
     const existing = await repo.getUser(data.user.id);
     await repo.saveUser({
@@ -178,7 +178,7 @@ export async function signIn(form: FormData) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) redirect("/login?error=" + encodeURIComponent("Email or password doesn't match."));
     const user = await repo.getUserByEmail(email);
-    if (!user) redirect("/login?error=" + encodeURIComponent("You're signed in, but we don't have a profile for this email yet. Ask Dale to check the owner email."));
+    if (!user) redirect("/login?error=" + encodeURIComponent("You're signed in, but we don't have a profile for this email yet. Please contact us to sort it out."));
     const finished = await finishDraft(repo, actorFromUser(user));
     redirect(finished ?? next ?? homeFor(user.role));
   }
@@ -408,8 +408,8 @@ export async function approveWorkAction(form: FormData) {
 export async function reportProblemAction(form: FormData) {
   const jobId = field(form, "jobId");
   const note = field(form, "note");
-  if (note.length < 3) jobBack(jobId, "error", "Tell Dale what needs another look.");
-  await mutate(jobId, "Dale has your note.", (repo, actor) => reportProblem(repo, actor, jobId, note));
+  if (note.length < 3) jobBack(jobId, "error", "Tell us what needs another look.");
+  await mutate(jobId, "We have your note.", (repo, actor) => reportProblem(repo, actor, jobId, note));
 }
 
 export async function cancelAction(form: FormData) {
@@ -424,7 +424,7 @@ export async function cancelAction(form: FormData) {
 
 export async function requestCancelAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Dale has your cancellation request.", (repo, actor) => requestCancel(repo, actor, jobId));
+  await mutate(jobId, "We have your cancellation request.", (repo, actor) => requestCancel(repo, actor, jobId));
 }
 
 export async function resolveCancelAction(form: FormData) {

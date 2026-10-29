@@ -553,7 +553,7 @@ export function priceUnlisted(input: PriceUnlistedInput): PricedUnlisted {
 
   const assumptions = [CUSTOMER_PRICE_NOTE, ...(input.assumptions ?? []).filter(Boolean).slice(0, 8)];
   if (bookable) assumptions.push("You can book this price and hold a time.");
-  else assumptions.push("Dale will review this before you can book or pay.");
+  else assumptions.push("We'll review this before you can book or pay.");
 
   const selection: LibrarySelection = {
     items: priced.length ? priced.map((item) => ({ id: item.id, quantity: item.quantity })) : [],

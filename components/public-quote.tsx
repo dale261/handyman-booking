@@ -131,7 +131,7 @@ export function PublicQuote({
           <Card>
             <CardContent className="space-y-3 text-sm">
               <p>
-                Other handyman work is priced from your description, so it starts with a free account. You still see one firm price before anything is booked. If the job is unclear or needs a license, Dale reviews it first.
+                Other handyman work is priced from your description, so it starts with a free account. You still see one firm price before anything is booked. If the job is unclear or needs a license, we review it first.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button asChild>
@@ -221,7 +221,7 @@ export function PublicQuote({
 
             <div className="rounded-lg border border-line bg-card p-4">
               <p className="text-sm font-semibold">Who&apos;s asking?</p>
-              <p className="mt-1 text-sm text-muted">A name and phone number, so Dale can follow up on this job. Email is optional. No spam, and we never share it.</p>
+              <p className="mt-1 text-sm text-muted">A name and phone number, so we can follow up on this job. Email is optional. No spam, and we never share it.</p>
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <Field label="Your name">
                   <Input
@@ -335,7 +335,7 @@ export function PublicQuote({
 
             {!estimate.area.auto && (
               <p className="rounded-md border border-copper/30 bg-copper/10 px-3 py-2">
-                {estimate.area.known ? estimate.area.detail : "That ZIP is outside our usual area."} Dale will check the address before a time is held. You can still create your account and ask for a time.
+                {estimate.area.known ? estimate.area.detail : "That ZIP is outside our usual area."} We&apos;ll check the address before a time is held. You can still create your account and ask for a time.
               </p>
             )}
 
@@ -343,7 +343,7 @@ export function PublicQuote({
               <input type="hidden" name="draft" value={JSON.stringify(draft)} />
               <p>
                 {estimate.review
-                  ? "Create a free account and Dale will get back to you with a price."
+                  ? "Create a free account and we'll get back to you with a price."
                   : `Next: create a free account, pick a time, and pay to book it. The time is held for ${holdHours} hours while you pay.`}
               </p>
               <div className="flex flex-wrap gap-2">

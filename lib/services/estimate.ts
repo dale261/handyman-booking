@@ -35,7 +35,7 @@ export type PublicEstimate = {
 };
 
 export const PUBLIC_REVIEW_NOTE =
-  "This one needs a look from Dale before it can be booked. Create an account and he'll send you one firm price, usually within 1 business day. Nothing is booked or paid until you approve it.";
+  "We need to take a look at this one before it can be booked. Create an account and we'll send you one firm price, usually within 1 business day. Nothing is booked or paid until you approve it.";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };

@@ -159,7 +159,7 @@ export function quoteCalc(
     scope = `Custom job, about ${h} hours of labor`;
     lines.push(line("Labor", `About ${h} hours on site`, h * r.hourly, "service"));
     if (m > 0) lines.push(line("Materials", "Materials for this job", m, "materials"));
-    assumptions.push("Dale confirms the details before this is booked");
+    assumptions.push("We confirm the details before this is booked");
   }
 
   const serviceSum = roundCents(lines.filter((l) => l.kind === "service").reduce((a, l) => a + l.amount, 0));

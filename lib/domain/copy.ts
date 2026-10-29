@@ -1,6 +1,6 @@
 /** Shown anywhere a customer would otherwise see a low–high estimate. */
 export const REVIEW_WAIT =
-  "Dale is reviewing this and will send you a firm price, usually within 1 business day. You'll approve it before anything is booked or paid.";
+  "We're reviewing this and will send you a firm price, usually within 1 business day. You'll approve it before anything is booked or paid.";
 
 /** Shown next to a price the customer can approve or pay. */
 export const LOCKED_PRICE =
@@ -12,7 +12,7 @@ export const ON_SITE_TERMS =
 
 /** Customer jobs list. Review and referral rows never include a dollar range. */
 export function customerListPrice(status: string, total: number, usd: (n: number) => string): string {
-  if (status === "scope_review") return "Firm price after Dale reviews it";
+  if (status === "scope_review") return "Firm price after we review it";
   if (status === "referred") return "";
   return usd(total);
 }

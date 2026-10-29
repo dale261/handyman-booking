@@ -98,7 +98,7 @@ export function ServiceFields({
       {service === "clean" && <Toggle label="Deep clean" checked={params.deep} onChange={(deep) => patch({ deep })} />}
       {service === "other" && (
         <p className="text-sm text-muted sm:col-span-2">
-          Tell us the work and the quantity, like 40 feet of baseboard. If we need more detail, or the job needs a license, Dale will review it before you can book.
+          Tell us the work and the quantity, like 40 feet of baseboard. If we need more detail, or the job needs a license, we&apos;ll review it before you can book.
         </p>
       )}
       {service === "helper" && (

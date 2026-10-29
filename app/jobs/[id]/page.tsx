@@ -104,7 +104,7 @@ export default async function JobPage({
           This job needs a licensed contractor, so we can&apos;t take it.{job.referralNote ? ` ${job.referralNote}` : " We're glad to help with anything else."}
         </Callout>
       )}
-      {job.status === "pending_area" && actor.role === "customer" && <Callout>{job.areaDetail} The {settings.holdHours}-hour hold starts after Dale approves the address.</Callout>}
+      {job.status === "pending_area" && actor.role === "customer" && <Callout>{job.areaDetail} The {settings.holdHours}-hour hold starts after we approve the address.</Callout>}
       {job.status === "held" && job.holdUntil && (
         <Callout>
           This time is held until {new Date(job.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}. Pay {usd(job.amountDueNow)} to keep it.
@@ -165,6 +165,8 @@ export default async function JobPage({
                       .filter(
                         (item) =>
                           !item.startsWith("This is an estimate based on your description") &&
+                          !item.startsWith("We'll review this before you can book") &&
+                          // Older saved jobs still carry the earlier wording.
                           !item.startsWith("Dale will review this before you can book"),
                       )
                       .map((item) => (
@@ -399,7 +401,7 @@ export default async function JobPage({
           {["in_progress", "awaiting_approval", "balance_due", "disputed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
             <form action={requestCancelAction} className="space-y-2">
               <input type="hidden" name="jobId" value={job.id} />
-              <p className="text-sm text-muted">Work has started, so Dale has to approve a cancellation. He enters any refund himself.</p>
+              <p className="text-sm text-muted">Work has started, so we have to approve a cancellation. We&apos;ll set any refund.</p>
               <SubmitButton variant="outline">Request cancellation</SubmitButton>
             </form>
           )}

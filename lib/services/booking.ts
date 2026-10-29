@@ -667,7 +667,7 @@ export async function createQuote(
       await mail(
         repo,
         user.email,
-        "Thanks. Dale is reviewing your request",
+        "Thanks. We're reviewing your request",
         `Hi ${user.fullName}, thanks for the details. ${REVIEW_WAIT}${footer(settings)}`,
         saved.id,
       );
@@ -686,7 +686,7 @@ export async function listOpenSlots(repo: Repository, actor: Actor, jobId: strin
       return fail("This job isn't ready for a time yet.");
     }
     if (job.licenseLevel !== "ok" && job.status !== "pending_area") {
-      return fail("Dale is still reviewing whether we can do this work.");
+      return fail("We're still reviewing whether we can do this work.");
     }
     const settings = await repo.getSettings();
     const slots = await buildSlots(repo, job, settings);
@@ -707,7 +707,7 @@ export async function holdSlot(
       if (!job) return fail("Job not found.");
       if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
       if (!["quoted", "released", "pending_area"].includes(job.status)) return fail("This job can't be booked from its current step.");
-      if (job.licenseLevel !== "ok") return fail("Dale needs to review this job before you can hold a time.");
+      if (job.licenseLevel !== "ok") return fail("We need to review this job before you can hold a time.");
       const settings = await repo.getSettings();
       const slots = await buildSlots(repo, job, settings);
       const slot = when === "earliest" ? slots[0] : slots.find((item) => item.date === when.date && item.startMin === when.startMin);
@@ -717,7 +717,7 @@ export async function holdSlot(
       if (tentative) {
         job.status = "pending_area";
         job.holdUntil = null;
-        job.assignNote = `${job.assignNote} We'll hold this time once Dale approves the address. The payment window starts then.`.trim();
+        job.assignNote = `${job.assignNote} We'll hold this time once we approve the address. The payment window starts then.`.trim();
       } else {
         job.status = "held";
         job.holdUntil = new Date(Date.now() + settings.holdHours * 3600 * 1000).toISOString();
@@ -754,7 +754,7 @@ export async function holdSlot(
           repo,
           fresh.customerEmail,
           "We received your time request",
-          `Hi ${fresh.customerName}, Dale will look at ${fresh.jobSiteAddress} before the payment window starts.${fresh.scheduledDate ? ` You asked for ${formatDate(fresh.scheduledDate)} at ${formatMinutes(fresh.startMin || 0)}.` : ""}${footer(settings)}`,
+          `Hi ${fresh.customerName}, we'll look at ${fresh.jobSiteAddress} before the payment window starts.${fresh.scheduledDate ? ` You asked for ${formatDate(fresh.scheduledDate)} at ${formatMinutes(fresh.startMin || 0)}.` : ""}${footer(settings)}`,
           fresh.id,
         );
       }
@@ -1131,7 +1131,7 @@ export async function cancelBeforeWork(
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
-    if (job.status !== "booked") return fail("Once work has started, ask Dale to approve a cancellation.");
+    if (job.status !== "booked") return fail("Once work has started, ask us to approve a cancellation.");
     const settings = await repo.getSettings();
     const payments = await repo.listPayments(jobId);
     const paid = amountPaid(payments, jobId);
@@ -1339,7 +1339,7 @@ export async function requestCancel(repo: Repository, actor: Actor, jobId: strin
       repo,
       saved.customerEmail,
       `Invoice #${saved.invoiceNumber}: we received your cancellation request`,
-      `Hi ${saved.customerName}, work on ${saved.scope} has already started, so Dale will review the cancellation. We'll email you when he decides, including any refund.${footer(settings)}`,
+      `Hi ${saved.customerName}, work on ${saved.scope} has already started, so we'll review the cancellation and email you our decision, including any refund.${footer(settings)}`,
       saved.id,
     );
     return { ok: true, data: saved };
@@ -1366,7 +1366,7 @@ export async function resolveCancel(
         repo,
         saved.customerEmail,
         `Invoice #${saved.invoiceNumber}: cancellation request declined`,
-        `Hi ${saved.customerName}, Dale didn't approve the cancellation for ${saved.scope}, so the job continues.${footer(settings)}`,
+        `Hi ${saved.customerName}, we didn't approve the cancellation for ${saved.scope}, so the job continues.${footer(settings)}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1495,7 +1495,7 @@ export async function decideArea(
         repo,
         saved.customerEmail,
         "About your request",
-        `Hi ${saved.customerName}, Dale can't book the job at ${saved.jobSiteAddress}. Call or write us if you want to talk it through.${footer(settings)}`,
+        `Hi ${saved.customerName}, we can't book the job at ${saved.jobSiteAddress}. Call or write us if you want to talk it through.${footer(settings)}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1519,10 +1519,10 @@ export async function decideArea(
     await mail(
       repo,
       fresh.customerEmail,
-      fresh.status === "held" ? `Your time is held for ${settings.holdHours} hours` : "Dale approved the address",
+      fresh.status === "held" ? `Your time is held for ${settings.holdHours} hours` : "We approved the address",
       fresh.status === "held"
-        ? `Hi ${fresh.customerName}, Dale approved ${fresh.jobSiteAddress}. We're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}. Pay ${usd(fresh.amountDueNow)} within ${settings.holdHours} hours: ${jobUrl(fresh.id)}${footer(settings)}`
-        : `Hi ${fresh.customerName}, Dale approved ${fresh.jobSiteAddress}. Pick a time and we'll hold it for you: ${jobUrl(fresh.id)}${footer(settings)}`,
+        ? `Hi ${fresh.customerName}, we approved ${fresh.jobSiteAddress} and are holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}. Pay ${usd(fresh.amountDueNow)} within ${settings.holdHours} hours: ${jobUrl(fresh.id)}${footer(settings)}`
+        : `Hi ${fresh.customerName}, we approved ${fresh.jobSiteAddress}. Pick a time and we'll hold it for you: ${jobUrl(fresh.id)}${footer(settings)}`,
       fresh.id,
     );
     return { ok: true, data: fresh };

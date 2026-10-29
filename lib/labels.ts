@@ -2,7 +2,7 @@ import type { JobStatus } from "@/lib/db/types";
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
   quoted: "Quote ready",
-  scope_review: "Dale is reviewing this",
+  scope_review: "We're reviewing this",
   referred: "Referred to someone else",
   pending_area: "Checking the address",
   declined: "Declined",

@@ -60,7 +60,7 @@ describe("customer price copy", () => {
     expect(REVIEW_WAIT).not.toMatch(/\$/);
     expect(REVIEW_WAIT).toMatch(/firm price/i);
     expect(LOCKED_PRICE).toMatch(/won't change/i);
-    expect(customerListPrice("scope_review", 482, usd)).toBe("Firm price after Dale reviews it");
+    expect(customerListPrice("scope_review", 482, usd)).toBe("Firm price after we review it");
     expect(customerListPrice("referred", 482, usd)).toBe("");
     expect(customerListPrice("quoted", 275, usd)).toBe("$275.00");
     expect(customerListPrice("scope_review", 482, usd)).not.toContain("482");

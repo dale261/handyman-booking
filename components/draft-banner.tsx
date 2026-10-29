@@ -21,7 +21,7 @@ export async function DraftBanner({ action }: { action: "signup" | "login" }) {
   if (!result.ok) {
     headline = `${verb} to finish your quote (${label}).`;
   } else if (result.data.review) {
-    headline = `${verb} and Dale will send you one firm price (${label}).`;
+    headline = `${verb} and we'll send you one firm price (${label}).`;
   } else {
     headline = `Your price is ${usd(result.data.total)} (${label}). ${verb} to pick a time.`;
   }

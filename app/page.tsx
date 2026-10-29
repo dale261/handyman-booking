@@ -35,7 +35,7 @@ export default async function HomePage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>{directBookingBlurb()}</p>
-            <p className="text-muted">Other handyman work can be priced from what you describe. If the job is unclear, or it needs a license, Dale will review it before you can book.</p>
+            <p className="text-muted">Other handyman work can be priced from what you describe. If the job is unclear, or it needs a license, we&apos;ll review it before you can book.</p>
           </CardContent>
         </Card>
       </section>

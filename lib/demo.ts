@@ -1,6 +1,6 @@
 /** Shown when PayPal is not connected and the test-payment button is turned off. */
 export const DEMO_PAY_UNAVAILABLE =
-  "Online payment isn't set up on this site yet. Dale will contact you to take payment.";
+  "Online payment isn't set up on this site yet. We'll contact you to take payment.";
 
 /**
  * Sample one-click sign-in is for `npm run dev` before Supabase is connected.
