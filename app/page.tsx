@@ -9,7 +9,6 @@ export default async function HomePage() {
   const repo = getRepository();
   const [settings, reviews] = await Promise.all([repo.getSettings(), repo.listReviews()]);
   const published = reviews.filter((review) => review.comment || review.rating);
-  const counties = settings.premiumCounties.join(", ");
 
   return (
     <div className="space-y-10">
@@ -61,30 +60,6 @@ export default async function HomePage() {
           </CardHeader>
           <CardContent className="text-sm text-muted">
             Create your account, then pick a time or take the earliest opening. It stays yours for {settings.holdHours} hours while you pay. Cancel before work starts and we keep {usd(settings.cancelFee)}. If we find something different on site, you can approve a new price or get refunded everything except travel.
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Travel and the area charge</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              Travel is {usd(settings.mileRate)} per mile, one way, with a {usd(settings.travelMinimum)} minimum. The first job of the day is measured from the shop at {settings.shopAddress}. Later jobs are measured from the stop before. Once you pay, that travel charge stays put.
-            </p>
-            <p>
-              Jobs in {counties} include a {Math.round((settings.premiumMultiplier - 1) * 100)}% area charge on the work, including helpers. The drive is not part of that charge.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Hire a helper</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            {usd(settings.helperRate)} per hour, per person. One hour minimum. Up to {settings.helperMax} helpers. The area charge applies to helper time. Travel is charged once, not per person.
           </CardContent>
         </Card>
       </section>
