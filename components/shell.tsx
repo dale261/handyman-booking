@@ -18,7 +18,7 @@ export function Shell({
 }) {
   return (
     <div className="min-h-screen">
-      <header className="bg-charcoal text-white">
+      <header className="bg-charcoal text-white print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <Image src="/brand/logo-header.png" alt="eX Construction" width={36} height={36} className="h-9 w-9" priority />
@@ -60,7 +60,7 @@ export function Shell({
         </div>
       </header>
       {ready && keys?.localDemo && (
-        <div className="border-b border-copper/30 bg-copper/10">
+        <div className="border-b border-copper/30 bg-copper/10 print:hidden">
           <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-ink">
             This copy saves to a file on this computer. Sample sign-in is on. Don&apos;t put this on the public internet. Connect Supabase before customers use it.
             {keys.resend ? " Email is live." : " Emails print in the terminal."}
@@ -70,8 +70,8 @@ export function Shell({
           </p>
         </div>
       )}
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-      <footer className="border-t border-line py-8 text-center text-sm text-muted">
+      <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">{children}</main>
+      <footer className="border-t border-line py-8 text-center text-sm text-muted print:hidden">
         eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work around Cadillac
       </footer>
     </div>

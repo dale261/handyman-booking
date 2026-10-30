@@ -6,6 +6,7 @@ import type { Settings } from "@/lib/domain/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function SettingsForm({ settings }: { settings: Settings }) {
@@ -41,6 +42,38 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           Premium counties, separated by commas
           <Input name="premiumCounties" defaultValue={settings.premiumCounties.join(", ")} />
         </label>
+      </div>
+      <div className="space-y-3 rounded-md border border-line bg-paper p-4">
+        <p className="text-sm font-semibold">On contracts and invoices</p>
+        <p className="text-sm text-muted">
+          These print at the top of every agreement and invoice. The address is the shop address above. Leave a field blank to leave it off.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-semibold">
+            Business name
+            <Input name="businessName" defaultValue={settings.businessName} />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">
+            Michigan license number
+            <Input name="licenseNumber" defaultValue={settings.licenseNumber} placeholder="Blank until licensed" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">
+            Business phone
+            <Input name="businessPhone" type="tel" defaultValue={settings.businessPhone} />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold">
+            Business email
+            <Input name="businessEmail" type="email" defaultValue={settings.businessEmail} />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold sm:col-span-2">
+            Workmanship promise, in your words (optional)
+            <Textarea name="warrantyText" defaultValue={settings.warrantyText} placeholder="For example: If something we did isn't right, tell us within 30 days and we'll come back and fix it at no charge." className="min-h-20" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold sm:col-span-2">
+            Other terms for every agreement (optional)
+            <Textarea name="extraTerms" defaultValue={settings.extraTerms} placeholder="One paragraph per term. Leave a blank line between terms." className="min-h-20" />
+          </label>
+        </div>
       </div>
       <p className="text-sm text-muted">
         Amounts marked “example” are starting public ranges. Replace them with your prices. Helper pay, travel, the cancel fee, and the deposit rule are your rules and can be changed here too. The Michigan builder threshold stays at ${settings.builderThreshold} and is not a price.

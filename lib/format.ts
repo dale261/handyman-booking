@@ -67,3 +67,8 @@ export function appUrl(): string {
 export function jobUrl(id: string): string {
   return `${appUrl()}/jobs/${id}`;
 }
+
+/** The contract and invoice page a customer can open without signing in. Falls back to the job page when the job has no link secret yet. */
+export function contractUrl(job: { id: string; docToken?: string }): string {
+  return job.docToken ? `${appUrl()}/contract/${job.id}?k=${job.docToken}` : `${appUrl()}/jobs/${job.id}/contract`;
+}

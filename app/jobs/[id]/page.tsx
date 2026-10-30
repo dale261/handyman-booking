@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   approveWorkAction,
@@ -92,6 +93,11 @@ export default async function JobPage({
           <p className="text-sm text-muted">{job.invoiceNumber ? `Invoice #${job.invoiceNumber}` : "No invoice yet"}</p>
           <h1 className="font-display text-3xl font-semibold text-ink">{hidePrice ? "We're reviewing your request" : job.scope || "Job"}</h1>
           <p className="text-sm text-muted">{job.jobSiteAddress}</p>
+          {!hidePrice && (
+            <Link className="text-sm font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
+              Contract and invoice{job.agreement ? " (signed)" : ""}
+            </Link>
+          )}
         </div>
         <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
       </div>
@@ -222,7 +228,8 @@ export default async function JobPage({
                 </p>
               )}
               {job.assignNote && actor.role !== "customer" && <p className="text-muted">{job.assignNote}</p>}
-              {job.travelLocked && <p className="text-muted">Travel stays at {job.travelMiles ?? 0} miles ({usd(job.travelFee)}) because this job is paid.</p>}
+              {job.travelLocked && !job.ownerPriced && <p className="text-muted">Travel stays at {job.travelMiles ?? 0} miles ({usd(job.travelFee)}) because this job is paid.</p>}
+              {job.ownerPriced && <p className="text-muted">{actor.role === "customer" ? "Travel is included in this price." : "Price typed by the owner, travel included. The app won't recalculate it."}</p>}
               {job.completionNote && <p>Crew note: {job.completionNote}</p>}
               {job.problemNote && <p>Problem: {job.problemNote}</p>}
               {actor.role === "owner" && job.quoteMeta && (
@@ -325,6 +332,15 @@ export default async function JobPage({
               {canPay && (
                 <div className="space-y-2">
                   <p className="font-semibold">Due now: {usd(due)}</p>
+                  {actor.role === "customer" && !job.agreement && (
+                    <p className="text-muted">
+                      Paying accepts the{" "}
+                      <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
+                        agreement
+                      </Link>
+                      .
+                    </p>
+                  )}
                   {paypalConfigured() ? (
                     <form action={startPayPalAction}>
                       <input type="hidden" name="jobId" value={job.id} />

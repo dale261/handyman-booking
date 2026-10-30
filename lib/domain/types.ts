@@ -113,6 +113,17 @@ export type Settings = {
   shopLat: number;
   shopLng: number;
   ownerNotifyEmail: string;
+  /** Legal name printed on contracts and invoices. */
+  businessName: string;
+  /** Phone and email printed on contracts and invoices. Blank leaves them off. */
+  businessPhone: string;
+  businessEmail: string;
+  /** Michigan residential builder license number. Blank until licensed; the contract wording changes with it. */
+  licenseNumber: string;
+  /** Workmanship promise printed in the agreement, in the owner's own words. Blank leaves the clause out. */
+  warrantyText: string;
+  /** Any extra terms the owner wants in every agreement. */
+  extraTerms: string;
   rrpCertified: boolean;
   premiumEnabled: boolean;
   premiumMultiplier: number;

@@ -203,6 +203,18 @@ Every price check is saved as a lead under **Leads** in the owner menu, with the
 
 Run `supabase/migrations/20261028120000_leads.sql` in the SQL Editor once. Running it twice is safe.
 
+## Phone jobs, contracts, and invoices
+
+Not every job starts on the website. **Jobs → Add a job** is for the ones that come in by phone or in person: type the customer (name, phone, email, billing address), the work (a short title the customer sees, details, hours on site, people on site), and your firm price with travel included. Optionally pick a date and start time; the closest free crew is assigned and the time is held for as many hours as you choose while the booking payment comes in. Your price is final: the app never recalculates it, and travel is a separate line only if you split it out. The job gets its invoice number right away.
+
+If the customer has no account yet, one is created so the job has a home. You can set a temporary password for them, or leave it blank; the contract link works without a sign-in. An existing customer's account is reused, and anything you typed updates their details.
+
+Every job, however it started, has a **Contract and invoice** page (linked from the job page and the Jobs table). It is built from the job record: your business details, the customer, the work, the scheduled time, the price lines, payments received and the balance, the terms the app actually enforces (firm price, on-site changes, the hold and deposit rules, cancel fees, approval of finished work), Michigan's licensing statement worded for the license you hold, and your own workmanship promise and extra terms. The page prints as a plain document; on a phone, Print → Save as PDF.
+
+From that page you can **email the customer a link** (queued under Queue until email is connected) or copy the link to text it. The link opens without a sign-in and shows a sign-here box; typing their name records the signature with the date, the price they agreed to, and the network address. Paying to book through the site also counts as acceptance, and the page says so. You get a Queue notice when someone signs.
+
+Fill in **Rates → On contracts and invoices** first: business name, phone, email, your Michigan license number when you have one, a workmanship promise in your own words, and any other terms. Blank fields are simply left off. The agreement text is not legal advice; have a Michigan lawyer read it once before you lean on it.
+
 ## How a job moves
 
 1. The customer sees a price on the public page first, then creates an account with a phone number and billing address. Signed-in customers use the full form, with photos and a different job-site address if needed.

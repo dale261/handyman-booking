@@ -1,8 +1,14 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { clearLocalSession, createSupabaseServer, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
+import { ensureCustomerAccount } from "@/lib/accounts";
+import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
+import { clientIp } from "@/lib/client-ip";
+import { sendAgreement, signAgreement } from "@/lib/services/agreement";
+import { createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
+import { areaCheck } from "@/lib/domain/area";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
@@ -15,11 +21,11 @@ import { mergeLibrary } from "@/lib/domain/library";
 import type { LibraryGroup } from "@/lib/domain/library-data";
 import { normalizeSettings, SETTING_FIELDS } from "@/lib/domain/settings";
 import type { QuoteParams, ServiceId, Settings } from "@/lib/domain/types";
-import { DEFAULT_PARAMS } from "@/lib/domain/types";
-import { flushEmails } from "@/lib/email";
+import { DEFAULT_PARAMS, SERVICE_LABELS } from "@/lib/domain/types";
+import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createPayPalOrder } from "@/lib/paypal";
-import { appUrl } from "@/lib/format";
+import { appUrl, formatDate, formatMinutes } from "@/lib/format";
 import { blocksSchedule } from "@/lib/domain/scheduling";
 import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
@@ -498,6 +504,12 @@ export async function saveSettingsAction(form: FormData) {
   next.shopLat = Number(field(form, "shopLat"));
   next.shopLng = Number(field(form, "shopLng"));
   next.ownerNotifyEmail = field(form, "ownerNotifyEmail");
+  next.businessName = field(form, "businessName") || current.businessName;
+  next.businessPhone = field(form, "businessPhone");
+  next.businessEmail = field(form, "businessEmail");
+  next.licenseNumber = field(form, "licenseNumber");
+  next.warrantyText = field(form, "warrantyText").slice(0, 2000);
+  next.extraTerms = field(form, "extraTerms").slice(0, 6000);
   next.premiumCounties = field(form, "premiumCounties")
     .split(",")
     .map((part) => part.trim())
@@ -669,4 +681,135 @@ export async function removeTimeOffAction(form: FormData) {
   await requireRole("owner");
   await getRepository().removeTimeOff(field(form, "id"));
   redirect("/owner/settings?notice=" + encodeURIComponent("Day off removed."));
+}
+
+// ---------------------------------------------------------------------------
+// Owner-entered jobs (phone and in-person) and the contract and invoice page
+// ---------------------------------------------------------------------------
+
+function newJobBack(message: string): never {
+  redirect("/owner/jobs/new?error=" + encodeURIComponent(message));
+}
+
+/** The owner types a phone or in-person job once: customer, work, firm price, and (optionally) the time. */
+export async function createOwnerJobAction(form: FormData) {
+  const actor = await requireRole("owner");
+  const repo = getRepository();
+  const total = Number(field(form, "total").replace(/[$,]/g, ""));
+  if (!Number.isFinite(total) || total <= 0) newJobBack("Enter the price as a dollar amount.");
+  const travel = Number(field(form, "travel").replace(/[$,]/g, "") || "0");
+  if (!Number.isFinite(travel) || travel < 0) newJobBack("Travel has to be a dollar amount, or blank.");
+  const service = field(form, "service") as ServiceId;
+  if (!(service in SERVICE_LABELS)) newJobBack("Pick a service.");
+  const billingZip = field(form, "billingZip");
+  if (!/^\d{5}$/.test(billingZip)) newJobBack("The billing ZIP must be 5 digits.");
+  const password = String(form.get("password") ?? "");
+  if (password && password.length < 8) newJobBack("A temporary password needs at least 8 characters.");
+  // Cheap checks first, so a typo doesn't leave behind a customer account with no job.
+  if (field(form, "scope").length < 3) newJobBack("Give the job a short title, such as 'Replace bathroom faucet'.");
+  if (travel > total) newJobBack("Travel can't be more than the whole price.");
+  const hours = Number(field(form, "hours") || "2");
+  if (!Number.isFinite(hours) || hours < OWNER_JOB_LIMITS.minHours || hours > OWNER_JOB_LIMITS.maxHours) {
+    newJobBack(`Hours on site must be between ${OWNER_JOB_LIMITS.minHours} and ${OWNER_JOB_LIMITS.maxHours}.`);
+  }
+  const siteText = field(form, "jobSiteAddress") || billingZip;
+  if (!areaCheck(siteText, await repo.listZips()).found) newJobBack("Add a 5-digit ZIP to the job site address.");
+
+  const account = await ensureCustomerAccount(repo, {
+    fullName: field(form, "fullName"),
+    email: field(form, "email"),
+    phone: field(form, "phone"),
+    billingAddress: field(form, "billingAddress"),
+    billingZip,
+    password,
+  });
+  if (!account.ok) newJobBack(account.error);
+
+  const created = await createOwnerJob(repo, actor, {
+    customer: account.user,
+    service,
+    scope: field(form, "scope"),
+    description: field(form, "description"),
+    jobSiteAddress: field(form, "jobSiteAddress"),
+    hoursOnSite: hours,
+    crewSize: Number(field(form, "crewSize") || "1"),
+    total,
+    travel,
+  });
+  if (!created.ok) newJobBack(created.error);
+  const job = created.data;
+
+  const notes = [`Job added${job.invoiceNumber ? `, invoice #${job.invoiceNumber}` : ""}.`];
+  if (account.created) {
+    notes.push(
+      password
+        ? `Customer account created for ${account.user.email} with the temporary password you set.`
+        : `Customer account created for ${account.user.email}. No password was set; the contract link works without one.`,
+    );
+  }
+  const date = field(form, "date");
+  const startMin = Number(field(form, "startMin"));
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(startMin)) {
+      notes.push("The date or time didn't read right, so nothing is held yet. Pick a time on the job page.");
+    } else {
+      const holdHours = Number(field(form, "holdHours") || "0") || undefined;
+      const held = await holdSlot(repo, actor, job.id, { date, startMin }, { holdHours });
+      if (held.ok) {
+        const until = held.data.holdUntil
+          ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
+          : "";
+        notes.push(`${formatDate(date)} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}; the customer was emailed.`);
+      } else {
+        notes.push(`Couldn't hold ${formatDate(date)} at ${formatMinutes(startMin)}: ${held.error} Pick a time on the job page.`);
+      }
+    }
+  }
+  const settings = await repo.getSettings();
+  if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
+    notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part.`);
+  }
+  await settle(repo);
+  redirect(`/jobs/${job.id}/contract?notice=${encodeURIComponent(notes.join(" "))}`);
+}
+
+/** The customer types their name to accept the agreement. Works signed in or from the emailed link. */
+export async function signAgreementAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const token = field(form, "token") || null;
+  const back = (kind: "notice" | "error", message: string): never => {
+    const target = token ? `/contract/${jobId}?k=${encodeURIComponent(token)}` : `/jobs/${jobId}/contract`;
+    redirect(`${target}${token ? "&" : "?"}${kind}=${encodeURIComponent(message)}`);
+  };
+  if (!jobId) redirect("/");
+  if (!(await allowRequest(ANON_LIMIT))) back("error", "Too many attempts from this network. Wait a few minutes and try again.");
+  if (form.get("agree") !== "on") back("error", "Tick the box to confirm you've read the agreement.");
+  const actor = await currentActor();
+  const headerList = await headers();
+  const repo = getRepository();
+  const result = await signAgreement(repo, {
+    jobId,
+    actor,
+    token,
+    signedName: field(form, "signedName"),
+    ip: clientIp(headerList),
+    userAgent: headerList.get("user-agent") ?? "",
+  });
+  await settle(repo);
+  if (!result.ok) back("error", result.error);
+  back("notice", "Thanks, your signature is recorded. Print or save this page for your records.");
+}
+
+/** Owner: email the customer the link to their contract and invoice. */
+export async function sendAgreementAction(form: FormData) {
+  const actor = await requireRole("owner");
+  const jobId = field(form, "jobId");
+  const repo = getRepository();
+  const result = await sendAgreement(repo, actor, jobId);
+  await settle(repo);
+  if (!result.ok) redirect(`/jobs/${jobId}/contract?error=${encodeURIComponent(result.error)}`);
+  const note = resendConfigured()
+    ? `Emailed to ${result.data.customerEmail}.`
+    : `Queued for ${result.data.customerEmail}. Email isn't connected yet, so it sits in the Queue until Resend is set up; you can share the link below instead.`;
+  redirect(`/jobs/${jobId}/contract?notice=${encodeURIComponent(note)}`);
 }

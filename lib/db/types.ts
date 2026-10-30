@@ -90,6 +90,16 @@ export type PriceChange = {
   outcome: PriceChangeOutcome;
 };
 
+/** The customer's acceptance of the written agreement, typed on the contract page. */
+export type Agreement = {
+  signedName: string;
+  signedAt: string;
+  /** The total they agreed to. The invoice shows a note if the price changed later. */
+  total: number;
+  ip: string;
+  userAgent: string;
+};
+
 export type JobRecord = {
   id: string;
   customerId: string;
@@ -153,6 +163,16 @@ export type JobRecord = {
   quoteMeta?: QuoteMeta | null;
   /** On-site price changes. Missing on jobs saved before this field existed. */
   priceChanges?: PriceChange[];
+  /** True when the owner typed the price for a phone or in-person job. The app never recomputes it. */
+  ownerPriced?: boolean;
+  /** People the owner wants on site for an owner-entered job. Listed services compute their own. */
+  crewSize?: number | null;
+  /** Secret in the no-sign-in contract link. Missing on jobs saved before this field existed. */
+  docToken?: string;
+  /** Set when the customer signs the agreement online. */
+  agreement?: Agreement | null;
+  /** When the owner last emailed the contract and invoice link. */
+  docSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -172,7 +192,7 @@ export type PaymentRecord = {
 
 export type NotificationRecord = {
   id: string;
-  kind: "pay" | "approval" | "refund" | "done" | "lead";
+  kind: "pay" | "approval" | "refund" | "done" | "lead" | "signed";
   title: string;
   detail: string;
   read: boolean;
