@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <section className="mx-auto max-w-xl space-y-3">
               <h1 className="font-display text-3xl font-semibold text-ink">This site isn&apos;t connected yet</h1>
               <p>eX Construction isn&apos;t taking bookings on this address until the database is connected. Please check back soon.</p>
-              <p className="text-sm text-muted">If you&apos;re Dale, the README walks through connecting Supabase, email, PayPal, and the quote notes.</p>
+              <p className="text-sm text-muted">If you&apos;re the owner, the README walks through connecting Supabase, email, PayPal, and the quote notes.</p>
             </section>
           )}
         </Shell>
