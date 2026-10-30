@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <div className="flex flex-wrap gap-2">
               <Demo role="customer" label="Sample customer" />
               <Demo role="worker" label="Worker A" />
-              <Demo role="owner" label="Dale (owner)" />
+              <Demo role="owner" label="Owner (sample)" />
             </div>
           </CardContent>
         </Card>
