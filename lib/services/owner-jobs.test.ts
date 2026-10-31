@@ -38,6 +38,7 @@ describe("owner-entered jobs", () => {
       description: "Swap the old faucet for the Moen the customer bought. Shut-offs work.",
       jobSiteAddress: "",
       hoursOnSite: 2,
+      days: 1,
       crewSize: 1,
       total: 450,
       travel: 50,
@@ -85,7 +86,7 @@ describe("owner-entered jobs", () => {
     const owner = actorFromUser(await user(store, DEMO_USERS.owner));
     const customer = await user(store, DEMO_USERS.customer);
     const worker = await user(store, DEMO_USERS.worker);
-    const base = { service: "other" as const, scope: "Fix a door", description: "", jobSiteAddress: "", hoursOnSite: 1, crewSize: 1, total: 200, travel: 0 };
+    const base = { service: "other" as const, scope: "Fix a door", description: "", jobSiteAddress: "", hoursOnSite: 1, days: 1, crewSize: 1, total: 200, travel: 0 };
     expect((await createOwnerJob(store, owner, { ...base, customer: worker })).ok).toBe(false);
     expect((await createOwnerJob(store, owner, { ...base, customer, total: 0 })).ok).toBe(false);
     expect((await createOwnerJob(store, owner, { ...base, customer, travel: 250 })).ok).toBe(false);
@@ -104,6 +105,7 @@ describe("owner-entered jobs", () => {
       description: "Walls only, customer supplies paint.",
       jobSiteAddress: "",
       hoursOnSite: 4,
+      days: 1,
       crewSize: 2,
       total: 700,
       travel: 0,
@@ -141,5 +143,44 @@ describe("owner-entered jobs", () => {
     expect(doc?.body).toContain("$700.00");
     const asCustomer = await sendAgreement(store, actorFromUser(customer), job.id);
     expect(asCustomer.ok).toBe(false);
+  });
+});
+
+describe("multi-day owner jobs", () => {
+  it("reserves the crew for consecutive working days, skipping Sundays, and keeps them busy on every day", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const customer = await user(store, DEMO_USERS.customer);
+    const base = { customer, service: "other" as const, description: "", jobSiteAddress: "", hoursOnSite: 8, crewSize: 2, travel: 0 };
+    const trim = await createOwnerJob(store, owner, { ...base, scope: "Trim out the whole first floor", days: 3, total: 2400 });
+    expect(trim.ok).toBe(true);
+    if (!trim.ok) return;
+    expect(trim.data.durationDays).toBe(3);
+    expect(trim.data.scheduledDates).toEqual([]);
+
+    const held = await holdSlot(store, owner, trim.data.id, "earliest");
+    expect(held.ok).toBe(true);
+    if (!held.ok) return;
+    const dates = held.data.scheduledDates ?? [];
+    expect(dates).toHaveLength(3);
+    expect(dates[0]).toBe(held.data.scheduledDate);
+    expect(new Set(dates).size).toBe(3);
+    for (const date of dates) expect(new Date(`${date}T12:00:00Z`).getUTCDay()).not.toBe(0);
+    expect(held.data.workerIds).toHaveLength(2);
+    expect(held.data.onsiteMinutes).toBe(480);
+    const emails = await store.listEmails();
+    const holdMail = emails.find((email) => email.to === customer.email && email.subject.startsWith("Your time is held"));
+    expect(holdMail?.body).toContain("each day");
+
+    // The same two people can't take another all-day job on the middle day.
+    const other = await createOwnerJob(store, owner, { ...base, scope: "Hang doors", days: 1, total: 900 });
+    expect(other.ok).toBe(true);
+    if (!other.ok) return;
+    const clash = await holdSlot(store, owner, other.data.id, { date: dates[1], startMin: held.data.startMin ?? 480 });
+    if (clash.ok) {
+      expect(clash.data.workerIds.some((id) => held.data.workerIds.includes(id))).toBe(false);
+    } else {
+      expect(clash.error).toMatch(/taken|fits/);
+    }
   });
 });

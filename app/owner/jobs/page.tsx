@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { formatDate, usd } from "@/lib/format";
+import { formatDateRange, usd } from "@/lib/format";
+import { jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 
 export default async function OwnerJobsPage() {
@@ -44,7 +45,7 @@ export default async function OwnerJobsPage() {
                     <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}`}>{job.scope || job.description}</Link>
                     {job.ownerPriced && <span className="ml-2 text-xs text-muted">phone job</span>}
                   </td>
-                  <td className="px-3 py-2">{job.scheduledDate ? formatDate(job.scheduledDate) : "—"}</td>
+                  <td className="px-3 py-2">{job.scheduledDate ? formatDateRange(jobDates(job)) : "—"}</td>
                   <td className="px-3 py-2 text-right">{usd(job.total)}</td>
                   <td className="px-3 py-2"><Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge></td>
                   <td className="px-3 py-2">

@@ -26,8 +26,8 @@ import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
 import { createPayPalOrder } from "@/lib/paypal";
-import { appUrl, formatDate, formatMinutes } from "@/lib/format";
-import { blocksSchedule } from "@/lib/domain/scheduling";
+import { appUrl, formatDate, formatDateRange, formatMinutes } from "@/lib/format";
+import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
   amountPayable,
@@ -713,6 +713,8 @@ export async function createOwnerJobAction(form: FormData) {
   if (!Number.isFinite(hours) || hours < OWNER_JOB_LIMITS.minHours || hours > OWNER_JOB_LIMITS.maxHours) {
     newJobBack(`Hours on site must be between ${OWNER_JOB_LIMITS.minHours} and ${OWNER_JOB_LIMITS.maxHours}.`);
   }
+  const days = Number(field(form, "days") || "1");
+  if (!Number.isFinite(days) || days < 1 || days > OWNER_JOB_LIMITS.maxDays) newJobBack(`Days must be between 1 and ${OWNER_JOB_LIMITS.maxDays}.`);
   const siteText = field(form, "jobSiteAddress") || billingZip;
   if (!areaCheck(siteText, await repo.listZips()).found) newJobBack("Add a 5-digit ZIP to the job site address.");
 
@@ -733,6 +735,7 @@ export async function createOwnerJobAction(form: FormData) {
     description: field(form, "description"),
     jobSiteAddress: field(form, "jobSiteAddress"),
     hoursOnSite: hours,
+    days,
     crewSize: Number(field(form, "crewSize") || "1"),
     total,
     travel,
@@ -760,7 +763,7 @@ export async function createOwnerJobAction(form: FormData) {
         const until = held.data.holdUntil
           ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
           : "";
-        notes.push(`${formatDate(date)} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}; the customer was emailed.`);
+        notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}; the customer was emailed.`);
       } else {
         notes.push(`Couldn't hold ${formatDate(date)} at ${formatMinutes(startMin)}: ${held.error} Pick a time on the job page.`);
       }

@@ -36,7 +36,8 @@ import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
-import { formatDate, formatMinutes, usd } from "@/lib/format";
+import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
+import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
 import { amountPaid, listOpenSlots, visibleTo, type SlotOption } from "@/lib/services/booking";
@@ -222,7 +223,7 @@ export default async function JobPage({
               </p>
               {job.scheduledDate && (
                 <p>
-                  {formatDate(job.scheduledDate)} at {formatMinutes(job.startMin || 0)}
+                  {jobDates(job).length > 1 ? `${formatDateRange(jobDates(job))}, ${formatMinutes(job.startMin || 0)} each day` : `${formatDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}`}
                   {crewName ? ` · ${crewName}` : ""}
                   {actor.role === "owner" && job.assignedBy === "auto" ? " · assigned automatically" : actor.role === "owner" && job.assignedBy === "owner" ? " · you assigned this crew" : ""}
                 </p>
@@ -283,10 +284,11 @@ export default async function JobPage({
                   <p className="text-sm text-muted">{slotError || "Nothing in the next two weeks fits this job and the drive."}</p>
                 ) : (
                   <>
+                    {daysOf(job) > 1 && <p className="text-sm text-muted">This job takes {daysOf(job)} working days. Pick the first day; the crew is reserved for the same hours each day after it.</p>}
                     <form action={holdSlotAction}>
                       <input type="hidden" name="jobId" value={job.id} />
                       <input type="hidden" name="when" value="earliest" />
-                      <SubmitButton>Earliest available · {formatDate(slots[0].date)} at {formatMinutes(slots[0].startMin)}</SubmitButton>
+                      <SubmitButton>Earliest available · {formatDateRange(slots[0].dates)} at {formatMinutes(slots[0].startMin)}</SubmitButton>
                     </form>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {dates.map((date) => (
@@ -306,7 +308,10 @@ export default async function JobPage({
                           <input type="hidden" name="date" value={slot.date} />
                           <input type="hidden" name="startMin" value={slot.startMin} />
                           <div>
-                            <p className="font-semibold">{formatMinutes(slot.startMin)} · {slot.crewName}</p>
+                            <p className="font-semibold">
+                              {formatMinutes(slot.startMin)} · {slot.crewName}
+                              {slot.dates.length > 1 ? ` · through ${formatDate(slot.dates[slot.dates.length - 1])}` : ""}
+                            </p>
                             <p className="text-muted">
                               {slot.memberNames.join(", ")} · {slot.travelMiles.toFixed(1)} miles from {slot.travelFrom} · travel {usd(slot.travelFee)}
                             </p>

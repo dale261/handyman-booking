@@ -100,8 +100,13 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="jobSiteAddress" autoComplete="off" placeholder="Street, city, state, ZIP" />
             </label>
             <label className={fieldClass}>
-              Hours on site
+              Hours on site each day
               <Input name="hours" type="number" step="0.5" min={OWNER_JOB_LIMITS.minHours} max={OWNER_JOB_LIMITS.maxHours} defaultValue={2} required />
+            </label>
+            <label className={fieldClass}>
+              Working days
+              <Input name="days" type="number" step="1" min={1} max={OWNER_JOB_LIMITS.maxDays} defaultValue={1} required />
+              <span className="font-normal text-muted">More than 1 reserves the crew for the same hours on consecutive working days. Weekends and days off are skipped.</span>
             </label>
             <label className={fieldClass}>
               People on site
@@ -161,8 +166,9 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="holdHours" type="number" step="1" min={1} max={720} defaultValue={settings.holdHours} />
             </label>
             <p className="text-sm text-muted sm:col-span-3">
-              The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the usual hold email. Mark cash or a
-              check paid on the job page to confirm it. Leave the date blank to pick a time later from the job page.
+              The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the usual hold email. For a multi-day
+              job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the job page to confirm it. Leave
+              the date blank to pick a time later from the job page.
             </p>
           </CardContent>
         </Card>

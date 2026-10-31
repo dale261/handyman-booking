@@ -48,6 +48,14 @@ export function todayDetroit(now = new Date()): string {
   }).format(now);
 }
 
+/** "Mon, Nov 3" for one day, "Mon, Nov 3 – Wed, Nov 5" for a run of days. */
+export function formatDateRange(dates: string[]): string {
+  if (dates.length === 0) return "";
+  const first = formatDate(dates[0]);
+  const last = formatDate(dates[dates.length - 1]);
+  return dates.length === 1 || first === last ? first : `${first} – ${last}`;
+}
+
 export function addDays(date: string, days: number): string {
   const [y, m, d] = date.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d + days));

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { mergeLibrary } from "@/lib/domain/library";
 import type { LibraryEntry } from "@/lib/domain/library-data";
-import { blocksSchedule } from "@/lib/domain/scheduling";
+import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
@@ -209,7 +209,8 @@ function seed(): FileShape {
 function overlaps(job: JobRecord, other: JobRecord): boolean {
   if (other.id === job.id) return false;
   if (!blocksSchedule(other.status)) return false;
-  if (!job.scheduledDate || other.scheduledDate !== job.scheduledDate) return false;
+  const mine = jobDates(job);
+  if (mine.length === 0 || !jobDates(other).some((date) => mine.includes(date))) return false;
   if (job.reserveStartMin == null || job.reserveEndMin == null) return false;
   if (other.reserveStartMin == null || other.reserveEndMin == null) return false;
   const shares = job.workerIds.some((id) => other.workerIds.includes(id));

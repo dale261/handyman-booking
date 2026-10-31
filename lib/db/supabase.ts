@@ -201,10 +201,19 @@ export class SupabaseRepository implements Repository {
   }
 
   async saveJob(job: JobRecord, opts?: SaveJobOptions) {
-    const data = await this.must(
-      this.db().rpc("save_job", { p_job: job, p_issue: Boolean(opts?.issueInvoice && job.invoiceNumber == null) }),
-    );
-    return data as JobRecord;
+    const issue = Boolean(opts?.issueInvoice && job.invoiceNumber == null);
+    const data = await this.must(this.db().rpc("save_job", { p_job: job, p_issue: issue }));
+    const saved = data as JobRecord;
+    if (!issue || saved.invoiceNumber != null || job.status === "held") return saved;
+    // The original save_job only hands out numbers while a job is held. Until the
+    // multi-day migration (which also fixes that) has been run, take the number
+    // through a momentary "held" save and write the real status straight back.
+    const numbered = (await this.must(this.db().rpc("save_job", { p_job: { ...job, status: "held" }, p_issue: true }))) as JobRecord;
+    if (numbered.invoiceNumber == null) return saved;
+    const final = (await this.must(
+      this.db().rpc("save_job", { p_job: { ...job, invoiceNumber: numbered.invoiceNumber }, p_issue: false }),
+    )) as JobRecord;
+    return final;
   }
 
   async listPayments(jobId?: string) {

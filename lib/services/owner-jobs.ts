@@ -26,7 +26,10 @@ export type OwnerJobInput = {
   description: string;
   /** Blank means the work is at the customer's billing address. */
   jobSiteAddress: string;
+  /** Hours on site each day. */
   hoursOnSite: number;
+  /** Working days the job takes; the crew is reserved for the same window each day. */
+  days: number;
   crewSize: number;
   /** The firm price, travel included. */
   total: number;
@@ -34,7 +37,7 @@ export type OwnerJobInput = {
   travel: number;
 };
 
-export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxCrew: 4, maxTotal: 50_000 };
+export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000 };
 
 /**
  * A job that came in by phone or in person. The owner types the customer, the work,
@@ -62,6 +65,8 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
     if (hours < OWNER_JOB_LIMITS.minHours || hours > OWNER_JOB_LIMITS.maxHours) {
       return fail(`Hours on site must be between ${OWNER_JOB_LIMITS.minHours} and ${OWNER_JOB_LIMITS.maxHours}.`);
     }
+    const days = Math.round(Number.isFinite(input.days) ? input.days : 1);
+    if (days < 1 || days > OWNER_JOB_LIMITS.maxDays) return fail(`Days must be between 1 and ${OWNER_JOB_LIMITS.maxDays}.`);
     const crewSize = Math.round(Number.isFinite(input.crewSize) ? input.crewSize : 1);
     if (crewSize < 1 || crewSize > OWNER_JOB_LIMITS.maxCrew) return fail(`People on site must be between 1 and ${OWNER_JOB_LIMITS.maxCrew}.`);
 
@@ -147,6 +152,8 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       priceChanges: [],
       ownerPriced: true,
       crewSize,
+      durationDays: days,
+      scheduledDates: [],
       docToken: newDocToken(),
       agreement: null,
       docSentAt: null,

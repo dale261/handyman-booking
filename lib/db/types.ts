@@ -167,6 +167,10 @@ export type JobRecord = {
   ownerPriced?: boolean;
   /** People the owner wants on site for an owner-entered job. Listed services compute their own. */
   crewSize?: number | null;
+  /** Working days the job takes. Missing or 1 means a single visit. Owner-entered jobs only, for now. */
+  durationDays?: number;
+  /** Every date the crew is reserved, first day first. Set when a time is held; empty when nothing is scheduled. */
+  scheduledDates?: string[];
   /** Secret in the no-sign-in contract link. Missing on jobs saved before this field existed. */
   docToken?: string;
   /** Set when the customer signs the agreement online. */

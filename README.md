@@ -31,7 +31,8 @@ Supabase is the database and the sign-in system. The free project is enough. It 
 5. Do the same with `supabase/migrations/20261026140000_cost_library.sql`. That loads the 37-job cost library for work that is not on the rate sheet. Run it third. Running it twice will not overwrite prices you already changed.
 6. Do the same with `supabase/migrations/20261027120000_ai_usage.sql`. That stores the daily AI quote counts and the IP limits. Run it after the cost library. Running it twice is safe.
 7. Do the same with `supabase/migrations/20261028120000_leads.sql`. That stores the leads from the public price page. Running it twice is safe.
-8. Still in the SQL Editor, run this with your real email:
+8. Do the same with `supabase/migrations/20261030230000_multi_day.sql`. That lets a job reserve the crew for several days and gives phone jobs their invoice number right away. Running it twice is safe.
+9. Still in the SQL Editor, run this with your real email:
 
 ```sql
 update public.app_settings
@@ -41,15 +42,15 @@ where id = 1;
 
 The first person who signs up with that exact email becomes the owner. Everyone else becomes a customer, unless their email matches a worker you already added.
 
-9. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
-10. Open **Project Settings**, then **API**. Copy three values:
+10. Open **Authentication**, then **Providers**, then **Email**. Turn **Confirm email** off. If it stays on, new accounts cannot sign in until they click a message, and the free email setup is easy to get wrong.
+11. Open **Project Settings**, then **API**. Copy three values:
    - Project URL
    - `anon` public key
    - `service_role` secret key
 
 The service role key can read every job. It stays in `.env.local` on the server. Never paste it into a web page or a public chat.
 
-11. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
+12. In this folder, copy `.env.example` to a new file named `.env.local`. Fill in:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=the project URL
@@ -59,8 +60,8 @@ OWNER_EMAIL=the same email you put in the SQL update
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:43123
 ```
 
-12. Stop the app (Ctrl+C) and run `npm run dev` again.
-13. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
+13. Stop the app (Ctrl+C) and run `npm run dev` again.
+14. Open the site and create an account with that owner email. You should land on the day-route screen, not the customer job list.
 
 If you already created the account before setting `owner_email`, you are a customer. In the SQL Editor run, with your user id from **Authentication → Users**:
 
@@ -223,6 +224,8 @@ Run `supabase/migrations/20261028120000_leads.sql` in the SQL Editor once. Runni
 ## Phone jobs, contracts, and invoices
 
 Not every job starts on the website. **Jobs → Add a job** is for the ones that come in by phone or in person: type the customer (name, phone, email, billing address), the work (a short title the customer sees, details, hours on site, people on site), and your firm price with travel included. Optionally pick a date and start time; the closest free crew is assigned and the time is held for as many hours as you choose while the booking payment comes in. Your price is final: the app never recalculates it, and travel is a separate line only if you split it out. The job gets its invoice number right away.
+
+A job that takes more than one day: set **Working days** and **Hours on site each day**. Pick the first day and a start time; the crew is reserved for the same hours on each consecutive working day (weekends and days off are skipped, so a 3-day job starting Friday runs Friday, Monday, Tuesday). The contract, the hold email, the day route and the crew page all show the date range. Run `supabase/migrations/20261030230000_multi_day.sql` once in the SQL Editor so the database locks every day of the run, not just the first; the same file makes phone jobs get their invoice number the moment they are saved. Running it twice is safe.
 
 If the customer has no account yet, one is created so the job has a home. You can set a temporary password for them, or leave it blank; the contract link works without a sign-in. An existing customer's account is reused, and anything you typed updates their details.
 

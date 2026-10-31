@@ -141,6 +141,24 @@ export function blocksSchedule(status: string): boolean {
   return BLOCKING.has(status);
 }
 
+type Dated = { scheduledDate: string | null; scheduledDates?: string[] | null };
+
+/** Every date a scheduled job occupies: the first day, plus the extra working days of a multi-day job. */
+export function jobDates(job: Dated): string[] {
+  if (job.scheduledDates && job.scheduledDates.length > 0) return job.scheduledDates;
+  return job.scheduledDate ? [job.scheduledDate] : [];
+}
+
+export function jobOnDate(job: Dated, date: string): boolean {
+  return jobDates(job).includes(date);
+}
+
+/** How many working days a job takes. Anything missing or odd is one day. */
+export function daysOf(job: { durationDays?: number | null }): number {
+  const n = Math.round(Number(job.durationDays ?? 1));
+  return Number.isFinite(n) && n > 1 ? Math.min(n, 60) : 1;
+}
+
 export function previousJob<T extends { crewId: string | null; startMin: number | null; status: string }>(
   jobs: T[],
   crewId: string,

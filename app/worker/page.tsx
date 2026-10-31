@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { formatDate, formatMinutes, todayDetroit } from "@/lib/format";
+import { formatDate, formatDateRange, formatMinutes, todayDetroit } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
-import { blocksSchedule } from "@/lib/domain/scheduling";
+import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 
 export default async function WorkerPage() {
   const actor = await requireActor();
@@ -41,7 +41,7 @@ export default async function WorkerPage() {
                   <div>
                     <p className="font-semibold">{job.scope}</p>
                     <p className="text-sm text-muted">
-                      {job.scheduledDate ? formatDate(job.scheduledDate) : "Unscheduled"} {job.startMin != null ? `at ${formatMinutes(job.startMin)}` : ""} · {job.jobSiteAddress}
+                      {job.scheduledDate ? formatDateRange(jobDates(job)) : "Unscheduled"} {job.startMin != null ? `at ${formatMinutes(job.startMin)}` : ""} · {job.jobSiteAddress}
                     </p>
                   </div>
                   <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>

@@ -10,6 +10,7 @@ import {
   type NotificationRecord,
   type PaymentRecord,
   type PriceChangeOutcome,
+  type WorkerRecord,
 } from "@/lib/db/types";
 import { areaCheck } from "@/lib/domain/area";
 import { applyRevisedTotal, linesForRevisedTotal, refundBeforeWork, refundExceptTravel, validateOwnerRefund } from "@/lib/domain/cancellation";
@@ -22,6 +23,9 @@ import { mergeListedAssumptions, noteFitsService } from "@/lib/domain/service-no
 import {
   blocksSchedule,
   chooseCrew,
+  daysOf,
+  jobDates,
+  jobOnDate,
   previousJob,
   visitWindow,
   workerFree,
@@ -37,7 +41,7 @@ import {
   type ServiceId,
   type Settings,
 } from "@/lib/domain/types";
-import { addDays, contractUrl, formatDate, formatMinutes, jobUrl, nowMinutesDetroit, todayDetroit, usd, weekday } from "@/lib/format";
+import { addDays, contractUrl, formatDate, formatDateRange, formatMinutes, jobUrl, nowMinutesDetroit, todayDetroit, usd, weekday } from "@/lib/format";
 import { geocodeAddress, measureLeg, type Point } from "@/lib/mileage";
 import { paypalConfigured, refundPayPalCapture } from "@/lib/paypal";
 
@@ -45,6 +49,8 @@ const SERVICE_IDS: ServiceId[] = ["paint", "tv", "blinds", "furniture", "yard", 
 
 export type SlotOption = {
   date: string;
+  /** Every working day the crew is reserved; one entry for a single visit. */
+  dates: string[];
   startMin: number;
   crewId: string;
   crewName: string;
@@ -238,6 +244,7 @@ function clearSchedule(job: JobRecord) {
   job.assignedBy = null;
   job.assignNote = "";
   job.scheduledDate = null;
+  job.scheduledDates = [];
   job.startMin = null;
   job.reserveStartMin = null;
   job.reserveEndMin = null;
@@ -250,13 +257,13 @@ async function releaseExpired(repo: Repository) {
   for (const job of jobs) {
     if (job.status === "held" && job.holdUntil && new Date(job.holdUntil).getTime() <= now) {
       const crewId = job.crewId;
-      const date = job.scheduledDate;
+      const dates = jobDates(job);
       clearSchedule(job);
       job.status = "released";
       await repo.saveJob(job, { skipOverlap: true });
-      if (crewId && date) {
+      if (crewId && dates.length > 0) {
         const settings = await repo.getSettings();
-        await recalculateDay(repo, settings, date, crewId);
+        await recalculateDays(repo, settings, dates, crewId);
       }
     }
   }
@@ -265,7 +272,7 @@ async function releaseExpired(repo: Repository) {
 function busyWindows(jobs: JobRecord[], workerId: string, date: string): [number, number][] {
   const windows: [number, number][] = [];
   for (const job of jobs) {
-    if (job.scheduledDate !== date || !blocksSchedule(job.status)) continue;
+    if (!jobOnDate(job, date) || !blocksSchedule(job.status)) continue;
     if (!job.workerIds.includes(workerId)) continue;
     if (job.reserveStartMin == null || job.reserveEndMin == null) continue;
     windows.push([job.reserveStartMin, job.reserveEndMin]);
@@ -279,10 +286,38 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
   const crews = (await repo.listCrews()).filter((crew) => crew.active);
   const timeOff = await repo.listTimeOff();
   const needed = job.crewSize && job.crewSize > 0 ? Math.round(job.crewSize) : crewNeeded(job.service, job.params, settings);
+  const days = daysOf(job);
   const today = todayDetroit();
   const minuteNow = nowMinutesDetroit();
   const slots: SlotOption[] = [];
   const destination = pointOf(job);
+  const offDay = (workerId: string, date: string) => timeOff.some((off) => off.workerId === workerId && off.date === date);
+
+  /**
+   * For a multi-day job: the run of consecutive working days from `first`, and the
+   * members who are free for the same window on every one of them. Days nobody in
+   * the group works (weekends, time off) are skipped, not counted. Null when the
+   * crew can't string enough days together.
+   */
+  const workingRun = (first: string, members: WorkerRecord[], reserveStart: number, reserveEnd: number): { dates: string[]; memberIds: string[] } | null => {
+    const dates = [first];
+    let group = members;
+    let cursor = first;
+    for (let step = 0; dates.length < days && step < 60; step++) {
+      cursor = addDays(cursor, 1);
+      const dow = weekday(cursor);
+      const working = group.filter((worker) => worker.workDays.includes(dow) && !offDay(worker.id, cursor));
+      if (working.length === 0) continue; // a day off for everyone: skip it, don't count it
+      const free = working.filter((worker) =>
+        workerFree({ dayStart: worker.dayStartMin, dayEnd: worker.dayEndMin }, busyWindows(jobs, worker.id, cursor), reserveStart, reserveEnd),
+      );
+      if (free.length < needed) return null;
+      group = free;
+      dates.push(cursor);
+    }
+    if (dates.length < days) return null;
+    return { dates, memberIds: group.map((worker) => worker.id) };
+  };
 
   for (let offset = 0; offset < 14; offset++) {
     const date = addDays(today, offset);
@@ -290,7 +325,7 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
     const cache = new Map<string, { miles: number; fromLabel: string; drive: number }>();
     const leg = async (crewId: string, startMin: number) => {
       const prev = previousJob(
-        jobs.filter((item) => item.scheduledDate === date),
+        jobs.filter((item) => jobOnDate(item, date)),
         crewId,
         startMin,
       );
@@ -313,14 +348,15 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
       if (date === today && start <= minuteNow + 30) continue;
       const candidates: CrewCandidate[] = [];
       const legs = new Map<string, { miles: number; fromLabel: string; drive: number }>();
+      const runs = new Map<string, string[]>();
       for (const crew of crews) {
         const measured = await leg(crew.id, start);
         legs.set(crew.id, measured);
         const window = visitWindow(start, measured.drive, job.onsiteMinutes, settings.bufferMinutes);
-        const free = workers.filter((worker) => {
+        let free = workers.filter((worker) => {
           if (worker.crewId !== crew.id) return false;
           if (!worker.workDays.includes(day)) return false;
-          if (timeOff.some((off) => off.workerId === worker.id && off.date === date)) return false;
+          if (offDay(worker.id, date)) return false;
           return workerFree(
             { dayStart: worker.dayStartMin, dayEnd: worker.dayEndMin },
             busyWindows(jobs, worker.id, date),
@@ -328,8 +364,19 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
             window.reserveEnd,
           );
         });
+        let dates = [date];
+        if (days > 1 && free.length >= needed) {
+          const run = workingRun(date, free, window.reserveStart, window.reserveEnd);
+          if (run) {
+            dates = run.dates;
+            free = free.filter((worker) => run.memberIds.includes(worker.id));
+          } else {
+            free = [];
+          }
+        }
+        runs.set(crew.id, dates);
         const jobCount = jobs.filter(
-          (item) => item.scheduledDate === date && item.crewId === crew.id && item.startMin != null && blocksSchedule(item.status),
+          (item) => jobOnDate(item, date) && item.crewId === crew.id && item.startMin != null && blocksSchedule(item.status),
         ).length;
         candidates.push({
           crewId: crew.id,
@@ -356,10 +403,13 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
             : candidate,
         );
       }
-      const choice = chooseCrew(pool, needed);
+      // A multi-day job needs one crew for the whole run, so borrowing from other crews is off.
+      const choice = chooseCrew(days > 1 ? pool.filter((candidate) => candidate.freeMemberIds.length >= needed) : pool, needed);
       if (!choice) continue;
       const info = legs.get(choice.crewId);
       if (!info) continue;
+      const runDates = runs.get(choice.crewId) ?? [date];
+      if (days > 1 && (choice.borrowed || runDates.length < days)) continue;
       let total = 0;
       let travelFeeAmount = 0;
       if (job.ownerPriced) {
@@ -381,6 +431,7 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
       const split = splitPayment(total, settings.depositThreshold);
       slots.push({
         date,
+        dates: runDates,
         startMin: start,
         crewId: choice.crewId,
         crewName: crews.find((crew) => crew.id === choice.crewId)?.name ?? "Crew",
@@ -404,6 +455,7 @@ function placeOnSlot(job: JobRecord, settings: Settings, slot: SlotOption) {
   job.workerIds = slot.memberIds;
   job.assignedBy = "auto";
   job.scheduledDate = slot.date;
+  job.scheduledDates = slot.dates.length > 0 ? slot.dates : [slot.date];
   job.startMin = slot.startMin;
   if (!job.ownerPriced) job.onsiteMinutes = onsiteMinutes(job.service, job.params, settings);
   const tie = slot.tie ? "; tie, fewer jobs that day" : "";
@@ -411,10 +463,14 @@ function placeOnSlot(job: JobRecord, settings: Settings, slot: SlotOption) {
   applyQuote(job, settings, slot.travelMiles, slot.travelFrom, job.travelSource || "straight-line");
 }
 
+async function recalculateDays(repo: Repository, settings: Settings, dates: string[], crewId: string) {
+  for (const date of [...new Set(dates)]) await recalculateDay(repo, settings, date, crewId);
+}
+
 async function recalculateDay(repo: Repository, settings: Settings, date: string, crewId: string) {
   const jobs = await repo.listJobs();
   const dayJobs = jobs
-    .filter((job) => job.scheduledDate === date && job.crewId === crewId && job.startMin != null && blocksSchedule(job.status))
+    .filter((job) => jobOnDate(job, date) && job.crewId === crewId && job.startMin != null && blocksSchedule(job.status))
     .sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0));
   for (const job of dayJobs) {
     if (job.travelLocked) continue;
@@ -747,22 +803,23 @@ export async function holdSlot(
         job.holdUntil = new Date(Date.now() + holdHours * 3600 * 1000).toISOString();
       }
       const saved = await repo.saveJob(job, { issueInvoice: job.status === "held" && job.invoiceNumber == null });
-      if (saved.crewId && saved.scheduledDate) await recalculateDay(repo, settings, saved.scheduledDate, saved.crewId);
+      if (saved.crewId && saved.scheduledDate) await recalculateDays(repo, settings, jobDates(saved), saved.crewId);
       const fresh = (await repo.getJob(saved.id)) ?? saved;
       if (fresh.status === "held") {
         const payLink = fresh.ownerPriced ? contractUrl(fresh) : jobUrl(fresh.id);
+        const when = jobDates(fresh).length > 1 ? `${formatDateRange(jobDates(fresh))}, starting ${formatMinutes(fresh.startMin || 0)} each day,` : `${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`;
         await mail(
           repo,
           fresh.customerEmail,
           `Your time is held for ${holdHours} hours`,
-          `Hi ${fresh.customerName}, we're holding ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Pay here: "}${payLink}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+          `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Pay here: "}${payLink}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
         await notify(
           repo,
           settings,
           "pay",
-          `Time held, waiting on payment: ${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`,
+          `Time held, waiting on payment: ${formatDateRange(jobDates(fresh))} at ${formatMinutes(fresh.startMin || 0)}`,
           `${fresh.customerName} (${fresh.customerPhone}) held ${fresh.scope} at ${fresh.jobSiteAddress}. Invoice #${fresh.invoiceNumber}. ${usd(fresh.amountDueNow)} is due within ${holdHours} hours or the time is released.${paypalConfigured() ? "" : " Online payment isn't set up, so collect it yourself and mark it paid on the job page."}`,
           fresh.id,
         );
@@ -798,12 +855,12 @@ export async function releaseHold(repo: Repository, actor: Actor, jobId: string)
     if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
     if (job.status !== "held" && !(job.status === "pending_area" && job.scheduledDate)) return fail("There isn't a hold to release.");
     const crewId = job.crewId;
-    const date = job.scheduledDate;
+    const dates = jobDates(job);
     clearSchedule(job);
     if (job.status === "held") job.status = "released";
     const saved = await repo.saveJob(job, { skipOverlap: true });
     const settings = await repo.getSettings();
-    if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+    if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
     return { ok: true, data: (await repo.getJob(saved.id)) ?? saved };
   });
 }
@@ -854,7 +911,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(dueNow)} paid, you're booked`,
-        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}${saved.scheduledDate ? ` on ${formatDate(saved.scheduledDate)} at ${formatMinutes(saved.startMin || 0).replace(/\.$/, "")}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
+        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}${saved.scheduledDate ? ` on ${formatDateRange(jobDates(saved))} at ${formatMinutes(saved.startMin || 0).replace(/\.$/, "")}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
         saved.id,
       );
       await notify(
@@ -1122,11 +1179,11 @@ async function cancelKeepingTravel(
   await recordKeptRefund(repo, job.id, refund.refund, refund.note, true);
   closePriceChange(job, outcome, fallbackReason);
   const crewId = job.crewId;
-  const date = job.scheduledDate;
+  const dates = jobDates(job);
   clearSchedule(job);
   job.status = "cancelled";
   const saved = await repo.saveJob(job, { skipOverlap: true });
-  if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+  if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
   const verb = outcome === "declined" ? "you declined the new price" : "we cancelled on site";
   await mail(
     repo,
@@ -1175,7 +1232,7 @@ export async function cancelBeforeWork(
       createdAt: new Date().toISOString(),
     });
     const crewId = job.crewId;
-    const date = job.scheduledDate;
+    const dates = jobDates(job);
     if (kind === "cancel") {
       clearSchedule(job);
       job.status = "cancelled";
@@ -1185,7 +1242,7 @@ export async function cancelBeforeWork(
       job.travelLocked = false;
     }
     const saved = await repo.saveJob(job, { skipOverlap: true });
-    if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+    if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
     const verb = kind === "cancel" ? "cancelled" : "rescheduled";
     await mail(
       repo,
@@ -1414,11 +1471,11 @@ export async function resolveCancel(
       createdAt: new Date().toISOString(),
     });
     const crewId = job.crewId;
-    const date = job.scheduledDate;
+    const dates = jobDates(job);
     clearSchedule(job);
     job.status = "cancelled";
     const saved = await repo.saveJob(job, { skipOverlap: true });
-    if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+    if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
     await mail(
       repo,
       saved.customerEmail,
@@ -1482,11 +1539,11 @@ export async function referOut(repo: Repository, actor: Actor, jobId: string, no
     job.status = "referred";
     job.referralNote = note.trim();
     const crewId = job.crewId;
-    const date = job.scheduledDate;
+    const dates = jobDates(job);
     clearSchedule(job);
     const saved = await repo.saveJob(job, { skipOverlap: true });
     const settings = await repo.getSettings();
-    if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+    if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
     await mail(
       repo,
       saved.customerEmail,
@@ -1511,11 +1568,11 @@ export async function decideArea(
     const settings = await repo.getSettings();
     if (decision === "decline") {
       const crewId = job.crewId;
-      const date = job.scheduledDate;
+      const dates = jobDates(job);
       clearSchedule(job);
       job.status = "declined";
       const saved = await repo.saveJob(job, { skipOverlap: true });
-      if (crewId && date) await recalculateDay(repo, settings, date, crewId);
+      if (crewId && dates.length > 0) await recalculateDays(repo, settings, dates, crewId);
       await mail(
         repo,
         saved.customerEmail,
@@ -1569,13 +1626,14 @@ export async function reassignCrew(repo: Repository, actor: Actor, jobId: string
     if (workers.length < needed) return fail(`${crew.name} doesn't have ${needed} active worker${needed === 1 ? "" : "s"}.`);
     const previousCrew = job.crewId;
     const date = job.scheduledDate;
+    const dates = jobDates(job);
     job.crewId = crewId;
     job.workerIds = workers.slice(0, needed).map((worker) => worker.id);
     job.assignedBy = "owner";
     if (!job.travelLocked) {
       const jobs = (await repo.listJobs()).filter((item) => item.id !== job.id);
       const prev = previousJob(
-        jobs.filter((item) => item.scheduledDate === date),
+        jobs.filter((item) => jobOnDate(item, date)),
         crewId,
         job.startMin,
       );
@@ -1591,8 +1649,8 @@ export async function reassignCrew(repo: Repository, actor: Actor, jobId: string
     }
     try {
       const saved = await repo.saveJob(job);
-      if (previousCrew && previousCrew !== crewId) await recalculateDay(repo, settings, date, previousCrew);
-      await recalculateDay(repo, settings, date, crewId);
+      if (previousCrew && previousCrew !== crewId) await recalculateDays(repo, settings, dates, previousCrew);
+      await recalculateDays(repo, settings, dates, crewId);
       return { ok: true, data: (await repo.getJob(saved.id)) ?? saved };
     } catch (error) {
       if (error instanceof SlotTakenError) return fail(`${crew.name} is already booked across that visit.`);
@@ -1639,7 +1697,7 @@ export async function dayRoute(repo: Repository, date: string): Promise<DayRoute
     const routes: DayRoute[] = [];
     for (const crew of crews.filter((item) => item.active)) {
       const stops = jobs
-        .filter((job) => job.scheduledDate === date && job.crewId === crew.id && job.startMin != null && blocksSchedule(job.status))
+        .filter((job) => jobOnDate(job, date) && job.crewId === crew.id && job.startMin != null && blocksSchedule(job.status))
         .sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0));
       let previous: JobRecord | null = null;
       let liveMiles = 0;

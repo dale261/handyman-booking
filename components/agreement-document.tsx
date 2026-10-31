@@ -7,6 +7,7 @@ import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { accepted, agreementTerms, canSign, invoiceSummary } from "@/lib/domain/agreement";
 import type { Settings } from "@/lib/domain/types";
 import { formatMinutes, jobUrl, usd } from "@/lib/format";
+import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
 
@@ -70,6 +71,8 @@ export function AgreementDocument({
   const issued = job.invoiceNumber != null;
   const hours = job.onsiteMinutes / 60;
   const hoursLabel = hours >= 1 ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hour${hours === 1 ? "" : "s"}` : `${job.onsiteMinutes} minutes`;
+  const dates = jobDates(job);
+  const days = Math.max(daysOf(job), dates.length);
 
   return (
     <article className="mx-auto max-w-3xl space-y-8 rounded-xl border border-line bg-card p-6 text-ink shadow-sm print:max-w-none print:space-y-6 print:rounded-none print:border-0 print:p-0 print:shadow-none sm:p-8">
@@ -120,18 +123,22 @@ export function AgreementDocument({
         <p>
           {job.scheduledDate ? (
             <>
-              <span className="font-semibold">Scheduled:</span> {longDate(job.scheduledDate)} at {formatMinutes(job.startMin || 0)}
+              <span className="font-semibold">Scheduled:</span>{" "}
+              {dates.length > 1
+                ? `${longDate(dates[0])} through ${longDate(dates[dates.length - 1])} (${dates.length} working days), starting ${formatMinutes(job.startMin || 0)} each day`
+                : `${longDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}`}
               {crewName && viewer !== "public" ? ` · ${crewName}` : ""}
               {job.status === "held" && job.holdUntil ? ` (held until ${stamp(job.holdUntil)}, pending payment)` : ""}
             </>
           ) : (
             <>
-              <span className="font-semibold">Scheduled:</span> not yet. The customer picks an open time, or we set one together.
+              <span className="font-semibold">Scheduled:</span> not yet{days > 1 ? ` (${days} working days)` : ""}. The customer picks an open time, or we set one together.
             </>
           )}
         </p>
         <p>
           <span className="font-semibold">Time on site:</span> about {hoursLabel}
+          {days > 1 ? " a day" : ""}
           {job.crewSize && job.crewSize > 1 ? `, ${job.crewSize} people` : ""}.
         </p>
       </section>
