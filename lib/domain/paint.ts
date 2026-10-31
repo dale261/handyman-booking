@@ -46,31 +46,64 @@ export function heightFeet(height: QuoteParams["height"]): number {
   return height === "11" ? 11 : height === "9" ? 9 : 8;
 }
 
+/** The size answers a paint quote can carry. Older quotes are missing the newer keys. */
+export type PaintSize = Partial<Pick<QuoteParams, "rooms" | "roomLength" | "roomWidth" | "walls" | "sqft">>;
+
+function roomsOf(p: PaintSize): number {
+  return Math.max(1, Math.round(num(p.rooms, 1)));
+}
+
+function dims(p: PaintSize): { length: number; width: number } | null {
+  const length = num(p.roomLength, 0);
+  const width = num(p.roomWidth, 0);
+  return length > 0 && width > 0 ? { length, width } : null;
+}
+
 /**
- * Total feet of wall to paint. Wall lengths win. Older quotes that only saved a
- * floor area are treated as a square room so their price stays about the same.
+ * Total feet of wall to paint. Room length and width win: each room is
+ * 2 × (length + width). Quotes from the day the form asked for wall lengths use
+ * those, and older quotes that only saved a floor area are treated as square rooms,
+ * so nobody's price jumps.
  */
-export function paintWallFeet(p: Pick<QuoteParams, "walls" | "sqft">): number {
+export function paintWallFeet(p: PaintSize): number {
+  const rooms = roomsOf(p);
+  const size = dims(p);
+  if (size) return Math.round(2 * (size.length + size.width) * rooms * 10) / 10;
   const typed = wallFeetTotal(p.walls ?? "");
   if (typed > 0) return typed;
   const sq = Math.max(0, num(p.sqft, 0));
-  return sq > 0 ? Math.round(4 * Math.sqrt(sq) * 10) / 10 : 0;
+  return sq > 0 ? Math.round(4 * Math.sqrt(sq / rooms) * rooms * 10) / 10 : 0;
 }
 
 /** Square feet of wall: every wall length times the ceiling height. */
-export function paintWallArea(p: Pick<QuoteParams, "walls" | "sqft" | "height">): number {
+export function paintWallArea(p: PaintSize & Pick<QuoteParams, "height">): number {
   return Math.round(paintWallFeet(p) * heightFeet(p.height));
 }
 
 /**
- * Ceiling area guessed from the walls: each room is treated as a square with a
- * quarter of its share of the wall length per side. Long narrow rooms come out a
- * little high, which is the side we want to err on.
+ * Ceiling area: length × width per room when we have the size. Wall-length quotes
+ * treat each room as a square (long narrow rooms come out a little high, the side
+ * we want to err on). Floor-area quotes use the area they saved.
  */
-export function paintCeilingArea(p: Pick<QuoteParams, "walls" | "sqft" | "rooms">): number {
-  const rooms = Math.max(1, Math.round(num(p.rooms, 1)));
-  const feet = paintWallFeet(p);
-  if (feet <= 0) return 0;
-  const side = feet / rooms / 4;
-  return Math.round(side * side * rooms);
+export function paintCeilingArea(p: PaintSize): number {
+  const rooms = roomsOf(p);
+  const size = dims(p);
+  if (size) return Math.round(size.length * size.width * rooms);
+  const typed = wallFeetTotal(p.walls ?? "");
+  if (typed > 0) {
+    const side = typed / rooms / 4;
+    return Math.round(side * side * rooms);
+  }
+  const sq = Math.max(0, num(p.sqft, 0));
+  return Math.round(sq);
+}
+
+/** "12 × 14 ft" or "5 rooms about 12 × 14 ft each", for the quote lines. */
+export function paintSizeLabel(p: PaintSize): string {
+  const rooms = roomsOf(p);
+  const size = dims(p);
+  if (!size) return `${paintWallFeet(p)} ft of wall`;
+  const l = Number.isInteger(size.length) ? size.length : size.length.toFixed(1);
+  const w = Number.isInteger(size.width) ? size.width : size.width.toFixed(1);
+  return rooms === 1 ? `${l} × ${w} ft room` : `${rooms} rooms about ${l} × ${w} ft each`;
 }

@@ -58,6 +58,9 @@ const ENUMS = {
 
 const RANGES: Partial<Record<keyof QuoteParams, [number, number]>> = {
   rooms: [1, 50],
+  // 0 means "not given": the quote then prices from the wall lengths or floor area it saved.
+  roomLength: [0, 200],
+  roomWidth: [0, 200],
   sqft: [1, 20000],
   doors: [0, 200],
   colors: [1, 20],
@@ -84,6 +87,9 @@ export function sanitizeParams(input: unknown): QuoteParams {
   };
   return {
     rooms: numberAt("rooms"),
+    // Missing keys mean an older draft that priced from wall lengths or floor area; 0 keeps that path.
+    roomLength: src.roomLength == null ? 0 : numberAt("roomLength"),
+    roomWidth: src.roomWidth == null ? 0 : numberAt("roomWidth"),
     walls: cleanWallsText(src.walls),
     sqft: numberAt("sqft"),
     height: pick("height", src.height),

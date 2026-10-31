@@ -32,7 +32,7 @@ const SAMPLES: { label: string; service: ServiceId; description: string; params:
     label: "Large interior paint job",
     service: "paint",
     description: "Repaint the living room, dining room, hallway and two bedrooms: walls and trim, three colors",
-    params: { rooms: 5, walls: "15, 18, 15, 18, 12, 14, 12, 14, 4, 20, 4, 20, 11, 12, 11, 12, 11, 12, 11, 12", height: "9", cond: "fair", doors: 10, colors: 3 },
+    params: { rooms: 5, roomLength: 14, roomWidth: 12, height: "9", cond: "fair", doors: 10, colors: 3 },
   },
   {
     label: "Mount a 65-inch TV",
@@ -178,13 +178,16 @@ export function BookForm({
           : "We'll price this from the work you describe. A note from your description doesn't change the price."}
       </p>
 
-      <div className="flex flex-wrap gap-2">
-        {SAMPLES.map((sample) => (
-          <Button key={sample.label} type="button" variant="outline" size="sm" onClick={() => loadSample(sample)}>
-            {sample.label}
-          </Button>
-        ))}
-      </div>
+      {SAMPLES.some((sample) => sample.service === service) && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          <span>Example:</span>
+          {SAMPLES.filter((sample) => sample.service === service).map((sample) => (
+            <Button key={sample.label} type="button" variant="outline" size="sm" onClick={() => loadSample(sample)}>
+              {sample.label}
+            </Button>
+          ))}
+        </div>
+      )}
 
       <div className="rounded-lg border border-line bg-card p-4 text-sm">
         <p className="font-semibold">Job site</p>

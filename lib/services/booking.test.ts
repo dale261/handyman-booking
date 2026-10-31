@@ -165,7 +165,7 @@ describe("booking flow", () => {
     const created = await createQuote(store, customer, {
       service: "paint",
       description: "Repaint the living room, dining room, hallway and two bedrooms",
-      params: { ...DEFAULT_PARAMS, rooms: 1, sqft: 1400, height: "8", cond: "good", doors: 0, colors: 1, ceilings: false },
+      params: { ...DEFAULT_PARAMS, rooms: 1, roomLength: 30, roomWidth: 25, height: "8", cond: "good", doors: 0, colors: 1, ceilings: false },
       differentSite: false,
       jobSiteAddress: "",
       urgent: false,
@@ -255,8 +255,8 @@ describe("booking flow", () => {
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.data.scope).toMatch(/Paint walls in 1 room/);
-    // 150 sq ft of floor is priced as a 12.2 ft square: 49 ft of wall × 8 ft
-    expect(created.data.scope).toMatch(/392 sq ft of wall/);
+    // DEFAULT_PARAMS carries a 12 × 12 room: 48 ft of wall × 8 ft
+    expect(created.data.scope).toMatch(/384 sq ft of wall/);
     const notes = created.data.assumptions.join(" ");
     expect(notes).not.toMatch(/TV|television|mounting bracket|wall studs/i);
     expect(notes).toMatch(/paint/i);

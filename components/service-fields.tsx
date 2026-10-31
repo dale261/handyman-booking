@@ -29,8 +29,11 @@ export function ServiceFields({
           <Field label="Rooms">
             <Input type="number" min={1} value={params.rooms} onChange={(e) => patch({ rooms: Number(e.target.value) })} />
           </Field>
-          <Field label="Wall lengths (feet)" hint="Each wall you want painted, in feet, separated by commas. A 12 by 14 room is 12, 14, 12, 14.">
-            <Input type="text" inputMode="decimal" placeholder="12, 14, 12, 14" value={params.walls} onChange={(e) => patch({ walls: e.target.value })} />
+          <Field label="Room length (feet)" hint="The longest wall.">
+            <Input type="number" inputMode="decimal" min={1} max={200} step="0.5" value={params.roomLength} onChange={(e) => patch({ roomLength: Number(e.target.value) })} />
+          </Field>
+          <Field label="Room width (feet)" hint="The shortest wall. More than one room? Use a typical room and set Rooms above; we confirm on site.">
+            <Input type="number" inputMode="decimal" min={1} max={200} step="0.5" value={params.roomWidth} onChange={(e) => patch({ roomWidth: Number(e.target.value) })} />
           </Field>
           <Field label="Ceiling height">
             <Select value={params.height} onChange={(value) => patch({ height: value as QuoteParams["height"] })} options={[["8", "8 ft"], ["9", "9–10 ft"], ["11", "11 ft or vaulted"]]} />
