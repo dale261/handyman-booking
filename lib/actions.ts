@@ -24,6 +24,7 @@ import type { QuoteParams, ServiceId, Settings } from "@/lib/domain/types";
 import { DEFAULT_PARAMS, SERVICE_LABELS } from "@/lib/domain/types";
 import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
 import { createPayPalOrder } from "@/lib/paypal";
 import { appUrl, formatDate, formatMinutes } from "@/lib/format";
 import { blocksSchedule } from "@/lib/domain/scheduling";
@@ -812,4 +813,78 @@ export async function sendAgreementAction(form: FormData) {
     ? `Emailed to ${result.data.customerEmail}.`
     : `Queued for ${result.data.customerEmail}. Email isn't connected yet, so it sits in the Queue until Resend is set up; you can share the link below instead.`;
   redirect(`/jobs/${jobId}/contract?notice=${encodeURIComponent(note)}`);
+}
+
+// ---------------------------------------------------------------------------
+// Forgot password
+// ---------------------------------------------------------------------------
+
+const RESET_SENT = "If that email has an account, a reset link is on its way. Check spam if it doesn't show up in a few minutes.";
+
+/** Ask for a reset link. The answer never says whether the email exists. */
+export async function requestPasswordResetAction(form: FormData) {
+  if (!(await allowRequest(ANON_LIMIT))) {
+    redirect("/forgot?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
+  }
+  const email = field(form, "email").toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect("/forgot?error=" + encodeURIComponent("Enter the email you signed up with."));
+  const repo = getRepository();
+  if (supabaseConfigured()) {
+    const supabase = await createSupabaseServer();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${appUrl()}/auth/confirm?next=/reset` });
+    if (error) {
+      console.error("[auth] reset email failed", error.message);
+      const text = error.message.toLowerCase();
+      if (text.includes("not authorized") || text.includes("rate limit") || text.includes("smtp")) {
+        redirect(
+          "/forgot?error=" +
+            encodeURIComponent("We couldn't send a reset email to that address yet. Please call or email us and we'll reset it for you."),
+        );
+      }
+    }
+    redirect("/forgot?notice=" + encodeURIComponent(RESET_SENT));
+  }
+  // Saved-file demo: the link prints in the terminal with the other emails.
+  const user = await repo.getUserByEmail(email);
+  if (user) {
+    const token = issueLocalResetToken(user.id);
+    await repo.addEmail({
+      id: randomUUID(),
+      to: user.email,
+      subject: "Reset your eX Construction password",
+      body: `Hi ${user.fullName}, open this link to choose a new password. It works once, for an hour.\n\n${appUrl()}/reset?t=${token}`,
+      jobId: null,
+      sent: false,
+      createdAt: new Date().toISOString(),
+    });
+    await settle(repo);
+  }
+  redirect("/forgot?notice=" + encodeURIComponent(RESET_SENT));
+}
+
+/** Save the new password. On the live site this needs the recovery session the emailed link created. */
+export async function setNewPasswordAction(form: FormData) {
+  const password = String(form.get("password") ?? "");
+  const again = String(form.get("passwordAgain") ?? "");
+  const token = field(form, "token");
+  const back = (message: string): never => redirect(`/reset?${token ? `t=${encodeURIComponent(token)}&` : ""}error=${encodeURIComponent(message)}`);
+  if (password.length < 8) back("Use a password of at least 8 characters.");
+  if (password !== again) back("The two passwords don't match.");
+  const repo = getRepository();
+  if (supabaseConfigured()) {
+    const supabase = await createSupabaseServer();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) redirect("/forgot?error=" + encodeURIComponent("That reset link has expired or was already used. Ask for a new one."));
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) back(error.message);
+    const user = await repo.getUser(data.user.id);
+    redirect(`${homeFor(user?.role ?? "customer")}?notice=${encodeURIComponent("Your password is saved and you're signed in.")}`);
+  }
+  const userId = consumeLocalResetToken(token);
+  if (!userId) redirect("/forgot?error=" + encodeURIComponent("That reset link has expired or was already used. Ask for a new one."));
+  const user = await repo.getUser(userId);
+  if (!user) redirect("/forgot?error=" + encodeURIComponent("Account not found."));
+  await repo.saveUser({ ...user, passwordHash: hashPassword(password) });
+  await setLocalSession(user.id);
+  redirect(`${homeFor(user.role)}?notice=${encodeURIComponent("Your password is saved and you're signed in.")}`);
 }

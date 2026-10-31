@@ -34,6 +34,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <SubmitButton>Sign in</SubmitButton>
             <p className="text-sm text-muted">
               New here? <Link className="font-semibold text-pine underline" href="/signup">Create an account</Link>
+              {" · "}
+              <Link className="font-semibold text-pine underline" href="/forgot">Forgot your password?</Link>
             </p>
           </form>
         </CardContent>

@@ -70,6 +70,23 @@ update public.profiles set role = 'owner' where email = 'you@your-email.com';
 
 Workers: add them under **Rates** with their email and a password. They can then sign in. On Supabase, a person who signs up later with a worker's email is also linked to that worker.
 
+### Forgot password
+
+The sign-in page has a **Forgot your password?** link. On the live site it asks Supabase to email a recovery link; the link comes back to `/auth/confirm`, which signs the person in and sends them to `/reset` to choose a new password. Two Supabase settings make it work:
+
+1. **Authentication → URL Configuration**: set **Site URL** to the live address (`https://project-3u2ad.vercel.app`) and add `https://project-3u2ad.vercel.app/**` under **Redirect URLs**. Without this, Supabase sends people to the wrong address.
+2. Until a custom SMTP server is set, Supabase's own mailer only delivers to the email addresses of your Supabase team (and only about 2 an hour). That is fine for you; customers will get "we couldn't send a reset email" until you connect SMTP. Resend's free tier includes SMTP: in Supabase open **Authentication → SMTP Settings**, turn on custom SMTP, host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = the same verified address you use for `RESEND_FROM_EMAIL`.
+
+The link has to be opened in the same browser that asked for it (a phone's mail app usually hands it to the normal browser, which is fine). Locked out yourself with no email set up? In the SQL Editor:
+
+```sql
+update auth.users
+set encrypted_password = crypt('a-new-password', gen_salt('bf'))
+where email = 'you@your-email.com';
+```
+
+On the saved-file demo there is no mailer, so the reset link prints in the terminal like every other email.
+
 Photos use a private bucket named `job-photos`. The first SQL file creates it. If that step prints a notice instead, open **Storage** and create a private bucket with that exact name.
 
 ## Turn on email (Resend, free tier)
