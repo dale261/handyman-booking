@@ -44,11 +44,11 @@ describe("wall lengths", () => {
     expect(paintCeilingArea({ rooms: 1 })).toBe(0);
   });
 
-  it("keeps a 12 by 12 room with 8 ft ceilings close to the old floor-area price", () => {
+  it("prices a 12 by 12 room with 8 ft ceilings at $2 a wall square foot, the same for an old floor-area quote", () => {
     const quote = quoteCalc("paint", { ...DEFAULT_PARAMS, rooms: 1, roomLength: 12, roomWidth: 12, height: "8", cond: "good", doors: 0, colors: 1 }, DEFAULT_SETTINGS, "Wexford", 0);
-    expect(quote.lines.find((l) => l.label === "Walls")?.amount).toBe(960);
+    expect(quote.lines.find((l) => l.label === "Walls")?.amount).toBe(768);
     expect(quote.scope).toContain("12 × 12 ft room, about 384 sq ft of wall");
     const old = quoteCalc("paint", { ...DEFAULT_PARAMS, rooms: 1, roomLength: 0, roomWidth: 0, walls: "", sqft: 144, height: "8", cond: "good", doors: 0, colors: 1 }, DEFAULT_SETTINGS, "Wexford", 0);
-    expect(old.lines.find((l) => l.label === "Walls")?.amount).toBe(960);
+    expect(old.lines.find((l) => l.label === "Walls")?.amount).toBe(768);
   });
 });

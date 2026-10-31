@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   helperRate: 100,
   helperMax: 3,
   helperMaxHours: 8,
-  paintWallSqft: 2.5,
+  paintWallSqft: 2,
   paintCeiling: 1.75,
   paintDoor: 75,
   paintColor: 60,

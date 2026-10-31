@@ -121,8 +121,8 @@ describe("quote pricing", () => {
       "Charlevoix",
       60,
     );
-    // 52 ft of wall × 9 ft = 468 sq ft of wall
-    const walls = roundCents(468 * 2.5 * 1.15 * 1.1);
+    // 52 ft of wall × 9 ft = 468 sq ft of wall at $2
+    const walls = roundCents(468 * 2 * 1.15 * 1.1);
     expect(quote.lines.find((l) => l.label === "Walls")?.amount).toBe(walls);
     expect(quote.lines.find((l) => l.label === "Walls")?.detail).toContain("468 sq ft of wall");
     expect(quote.lines.find((l) => l.label === "Ceilings")?.amount).toBeCloseTo(168 * 1.75, 2);
