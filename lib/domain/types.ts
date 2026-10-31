@@ -32,6 +32,9 @@ export const PREAPPROVED: ServiceId[] = [
 
 export type QuoteParams = {
   rooms: number;
+  /** Wall lengths in feet, as typed: "12, 14, 12, 14". Painting prices from these. */
+  walls: string;
+  /** Floor area. No longer asked for painting; kept so older quotes still price. */
   sqft: number;
   height: "8" | "9" | "11";
   cond: "good" | "fair" | "poor";
@@ -55,6 +58,7 @@ export type QuoteParams = {
 
 export const DEFAULT_PARAMS: QuoteParams = {
   rooms: 1,
+  walls: "",
   sqft: 150,
   height: "8",
   cond: "good",
@@ -142,7 +146,8 @@ export type Settings = {
   helperRate: number;
   helperMax: number;
   helperMaxHours: number;
-  paintSqft: number;
+  /** $ per square foot of wall (wall lengths × ceiling height). */
+  paintWallSqft: number;
   paintCeiling: number;
   paintDoor: number;
   paintColor: number;

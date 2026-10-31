@@ -1,4 +1,5 @@
 import { clamp, num } from "./money";
+import { cleanWallsText } from "./paint";
 import { DEFAULT_PARAMS, PREAPPROVED, type QuoteParams, type ServiceId } from "./types";
 
 /**
@@ -83,6 +84,7 @@ export function sanitizeParams(input: unknown): QuoteParams {
   };
   return {
     rooms: numberAt("rooms"),
+    walls: cleanWallsText(src.walls),
     sqft: numberAt("sqft"),
     height: pick("height", src.height),
     cond: pick("cond", src.cond),

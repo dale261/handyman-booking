@@ -37,7 +37,7 @@ describe("cost library pricing", () => {
     expect(settings.hourly).toBe(95);
     expect(settings.aiDailyCap).toBe(100);
     expect(settings.aiCustomerDailyCap).toBe(10);
-    expect(settings.paintSqft).toBe(6.5);
+    expect(settings.paintWallSqft).toBe(2.5);
     expect(settings.helperRate).toBe(100);
     expect(settings.mileRate).toBe(1);
     expect(settings.travelMinimum).toBe(50);

@@ -32,7 +32,7 @@ const SAMPLES: { label: string; service: ServiceId; description: string; params:
     label: "Large interior paint job",
     service: "paint",
     description: "Repaint the living room, dining room, hallway and two bedrooms: walls and trim, three colors",
-    params: { rooms: 5, sqft: 1400, height: "9", cond: "fair", doors: 10, colors: 3 },
+    params: { rooms: 5, walls: "15, 18, 15, 18, 12, 14, 12, 14, 4, 20, 4, 20, 11, 12, 11, 12, 11, 12, 11, 12", height: "9", cond: "fair", doors: 10, colors: 3 },
   },
   {
     label: "Mount a 65-inch TV",

@@ -29,8 +29,8 @@ export function ServiceFields({
           <Field label="Rooms">
             <Input type="number" min={1} value={params.rooms} onChange={(e) => patch({ rooms: Number(e.target.value) })} />
           </Field>
-          <Field label="Floor area (sq ft)">
-            <Input type="number" min={1} value={params.sqft} onChange={(e) => patch({ sqft: Number(e.target.value) })} />
+          <Field label="Wall lengths (feet)" hint="Each wall you want painted, in feet, separated by commas. A 12 by 14 room is 12, 14, 12, 14.">
+            <Input type="text" inputMode="decimal" placeholder="12, 14, 12, 14" value={params.walls} onChange={(e) => patch({ walls: e.target.value })} />
           </Field>
           <Field label="Ceiling height">
             <Select value={params.height} onChange={(value) => patch({ height: value as QuoteParams["height"] })} options={[["8", "8 ft"], ["9", "9–10 ft"], ["11", "11 ft or vaulted"]]} />
@@ -38,7 +38,7 @@ export function ServiceFields({
           <Field label="Wall condition">
             <Select value={params.cond} onChange={(value) => patch({ cond: value as QuoteParams["cond"] })} options={[["good", "Good"], ["fair", "Fair"], ["poor", "Poor"]]} />
           </Field>
-          <Field label="Doors and trim pieces">
+          <Field label="Doors and windows (openings)" hint="Count every door and window in those walls. We trim and cut in around each one.">
             <Input type="number" min={0} value={params.doors} onChange={(e) => patch({ doors: Number(e.target.value) })} />
           </Field>
           <Field label="Colors">
@@ -115,11 +115,12 @@ export function ServiceFields({
   );
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="grid gap-1.5 text-sm font-semibold">
       {label}
       {children}
+      {hint && <span className="text-xs font-normal text-muted">{hint}</span>}
     </label>
   );
 }

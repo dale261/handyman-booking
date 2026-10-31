@@ -255,7 +255,8 @@ describe("booking flow", () => {
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.data.scope).toMatch(/Paint walls in 1 room/);
-    expect(created.data.scope).toMatch(/150 sq ft/);
+    // 150 sq ft of floor is priced as a 12.2 ft square: 49 ft of wall × 8 ft
+    expect(created.data.scope).toMatch(/392 sq ft of wall/);
     const notes = created.data.assumptions.join(" ");
     expect(notes).not.toMatch(/TV|television|mounting bracket|wall studs/i);
     expect(notes).toMatch(/paint/i);

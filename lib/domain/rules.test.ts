@@ -113,18 +113,21 @@ describe("quote pricing", () => {
     expect(quote.total).toBe(880);
   });
 
-  it("prices painting from floor area, height, condition, and keeps materials out of a labor-only job", () => {
+  it("prices painting from wall lengths, height, condition, and keeps materials out of a labor-only job", () => {
     const quote = quoteCalc(
       "paint",
-      params({ rooms: 1, sqft: 150, height: "9", cond: "fair", doors: 2, colors: 4, ceilings: true }),
+      params({ rooms: 1, walls: "12, 14, 12, 14", height: "9", cond: "fair", doors: 2, colors: 4, ceilings: true }),
       settings,
       "Charlevoix",
       60,
     );
-    const walls = roundCents(150 * 6.5 * 1.15 * 1.1);
+    // 52 ft of wall × 9 ft = 468 sq ft of wall
+    const walls = roundCents(468 * 2.5 * 1.15 * 1.1);
     expect(quote.lines.find((l) => l.label === "Walls")?.amount).toBe(walls);
-    expect(quote.lines.find((l) => l.label === "Ceilings")?.amount).toBeCloseTo(150 * 1.75, 2);
-    expect(quote.lines.find((l) => l.label === "Trim and doors")?.amount).toBe(150);
+    expect(quote.lines.find((l) => l.label === "Walls")?.detail).toContain("468 sq ft of wall");
+    // ceiling guessed as a 13 × 13 square from 52 ft of wall
+    expect(quote.lines.find((l) => l.label === "Ceilings")?.amount).toBeCloseTo(169 * 1.75, 2);
+    expect(quote.lines.find((l) => l.label === "Doors and windows")?.amount).toBe(150);
     expect(quote.lines.find((l) => l.label === "Extra colors")?.amount).toBe(120);
     const service = quote.lines.filter((l) => l.kind === "service").reduce((a, l) => a + l.amount, 0);
     expect(quote.lines.find((l) => l.kind === "premium")?.amount).toBeCloseTo(service * 0.2, 2);

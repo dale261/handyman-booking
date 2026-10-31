@@ -1,4 +1,5 @@
 import { clamp, num, roundCents } from "./money";
+import { paintCeilingArea, paintWallArea, paintWallFeet } from "./paint";
 import type { QuoteLine, QuoteParams, QuoteResult, ServiceId, Settings } from "./types";
 
 function countNoun(n: number, one: string, many: string): string {
@@ -73,18 +74,22 @@ export function quoteCalc(
   let scope = "";
 
   if (id === "paint") {
-    const sq = Math.max(0, num(p.sqft, 0));
+    const feet = paintWallFeet(p);
+    const wallSq = paintWallArea(p);
     const rooms = Math.max(0, num(p.rooms, 1));
     const hm = p.height === "11" ? r.height11 : p.height === "9" ? r.height9 : 1;
     const cm = p.cond === "poor" ? r.condPoor : p.cond === "fair" ? r.condFair : 1;
     const heightLabel = p.height === "11" ? "vaulted, 11 ft or taller" : `${p.height} ft`;
-    scope = `Paint walls in ${countNoun(rooms, "room", "rooms")}, about ${sq} sq ft, ${heightLabel} ceilings, ${p.cond} walls`;
-    lines.push(line("Walls", `${sq} sq ft, ${heightLabel} ceilings, ${p.cond} walls`, sq * r.paintSqft * hm * cm, "service"));
+    scope = `Paint walls in ${countNoun(rooms, "room", "rooms")}, about ${wallSq} sq ft of wall, ${heightLabel} ceilings, ${p.cond} walls`;
+    lines.push(
+      line("Walls", `${wallSq} sq ft of wall (${feet} ft of wall, ${heightLabel} ceilings), ${p.cond} walls`, wallSq * r.paintWallSqft * hm * cm, "service"),
+    );
     if (p.ceilings) {
-      lines.push(line("Ceilings", `${sq} sq ft of ceiling`, sq * r.paintCeiling, "service"));
+      const ceilingSq = paintCeilingArea(p);
+      lines.push(line("Ceilings", `about ${ceilingSq} sq ft of ceiling`, ceilingSq * r.paintCeiling, "service"));
     }
     const doors = Math.max(0, num(p.doors, 0));
-    if (doors > 0) lines.push(line("Trim and doors", countNoun(doors, "piece", "pieces"), doors * r.paintDoor, "service"));
+    if (doors > 0) lines.push(line("Doors and windows", `${countNoun(doors, "opening", "openings")}, trim and cut-in`, doors * r.paintDoor, "service"));
     const colors = Math.max(0, num(p.colors, 1));
     if (colors > 2) {
       lines.push(line("Extra colors", countNoun(colors - 2, "extra color", "extra colors"), (colors - 2) * r.paintColor, "service"));
