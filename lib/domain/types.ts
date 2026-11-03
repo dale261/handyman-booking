@@ -92,7 +92,8 @@ export type LineKind =
   | "minimum"
   | "travel"
   | "urgency"
-  | "pickup";
+  | "pickup"
+  | "discount";
 
 export type QuoteLine = {
   label: string;

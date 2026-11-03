@@ -8,6 +8,9 @@ import {
   decidePriceChangeAction,
   decideAreaAction,
   demoPayAction,
+  discountAction,
+  editOwnerJobAction,
+  removeDiscountAction,
   holdSlotAction,
   manualPayAction,
   markRefundAction,
@@ -35,6 +38,7 @@ import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
+import { grossTotal } from "@/lib/domain/discount";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
 import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
@@ -86,6 +90,10 @@ export default async function JobPage({
       ? applyRevisedTotal({ paid, newTotal: job.total, threshold: settings.depositThreshold })
       : null;
   const crewCanChange = (actor.role === "owner" || actor.role === "worker") && (job.status === "booked" || job.status === "price_change") && job.amountDueNow === 0;
+  const unpaidStep = ["scope_review", "quoted", "released", "pending_area", "held"].includes(job.status);
+  const paidStep = ["booked", "in_progress", "awaiting_approval", "disputed", "balance_due"].includes(job.status);
+  const canDiscount = (unpaidStep || paidStep) && !(job.status === "booked" && job.amountDueNow > 0);
+  const canEdit = Boolean(job.ownerPriced) && unpaidStep && paid === 0;
 
   return (
     <div className="space-y-4">
@@ -557,7 +565,7 @@ export default async function JobPage({
             </Card>
           )}
 
-          {actor.role === "owner" && <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} />}
+          {actor.role === "owner" && <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} />}
         </div>
       </div>
     </div>
@@ -600,13 +608,77 @@ function PaymentRow({ payment, jobId, owner }: { payment: PaymentRecord; jobId: 
   );
 }
 
-function OwnerTools({ job, crews }: { job: JobRecord; crews: { id: string; name: string }[] }) {
+function OwnerTools({ job, crews, canDiscount, canEdit }: { job: JobRecord; crews: { id: string; name: string }[]; canDiscount: boolean; canEdit: boolean }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Owner tools</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
+        {canDiscount && (
+          <div className="space-y-3 border-b border-line pb-4">
+            <p className="font-semibold">Discount</p>
+            {job.discount && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-paper px-3 py-2">
+                <span>
+                  {usd(job.discount.amount)} off · {job.discount.reason}
+                </span>
+                <form action={removeDiscountAction}>
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <SubmitButton size="sm" variant="outline">Remove</SubmitButton>
+                </form>
+              </div>
+            )}
+            <form action={discountAction} className="space-y-2">
+              <input type="hidden" name="jobId" value={job.id} />
+              <Input name="amount" inputMode="decimal" required aria-label="Discount in dollars" placeholder="Amount off, in dollars" />
+              <Input name="reason" maxLength={120} aria-label="Reason the customer sees" placeholder="Reason the customer sees, such as Neighbor discount" />
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="notify" defaultChecked /> Email the customer the new price
+              </label>
+              <SubmitButton size="sm">{job.discount ? "Change the discount" : "Apply discount"}</SubmitButton>
+              <p className="text-muted">Comes off the balance. The contract and invoice update on their own.</p>
+            </form>
+          </div>
+        )}
+        {canEdit && (
+          <form action={editOwnerJobAction} className="space-y-2 border-b border-line pb-4">
+            <input type="hidden" name="jobId" value={job.id} />
+            <p className="font-semibold">Fix the write-up</p>
+            <label className="grid gap-1 font-semibold">
+              Short title
+              <Input name="scope" defaultValue={job.scope} required minLength={3} maxLength={120} className="font-normal" />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Details
+              <Textarea name="description" defaultValue={job.description} className="font-normal" />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="grid gap-1 font-semibold">
+                Price before discount ($)
+                <Input name="total" inputMode="decimal" defaultValue={grossTotal(job.lines)} required className="font-normal" />
+              </label>
+              <label className="grid gap-1 font-semibold">
+                Of that, travel ($)
+                <Input name="travel" inputMode="decimal" defaultValue={job.travelFee} className="font-normal" />
+              </label>
+              {!job.scheduledDate && (
+                <>
+                  <label className="grid gap-1 font-semibold">
+                    Hours on site each day
+                    <Input name="hours" type="number" step="0.5" min={0.5} max={12} defaultValue={job.onsiteMinutes / 60} className="font-normal" />
+                  </label>
+                  <label className="grid gap-1 font-semibold">
+                    Working days
+                    <Input name="days" type="number" step="1" min={1} max={30} defaultValue={job.durationDays ?? 1} className="font-normal" />
+                  </label>
+                </>
+              )}
+            </div>
+            <SubmitButton size="sm" variant="outline">Save changes</SubmitButton>
+            <p className="text-muted">Only while nothing has been paid. If the customer already signed, email them the contract again.</p>
+          </form>
+        )}
         {job.status === "scope_review" && (
           <div className="space-y-2">
             <p>

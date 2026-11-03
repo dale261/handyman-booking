@@ -8,6 +8,7 @@ import { clearLocalSession, createSupabaseServer, currentActor, homeFor, require
 import { clientIp } from "@/lib/client-ip";
 import { sendAgreement, signAgreement } from "@/lib/services/agreement";
 import { createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
+import { clearDiscount, editOwnerJob, setDiscount } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
@@ -890,4 +891,40 @@ export async function setNewPasswordAction(form: FormData) {
   await repo.saveUser({ ...user, passwordHash: hashPassword(password) });
   await setLocalSession(user.id);
   redirect(`${homeFor(user.role)}?notice=${encodeURIComponent("Your password is saved and you're signed in.")}`);
+}
+
+// ---------------------------------------------------------------------------
+// Owner price adjustments: discounts, and fixing an owner-entered write-up
+// ---------------------------------------------------------------------------
+
+export async function discountAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "Discount applied. The invoice and contract show the new price.", (repo, actor) =>
+    setDiscount(repo, actor, jobId, {
+      amount: Number(field(form, "amount").replace(/[$,]/g, "")),
+      reason: field(form, "reason"),
+      notify: form.get("notify") === "on",
+    }),
+  );
+}
+
+export async function removeDiscountAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "Discount removed.", (repo, actor) => clearDiscount(repo, actor, jobId));
+}
+
+export async function editOwnerJobAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const hoursRaw = field(form, "hours");
+  const daysRaw = field(form, "days");
+  await mutate(jobId, "Job updated. The contract and invoice show the changes.", (repo, actor) =>
+    editOwnerJob(repo, actor, jobId, {
+      scope: field(form, "scope"),
+      description: field(form, "description"),
+      total: Number(field(form, "total").replace(/[$,]/g, "")),
+      travel: Number(field(form, "travel").replace(/[$,]/g, "") || "0"),
+      hoursOnSite: hoursRaw ? Number(hoursRaw) : null,
+      days: daysRaw ? Number(daysRaw) : null,
+    }),
+  );
 }

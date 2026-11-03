@@ -100,6 +100,13 @@ export type Agreement = {
   userAgent: string;
 };
 
+export type Discount = {
+  amount: number;
+  /** Shown to the customer on the invoice, such as "Neighbor discount". */
+  reason: string;
+  at: string;
+};
+
 export type JobRecord = {
   id: string;
   customerId: string;
@@ -177,6 +184,8 @@ export type JobRecord = {
   agreement?: Agreement | null;
   /** When the owner last emailed the contract and invoice link. */
   docSentAt?: string | null;
+  /** A discount the owner gave. Re-applied whenever the app rebuilds the price lines. */
+  discount?: Discount | null;
   createdAt: string;
   updatedAt: string;
 };

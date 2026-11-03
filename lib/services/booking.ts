@@ -16,6 +16,7 @@ import { areaCheck } from "@/lib/domain/area";
 import { applyRevisedTotal, linesForRevisedTotal, refundBeforeWork, refundExceptTravel, validateOwnerRefund } from "@/lib/domain/cancellation";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
 import { isLibraryQuote, priceUnlisted, pricedWithTravel } from "@/lib/domain/library";
+import { withDiscount } from "@/lib/domain/discount";
 import { roundCents } from "@/lib/domain/money";
 import { crewNeeded, licenseEstimate, onsiteMinutes, quoteCalc, splitPayment } from "@/lib/domain/pricing";
 import { classify } from "@/lib/domain/screening";
@@ -193,9 +194,10 @@ function applyQuote(
   }
   if (isLibraryQuote(job.quoteMeta)) {
     const priced = pricedWithTravel(job.lines, job.quoteMeta, miles, fromLabel, settings, estimate);
-    const split = splitPayment(priced.total, settings.depositThreshold);
-    job.lines = priced.lines;
-    job.total = priced.total;
+    const discounted = withDiscount(priced.lines, job.discount);
+    const split = splitPayment(discounted.total, settings.depositThreshold);
+    job.lines = discounted.lines;
+    job.total = discounted.total;
     job.quoteMeta = priced.meta;
     job.amountDueNow = split.now;
     job.balanceDue = split.later;
@@ -218,11 +220,12 @@ function applyQuote(
     travelFrom: fromLabel,
     milesAreEstimate: estimate,
   });
-  const split = splitPayment(quote.total, settings.depositThreshold);
+  const discounted = withDiscount(quote.lines, job.discount);
+  const split = splitPayment(discounted.total, settings.depositThreshold);
   job.scope = quote.scope;
-  job.lines = quote.lines;
+  job.lines = discounted.lines;
   job.assumptions = quote.assumptions;
-  job.total = quote.total;
+  job.total = discounted.total;
   job.amountDueNow = split.now;
   job.balanceDue = split.later;
   job.payRule = split.rule;
@@ -413,11 +416,12 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
       let total = 0;
       let travelFeeAmount = 0;
       if (job.ownerPriced) {
+        // The owner's price already carries any discount line.
         total = job.total;
         travelFeeAmount = job.travelFee;
       } else if (isLibraryQuote(job.quoteMeta)) {
         const priced = pricedWithTravel(job.lines, job.quoteMeta, info.miles, info.fromLabel, settings, false);
-        total = priced.total;
+        total = withDiscount(priced.lines, job.discount).total;
         travelFeeAmount = priced.travelFee;
       } else {
         const quote = quoteCalc(job.service, job.params, settings, job.county, info.miles, {
@@ -425,7 +429,7 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
           pickup: job.pickup,
           travelFrom: info.fromLabel,
         });
-        total = quote.total;
+        total = withDiscount(quote.lines, job.discount).total;
         travelFeeAmount = quote.lines.find((line) => line.kind === "travel")?.amount ?? 0;
       }
       const split = splitPayment(total, settings.depositThreshold);

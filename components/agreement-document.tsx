@@ -276,7 +276,7 @@ export function AgreementDocument({
             <p>
               Signed by <span className="font-semibold">{job.agreement.signedName}</span> on {stamp(job.agreement.signedAt)} for {usd(job.agreement.total)}.
             </p>
-            {priceChanged && <p className="text-muted">The price has since changed to {usd(job.total)} through a change the customer approved on their job page.</p>}
+            {priceChanged && <p className="text-muted">The price has since changed to {usd(job.total)}; the changes are listed under Price above.</p>}
             {viewer === "owner" && <p className="text-muted">Recorded from {job.agreement.ip}.</p>}
           </div>
         ) : accepted(job, payments) && firstPaid ? (
