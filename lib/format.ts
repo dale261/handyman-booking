@@ -68,8 +68,17 @@ export function weekday(date: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 
-export function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:43123").replace(/\/$/, "");
+/**
+ * The site's own address, used in emails and in the PayPal return link.
+ * NEXT_PUBLIC_APP_URL wins. On Vercel, fall back to the project's production
+ * domain so a missing variable never puts a 127.0.0.1 link in a customer email.
+ */
+export function appUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const configured = (env.NEXT_PUBLIC_APP_URL || "").trim();
+  if (configured) return configured.replace(/\/$/, "");
+  const vercel = (env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL || "").trim();
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
+  return "http://127.0.0.1:43123";
 }
 
 export function jobUrl(id: string): string {

@@ -62,6 +62,40 @@ export async function createPayPalOrder(input: {
   return { id: body.id, approveUrl: approve.href };
 }
 
+export type PayPalOrderState = {
+  /** CREATED, APPROVED, COMPLETED, VOIDED, ... */
+  status: string;
+  /** What the order was created for. A capture always takes exactly this. */
+  amount: number;
+  /** Set once the order has been captured (status COMPLETED). */
+  captureId: string | null;
+  captureStatus: string;
+};
+
+/** Look at an order before capturing it: its amount, whether the customer approved it, and whether it was already captured. */
+export async function getPayPalOrder(orderId: string): Promise<PayPalOrderState> {
+  const token = await accessToken();
+  const res = await fetch(`${baseUrl()}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`PayPal order lookup failed (${res.status})`);
+  const body = (await res.json()) as {
+    status?: string;
+    purchase_units?: { amount?: { value?: string }; payments?: { captures?: { id?: string; status?: string }[] } }[];
+  };
+  const unit = body.purchase_units?.[0];
+  const amount = Number(unit?.amount?.value);
+  if (!Number.isFinite(amount)) throw new Error("PayPal order lookup was incomplete");
+  const capture = unit?.payments?.captures?.[0];
+  return {
+    status: body.status || "",
+    amount,
+    captureId: capture?.id ?? null,
+    captureStatus: capture?.status || "",
+  };
+}
+
 export async function capturePayPalOrder(orderId: string): Promise<{ captureId: string; amount: number; status: string }> {
   const token = await accessToken();
   const res = await fetch(`${baseUrl()}/v2/checkout/orders/${orderId}/capture`, {

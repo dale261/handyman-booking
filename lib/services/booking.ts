@@ -812,11 +812,14 @@ export async function holdSlot(
       if (fresh.status === "held") {
         const payLink = fresh.ownerPriced ? contractUrl(fresh) : jobUrl(fresh.id);
         const when = jobDates(fresh).length > 1 ? `${formatDateRange(jobDates(fresh))}, starting ${formatMinutes(fresh.startMin || 0)} each day,` : `${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`;
+        const howToPay = paypalConfigured()
+          ? `Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Pay here: "}${payLink}`
+          : `${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} is due within ${holdHours} hours to keep this time. We'll contact you to take the payment.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Your quote: "}${payLink}`;
         await mail(
           repo,
           fresh.customerEmail,
           `Your time is held for ${holdHours} hours`,
-          `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Pay here: "}${payLink}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+          `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. ${howToPay}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
         await notify(
@@ -875,7 +878,10 @@ export async function payJob(
   jobId: string,
   method: "paypal" | "cash" | "check",
   paypalCaptureId: string | null = null,
+  /** Extra wording for the payment row and the owner notice, such as a PayPal capture that is still pending. */
+  opts: { note?: string } = {},
 ): Promise<Ok<JobRecord> | Err> {
+  const extra = opts.note ? ` ${opts.note}` : "";
   return repo.run(async () => {
     await releaseExpired(repo);
     const job = await repo.getJob(jobId);
@@ -901,7 +907,7 @@ export async function payJob(
         method,
         status: "paid",
         closed: false,
-        note: kind === "deposit" ? "Deposit, half down" : "Paid in full",
+        note: `${kind === "deposit" ? "Deposit, half down" : "Paid in full"}.${extra}`,
         paypalCaptureId,
         createdAt: new Date().toISOString(),
       });
@@ -923,7 +929,7 @@ export async function payJob(
         settings,
         "pay",
         `Payment received: ${usd(dueNow)} ${saved.balanceDue > 0 ? "50% deposit" : "full payment"}`,
-        `${saved.scope}; ${method}. ${saved.balanceDue > 0 ? `${usd(saved.balanceDue)} balance due after completion and customer approval.` : "Paid in full."}`,
+        `${saved.scope}; ${method}. ${saved.balanceDue > 0 ? `${usd(saved.balanceDue)} balance due after completion and customer approval.` : "Paid in full."}${extra}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -938,7 +944,7 @@ export async function payJob(
         method,
         status: "paid",
         closed: false,
-        note: "Extra due after an on-site price change",
+        note: `Extra due after an on-site price change.${extra}`,
         paypalCaptureId,
         createdAt: new Date().toISOString(),
       });
@@ -951,7 +957,7 @@ export async function payJob(
         `Hi ${saved.customerName}, we received ${usd(due)} by ${paidWith(method)} for the new price on ${saved.scope}. The total is ${usd(saved.total)}.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} is still due after the work is done and you approve it.` : " Nothing else is due right now."}\n${LOCKED_PRICE}${emailFooter(settings)}`,
         saved.id,
       );
-      await notify(repo, settings, "pay", `Payment received: ${usd(due)} after a price change`, `${saved.scope}; ${method}.`, saved.id);
+      await notify(repo, settings, "pay", `Payment received: ${usd(due)} after a price change`, `${saved.scope}; ${method}.${extra}`, saved.id);
       return { ok: true, data: saved };
     }
     if (job.status === "balance_due") {
@@ -963,7 +969,7 @@ export async function payJob(
         method,
         status: "paid",
         closed: false,
-        note: "Balance",
+        note: `Balance.${extra}`,
         paypalCaptureId,
         createdAt: new Date().toISOString(),
       });
@@ -979,7 +985,7 @@ export async function payJob(
         `Hi ${saved.customerName}, we received your ${usd(paid)} balance by ${paidWith(method)} for ${saved.scope}. The job is paid in full (${usd(saved.total)}). We'd love a short review: ${jobUrl(saved.id)}${emailFooter(settings)}`,
         saved.id,
       );
-      await notify(repo, settings, "pay", `Payment received: ${usd(paid)} balance`, `${saved.scope}; ${method}. Job is fully paid.`, saved.id);
+      await notify(repo, settings, "pay", `Payment received: ${usd(paid)} balance`, `${saved.scope}; ${method}. Job is fully paid.${extra}`, saved.id);
       return { ok: true, data: saved };
     }
     return fail("Nothing is due on this job right now.");

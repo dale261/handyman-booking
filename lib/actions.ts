@@ -16,7 +16,8 @@ import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-li
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
 import { actorFromUser, type Actor, type CrewRecord, type Role, type WorkerRecord } from "@/lib/db/types";
-import { clearDraftCookie, readDraftCookie, writeDraftCookie } from "@/lib/draft-cookie";
+import { clearDraftCookie, writeDraftCookie } from "@/lib/draft-cookie";
+import { finishDraft } from "@/lib/draft-finish";
 import { jobSiteAddress, parseDraft } from "@/lib/domain/draft";
 import { mergeLibrary } from "@/lib/domain/library";
 import type { LibraryGroup } from "@/lib/domain/library-data";
@@ -74,36 +75,6 @@ async function mutate(jobId: string, notice: string, work: (repo: Repository, ac
   await settle(repo);
   if (!result.ok) jobBack(jobId, "error", result.error);
   jobBack(jobId, "notice", notice);
-}
-
-/**
- * A visitor who priced a job before signing up has a draft in a cookie.
- * Turn it into a real quote now and send them to that job. Returns the
- * page to go to, or null when there is nothing to finish.
- */
-async function finishDraft(repo: Repository, actor: Actor): Promise<string | null> {
-  const draft = await readDraftCookie();
-  if (!draft) return null;
-  await clearDraftCookie();
-  if (actor.role !== "customer") return null;
-  const result = await createQuote(repo, actor, {
-    service: draft.service,
-    description: draft.description,
-    params: { ...DEFAULT_PARAMS, ...draft.params },
-    differentSite: true,
-    jobSiteAddress: jobSiteAddress(draft),
-    urgent: draft.urgent,
-    pickup: draft.pickup,
-    preferredWorkerId: null,
-    photos: [],
-  });
-  await settle(repo);
-  if (!result.ok) return "/book?error=" + encodeURIComponent(result.error);
-  if (draft.leadId) {
-    const lead = await repo.getLead(draft.leadId);
-    if (lead && !lead.jobId) await repo.saveLead({ ...lead, jobId: result.data.id, updatedAt: new Date().toISOString() });
-  }
-  return `/jobs/${result.data.id}`;
 }
 
 export async function signUp(form: FormData) {

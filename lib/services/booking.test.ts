@@ -42,6 +42,43 @@ async function actor(store: LocalRepository, id: string) {
 }
 
 describe("booking flow", () => {
+  it("records the same PayPal capture only once and carries a pending note to the owner", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const created = await createQuote(store, customer, {
+      service: "tv",
+      description: "Mount a 55-inch TV on a drywall living-room wall",
+      params: { ...DEFAULT_PARAMS, tvSize: "55", wall: "drywall", conceal: "none" },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    if (!created.ok) throw new Error(created.error);
+    const held = await holdSlot(store, customer, created.data.id, "earliest");
+    if (!held.ok) throw new Error(held.error);
+    const emailsBefore = (await store.listEmails()).length;
+
+    const first = await payJob(store, customer, created.data.id, "paypal", "CAPTURE-1", { note: "PayPal shows this payment as pending." });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.data.status).toBe("booked");
+    const payments = await store.listPayments(created.data.id);
+    expect(payments).toHaveLength(1);
+    expect(payments[0].note).toContain("pending");
+    const ownerNote = (await store.listNotifications()).find((note) => note.title.startsWith("Payment received"));
+    expect(ownerNote?.detail).toContain("pending");
+    expect((await store.listEmails()).length).toBe(emailsBefore + 2);
+
+    // The customer refreshed the PayPal return page: same capture id, nothing new recorded.
+    const again = await payJob(store, customer, created.data.id, "paypal", "CAPTURE-1");
+    expect(again.ok).toBe(true);
+    expect(await store.listPayments(created.data.id)).toHaveLength(1);
+    expect((await store.listEmails()).length).toBe(emailsBefore + 2);
+  });
+
   it("issues invoice 1000, locks travel when paid, and keeps $50 on cancel", async () => {
     const store = repo();
     const customer = await actor(store, DEMO_USERS.customer);

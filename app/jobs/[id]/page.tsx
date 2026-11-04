@@ -122,7 +122,12 @@ export default async function JobPage({
       {job.status === "pending_area" && actor.role === "customer" && <Callout>{job.areaDetail} The {settings.holdHours}-hour hold starts after we approve the address.</Callout>}
       {job.status === "held" && job.holdUntil && (
         <Callout>
-          This time is held until {new Date(job.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}. Pay {usd(job.amountDueNow)} to keep it.
+          This time is held until {new Date(job.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}.{" "}
+          {paypalConfigured() || demoSignInAllowed()
+            ? `Pay ${usd(job.amountDueNow)} to keep it.`
+            : actor.role === "customer"
+              ? `${usd(job.amountDueNow)} is due to keep it. We'll contact you to take the payment.`
+              : `${usd(job.amountDueNow)} is due. Collect it and mark it paid below, or the time is released.`}
         </Callout>
       )}
 
