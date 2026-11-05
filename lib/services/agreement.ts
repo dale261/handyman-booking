@@ -25,6 +25,23 @@ export function tokenMatches(job: Pick<JobRecord, "docToken">, token: string | n
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/**
+ * Whoever holds a job's emailed link acts for that job's customer: picking a time,
+ * signing, and paying, with no account or password. The link only ever reaches
+ * the customer's own email, and it only covers this one job.
+ */
+export function linkActor(job: JobRecord): Actor {
+  return { id: job.customerId, role: "customer", email: job.customerEmail, fullName: job.customerName, phone: job.customerPhone, workerId: null };
+}
+
+/** The job behind a contract link, or null when the link doesn't match. */
+export async function jobForLink(repo: Repository, jobId: string, token: string | null | undefined): Promise<{ job: JobRecord; actor: Actor } | null> {
+  if (!jobId || !token) return null;
+  const job = await repo.getJob(jobId);
+  if (!job || !tokenMatches(job, token)) return null;
+  return { job, actor: linkActor(job) };
+}
+
 /** Jobs saved before contract links existed get a secret the first time the owner opens the page. */
 export async function ensureDocToken(repo: Repository, job: JobRecord): Promise<JobRecord> {
   if (job.docToken) return job;
@@ -99,11 +116,18 @@ export async function sendAgreement(repo: Repository, actor: Actor, jobId: strin
         : split.later > 0
           ? `${usd(split.now)} is due to book (half down) and ${usd(split.later)} after you approve the finished work.`
           : `${usd(split.now)} is due to book.`;
+    // What the link lets them do next. No sign-in: the link itself is their key.
+    const nextStep =
+      !job.scheduledDate && (job.status === "quoted" || job.status === "released")
+        ? "Pick a time, read and sign the agreement, and pay, all from this link (no sign-in needed): "
+        : job.status === "held"
+          ? "Read and sign the agreement and pay to keep your time, all from this link (no sign-in needed): "
+          : "Read it, sign it, and keep a copy here: ";
     await mail(
       repo,
       job.customerEmail,
       `Your agreement and ${invoice} from ${settings.businessName}`,
-      `Hi ${job.customerName}, here is the agreement and invoice for ${job.scope || "your job"}${when}. The price is ${usd(job.total)}. ${pay}\n\nRead it, sign it, and keep a copy here: ${contractUrl(job)}\n\nYou can print it or save it as a PDF from that page. Reply to this email with any questions.${emailFooter(settings)}`,
+      `Hi ${job.customerName}, here is the agreement and invoice for ${job.scope || "your job"}${when}. The price is ${usd(job.total)}. ${pay}\n\n${nextStep}${contractUrl(job)}\n\nYou can print it or save it as a PDF from that page. Reply to this email with any questions.${emailFooter(settings)}`,
       job.id,
     );
     job.docSentAt = new Date().toISOString();

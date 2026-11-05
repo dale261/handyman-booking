@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { accepted, agreementTerms, canSign, invoiceSummary } from "@/lib/domain/agreement";
 import type { Settings } from "@/lib/domain/types";
-import { formatMinutes, jobUrl, usd } from "@/lib/format";
+import { contractUrl, formatMinutes, jobUrl, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
@@ -247,7 +247,7 @@ export function AgreementDocument({
         {summary.balance > 0 && job.status !== "cancelled" && (
           <p>
             <span className="font-semibold">How to pay:</span>{" "}
-            {paypalConfigured() ? `online with PayPal from your job page (${jobUrl(job.id)}), or ` : ""}
+            {paypalConfigured() ? `online with PayPal from ${token ? `this page (${contractUrl(job)})` : `your job page (${jobUrl(job.id)})`}, or ` : ""}
             by check payable to {settings.businessName}, or cash. We mark checks and cash paid when we receive them.
           </p>
         )}

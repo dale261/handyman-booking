@@ -100,6 +100,15 @@ function pointOf(job: Pick<JobRecord, "jobSiteAddress" | "jobLat" | "jobLng" | "
 }
 
 /** What PayPal or a recorded payment should collect right now. */
+/**
+ * Where a customer goes to act on their job. Owner-entered customers usually have no
+ * password, so their emails point at the contract link, which needs no sign-in and
+ * lets them pick a time, sign, and pay. Customers who signed up themselves get the job page.
+ */
+export function customerLink(job: Pick<JobRecord, "id" | "docToken" | "ownerPriced">): string {
+  return job.ownerPriced ? contractUrl(job) : jobUrl(job.id);
+}
+
 export function amountPayable(job: Pick<JobRecord, "status" | "amountDueNow" | "balanceDue">): number {
   if (job.status === "held") return roundCents(Math.max(0, job.amountDueNow));
   if (job.status === "balance_due") return roundCents(Math.max(0, job.balanceDue));
@@ -810,10 +819,10 @@ export async function holdSlot(
       if (saved.crewId && saved.scheduledDate) await recalculateDays(repo, settings, jobDates(saved), saved.crewId);
       const fresh = (await repo.getJob(saved.id)) ?? saved;
       if (fresh.status === "held") {
-        const payLink = fresh.ownerPriced ? contractUrl(fresh) : jobUrl(fresh.id);
+        const payLink = customerLink(fresh);
         const when = jobDates(fresh).length > 1 ? `${formatDateRange(jobDates(fresh))}, starting ${formatMinutes(fresh.startMin || 0)} each day,` : `${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`;
         const howToPay = paypalConfigured()
-          ? `Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Pay here: "}${payLink}`
+          ? `Pay ${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} within ${holdHours} hours to keep this time.\n\nPay here${fresh.ownerPriced ? " (no sign-in needed; your agreement and invoice are on the same page)" : ""}: ${payLink}`
           : `${usd(fresh.amountDueNow)} ${fresh.balanceDue > 0 ? "(half down)" : "(paid in full)"} is due within ${holdHours} hours to keep this time. We'll contact you to take the payment.\n\n${fresh.ownerPriced ? "Your agreement and invoice: " : "Your quote: "}${payLink}`;
         await mail(
           repo,
@@ -1258,7 +1267,7 @@ export async function cancelBeforeWork(
       repo,
       saved.customerEmail,
       kind === "cancel" ? `Invoice #${saved.invoiceNumber}: your booking is cancelled` : `Invoice #${saved.invoiceNumber}: rescheduled, pick a new time`,
-      `Hi ${saved.customerName}, you paid ${usd(paid)} for ${saved.scope}. We keep ${usd(refund.fee)}.${refund.refund > 0 ? ` ${usd(refund.refund)} will go back to your PayPal payment.` : ` You paid ${usd(settings.cancelFee)} or less, so there is no refund.`}${kind === "reschedule" ? ` Pick a new time: ${jobUrl(saved.id)}` : ""}${emailFooter(settings)}`,
+      `Hi ${saved.customerName}, you paid ${usd(paid)} for ${saved.scope}. We keep ${usd(refund.fee)}.${refund.refund > 0 ? ` ${usd(refund.refund)} will go back to your PayPal payment.` : ` You paid ${usd(settings.cancelFee)} or less, so there is no refund.`}${kind === "reschedule" ? ` Pick a new time: ${customerLink(saved)}` : ""}${emailFooter(settings)}`,
       saved.id,
     );
     await notify(
@@ -1384,7 +1393,7 @@ export async function decidePriceChange(
       revised.refund > 0
         ? `${usd(revised.refund)} will be refunded. The crew can start.`
         : revised.amountDueNow > 0
-          ? `Pay ${usd(revised.amountDueNow)} now${revised.balanceDue > 0 ? `. ${usd(revised.balanceDue)} is due after you approve the finished work` : ""}. The crew starts after that payment. Pay here: ${jobUrl(saved.id)}`
+          ? `Pay ${usd(revised.amountDueNow)} now${revised.balanceDue > 0 ? `. ${usd(revised.balanceDue)} is due after you approve the finished work` : ""}. The crew starts after that payment. Pay here: ${customerLink(saved)}`
           : "Nothing more is due right now. The crew can start.";
     await mail(
       repo,

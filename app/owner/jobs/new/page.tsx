@@ -31,8 +31,9 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
         </Link>
         <h1 className="font-display text-3xl font-semibold text-ink">Add a job</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          For jobs that come in by phone or in person. Type it once: the job gets an invoice number and a contract and invoice page right away, and you can
-          email that to the customer. Your price is final here; the app won&apos;t recalculate it.
+          For jobs that come in by phone or in person. Type it once: the job gets an invoice number and an agreement and invoice page right away, and the
+          customer is emailed a link where they pick a time (if you don&apos;t set one), sign, and pay, with no sign-in. Your price is final here; the app
+          won&apos;t recalculate it.
         </p>
       </div>
       <Flash error={query.error} />
@@ -64,7 +65,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Temporary password for their sign-in (optional)
-              <Input name="password" type="password" autoComplete="new-password" placeholder="8+ characters. Leave blank if they'll only use the emailed link" />
+              <Input name="password" type="password" autoComplete="new-password" placeholder="8+ characters. Leave blank; the emailed link needs no sign-in" />
               <span className="font-normal text-muted">
                 A new customer gets an account so the job has a home. If they already have one, this form just updates their details.
               </span>
@@ -166,14 +167,22 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="holdHours" type="number" step="1" min={1} max={720} defaultValue={settings.holdHours} />
             </label>
             <p className="text-sm text-muted sm:col-span-3">
-              The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the usual hold email. For a multi-day
-              job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the job page to confirm it. Leave
-              the date blank to pick a time later from the job page.
+              The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the hold email with their link to
+              pay. For a multi-day job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the job page
+              to confirm it. Leave the date blank and the customer picks a time from their link (or you do, from the job page).
             </p>
           </CardContent>
         </Card>
 
-        <SubmitButton pendingLabel="Adding…">Add the job and open the contract</SubmitButton>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="emailNow" defaultChecked className="mt-1" />
+          <span>
+            Email the customer their link right away.{" "}
+            <span className="text-muted">If a time is held they get the hold email either way. Untick this to look the agreement over first and send it from the next page.</span>
+          </span>
+        </label>
+
+        <SubmitButton pendingLabel="Adding…">Add the job</SubmitButton>
       </form>
     </div>
   );

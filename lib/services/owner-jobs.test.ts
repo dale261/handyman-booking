@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser } from "@/lib/db/types";
-import { sendAgreement, signAgreement, tokenMatches } from "@/lib/services/agreement";
-import { holdSlot, payJob } from "@/lib/services/booking";
+import { jobForLink, sendAgreement, signAgreement, tokenMatches } from "@/lib/services/agreement";
+import { amountPayable, holdSlot, listOpenSlots, payJob } from "@/lib/services/booking";
 import { createOwnerJob } from "@/lib/services/owner-jobs";
 
 const dirs: string[] = [];
@@ -143,6 +143,73 @@ describe("owner-entered jobs", () => {
     expect(doc?.body).toContain("$700.00");
     const asCustomer = await sendAgreement(store, actorFromUser(customer), job.id);
     expect(asCustomer.ok).toBe(false);
+  });
+
+  it("lets whoever holds the emailed link pick a time and pay, with no account", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const customer = await user(store, DEMO_USERS.customer);
+    const created = await createOwnerJob(store, owner, {
+      customer,
+      service: "other",
+      scope: "Hang a storm door",
+      description: "",
+      jobSiteAddress: "",
+      hoursOnSite: 2,
+      days: 1,
+      crewSize: 1,
+      total: 320,
+      travel: 0,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const job = created.data;
+
+    // The agreement email, sent with no time set, says the link is where to pick a time and pay.
+    const sent = await sendAgreement(store, owner, job.id);
+    expect(sent.ok).toBe(true);
+    const first = (await store.listEmails()).find((email) => email.to === customer.email && email.subject.includes("invoice #1000"));
+    expect(first?.body).toContain("Pick a time, read and sign the agreement, and pay, all from this link (no sign-in needed)");
+
+    // A wrong secret opens nothing; the right one acts for the customer on this job only.
+    expect(await jobForLink(store, job.id, "0000")).toBeNull();
+    expect(await jobForLink(store, "missing", job.docToken)).toBeNull();
+    const link = await jobForLink(store, job.id, job.docToken);
+    expect(link?.actor).toMatchObject({ id: customer.id, role: "customer", workerId: null });
+    if (!link) return;
+
+    const open = await listOpenSlots(store, link.actor, job.id);
+    expect(open.ok).toBe(true);
+    if (!open.ok) return;
+    expect(open.data.length).toBeGreaterThan(0);
+    expect(open.data[0].total).toBe(320);
+
+    const held = await holdSlot(store, link.actor, job.id, "earliest");
+    expect(held.ok).toBe(true);
+    if (!held.ok) return;
+    expect(held.data.status).toBe("held");
+    expect(held.data.total).toBe(320);
+    expect(amountPayable(held.data)).toBe(320);
+    // Not the owner, so the usual hold window applies even if a longer one is asked for.
+    const settings = await store.getSettings();
+    const holdMs = new Date(held.data.holdUntil || 0).getTime() - Date.now();
+    expect(holdMs).toBeLessThan((settings.holdHours + 1) * 3600 * 1000);
+    const holdMail = (await store.listEmails()).find((email) => email.to === customer.email && email.subject.startsWith("Your time is held"));
+    expect(holdMail?.body).toContain(`/contract/${job.id}?k=${job.docToken}`);
+
+    // Another customer's link can't touch this job.
+    const stranger = { ...link.actor, id: "someone-else" };
+    expect((await holdSlot(store, stranger, job.id, "earliest")).ok).toBe(false);
+    expect((await payJob(store, stranger, job.id, "paypal", "CAP-STRANGER")).ok).toBe(false);
+
+    const paid = await payJob(store, link.actor, job.id, "paypal", "CAP-LINK-1");
+    expect(paid.ok).toBe(true);
+    if (!paid.ok) return;
+    expect(paid.data.status).toBe("booked");
+    expect(paid.data.amountDueNow).toBe(0);
+    expect(amountPayable(paid.data)).toBe(0);
+    // Cash and checks stay the owner's to record.
+    expect((await payJob(store, link.actor, job.id, "cash")).ok).toBe(false);
   });
 });
 

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { ensureCustomerAccount } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
-import { sendAgreement, signAgreement } from "@/lib/services/agreement";
+import { jobForLink, sendAgreement, signAgreement } from "@/lib/services/agreement";
 import { createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
@@ -27,7 +27,7 @@ import { DEFAULT_PARAMS, SERVICE_LABELS } from "@/lib/domain/types";
 import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
-import { createPayPalOrder } from "@/lib/paypal";
+import { createPayPalOrder, paypalConfigured } from "@/lib/paypal";
 import { appUrl, formatDate, formatDateRange, formatMinutes } from "@/lib/format";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
@@ -725,9 +725,11 @@ export async function createOwnerJobAction(form: FormData) {
   }
   const date = field(form, "date");
   const startMin = Number(field(form, "startMin"));
+  // The hold email carries the customer's link (pay, sign, read). Without a hold, the agreement email does.
+  let emailed = false;
   if (date) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(startMin)) {
-      notes.push("The date or time didn't read right, so nothing is held yet. Pick a time on the job page.");
+      notes.push("The date or time didn't read right, so nothing is held yet.");
     } else {
       const holdHours = Number(field(form, "holdHours") || "0") || undefined;
       const held = await holdSlot(repo, actor, job.id, { date, startMin }, { holdHours });
@@ -735,11 +737,30 @@ export async function createOwnerJobAction(form: FormData) {
         const until = held.data.holdUntil
           ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
           : "";
-        notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}; the customer was emailed.`);
+        emailed = true;
+        // The hold email carried the contract link, so the contract page can say when it went out.
+        const fresh = await repo.getJob(job.id);
+        if (fresh && !fresh.docSentAt) {
+          fresh.docSentAt = new Date().toISOString();
+          await repo.saveJob(fresh, { skipOverlap: true });
+        }
+        notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}. The customer was emailed the link to pay and sign.`);
       } else {
-        notes.push(`Couldn't hold ${formatDate(date)} at ${formatMinutes(startMin)}: ${held.error} Pick a time on the job page.`);
+        notes.push(`Couldn't hold ${formatDate(date)} at ${formatMinutes(startMin)}: ${held.error}`);
       }
     }
+  }
+  if (!emailed && form.get("emailNow") === "on") {
+    const sent = await sendAgreement(repo, actor, job.id);
+    notes.push(
+      sent.ok
+        ? resendConfigured()
+          ? "The customer was emailed the link to pick a time, sign, and pay."
+          : "The customer's link is queued; email isn't connected yet, so text them the link below instead."
+        : `Couldn't email the customer: ${sent.error} Use the button below to send it.`,
+    );
+  } else if (!emailed) {
+    notes.push("Nothing was emailed yet. Use the button below when you're ready.");
   }
   const settings = await repo.getSettings();
   if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
@@ -774,6 +795,61 @@ export async function signAgreementAction(form: FormData) {
   await settle(repo);
   if (!result.ok) back("error", result.error);
   back("notice", "Thanks, your signature is recorded. Print or save this page for your records.");
+}
+
+// ---------------------------------------------------------------------------
+// From the emailed contract link: no sign-in, the secret in the link is the key
+// ---------------------------------------------------------------------------
+
+function contractBack(jobId: string, token: string, kind: "notice" | "error", message: string): never {
+  redirect(`/contract/${jobId}?k=${encodeURIComponent(token)}&${kind}=${encodeURIComponent(message)}`);
+}
+
+/** Pick a time from the emailed link. Holds it for the usual window, exactly as the job page does. */
+export async function holdSlotLinkAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const token = field(form, "token");
+  if (!jobId || !token) redirect("/");
+  if (!(await allowRequest(ANON_LIMIT))) contractBack(jobId, token, "error", "Too many attempts from this network. Wait a few minutes and try again.");
+  const repo = getRepository();
+  const link = await jobForLink(repo, jobId, token);
+  if (!link) redirect("/");
+  const when = field(form, "when") === "earliest" ? "earliest" : { date: field(form, "date"), startMin: Number(form.get("startMin")) };
+  const result = await holdSlot(repo, link.actor, jobId, when);
+  await settle(repo);
+  if (!result.ok) contractBack(jobId, token, "error", result.error);
+  contractBack(jobId, token, "notice", paypalConfigured() ? "That time is held. Pay below to keep it." : "That time is held. We'll contact you to take the payment.");
+}
+
+/** Start PayPal from the emailed link. PayPal brings the customer back to this same link. */
+export async function startPayPalLinkAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const token = field(form, "token");
+  if (!jobId || !token) redirect("/");
+  if (!(await allowRequest(ANON_LIMIT))) contractBack(jobId, token, "error", "Too many attempts from this network. Wait a few minutes and try again.");
+  const repo = getRepository();
+  const link = await jobForLink(repo, jobId, token);
+  if (!link) redirect("/");
+  const amount = amountPayable(link.job);
+  if (amount <= 0) contractBack(jobId, token, "error", "Nothing is due on this job right now.");
+  const linkQuery = `k=${encodeURIComponent(token)}`;
+  let approveUrl = "";
+  try {
+    const order = await createPayPalOrder({
+      amount,
+      invoiceNumber: link.job.invoiceNumber,
+      jobId,
+      returnUrl: `${appUrl()}/api/paypal/return?job=${jobId}&${linkQuery}`,
+      cancelUrl: `${appUrl()}/contract/${jobId}?${linkQuery}&notice=${encodeURIComponent("PayPal checkout was canceled. Nothing was charged.")}`,
+    });
+    link.job.paypalOrderId = order.id;
+    await repo.saveJob(link.job, { skipOverlap: true });
+    approveUrl = order.approveUrl;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "PayPal could not start checkout.";
+    contractBack(jobId, token, "error", message);
+  }
+  redirect(approveUrl);
 }
 
 /** Owner: email the customer the link to their contract and invoice. */

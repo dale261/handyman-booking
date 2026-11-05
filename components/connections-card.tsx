@@ -55,11 +55,12 @@ export async function ConnectionsCard() {
         )}
         {allGood ? (
           <p className="text-muted">
-            Everything a customer needs is on. To watch a payment go through once, stay signed in as yourself:{" "}
+            Everything a customer needs is on. To watch a payment go through once, the way a customer would:{" "}
             <Link className="font-semibold text-pine underline" href="/owner/jobs/new">
               Add a job
             </Link>{" "}
-            with your own name and phone, any email other than your sign-in, and a price of $1. Open it, hold a time, tap Pay with PayPal, pay with a card or a personal PayPal account, then tap Refund on the job page. No customer account needed.
+            with your own name and phone, an email other than your sign-in, a price of $1, and tomorrow&apos;s date. Open the email that arrives, tap the link, and pay
+            with a card or a personal PayPal account (not this business account). Then open the job here and tap Cancel on site, which refunds it through PayPal.
           </p>
         ) : null}
       </CardContent>

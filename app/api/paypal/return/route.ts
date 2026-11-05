@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { currentActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
+import type { Actor } from "@/lib/db/types";
 import { flushEmails } from "@/lib/email";
 import { appUrl, usd } from "@/lib/format";
 import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal";
 import { allowRequest, ANON_LIMIT } from "@/lib/rate-limit";
+import { linkActor, tokenMatches } from "@/lib/services/agreement";
 import { amountPayable, notify, payJob } from "@/lib/services/booking";
 
 /**
  * Where PayPal sends the customer after they approve the payment.
+ *
+ * Two ways in: signed in (the job page's Pay button) or holding the job's emailed
+ * contract link (`k`), which needs no account. Either way the customer lands back
+ * where they started, with a notice.
  *
  * Order of operations matters: everything that could reject the payment is
  * checked BEFORE the capture call, so a rejected return never leaves the
@@ -25,14 +31,27 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const jobId = url.searchParams.get("job") || "";
   const orderId = url.searchParams.get("token") || "";
-  const back = (kind: "notice" | "error", message: string) => NextResponse.redirect(`${appUrl()}/jobs/${jobId}?${kind}=${encodeURIComponent(message)}`);
-
-  const actor = await currentActor();
-  if (!actor) return NextResponse.redirect(`${appUrl()}/login?next=${encodeURIComponent(`/api/paypal/return?job=${jobId}&token=${orderId}`)}`);
-  if (!jobId || !orderId) return back("error", "PayPal didn't send an order back. Nothing was charged.");
+  const linkToken = url.searchParams.get("k") || "";
+  const back = (kind: "notice" | "error", message: string) =>
+    NextResponse.redirect(
+      linkToken
+        ? `${appUrl()}/contract/${jobId}?k=${encodeURIComponent(linkToken)}&${kind}=${encodeURIComponent(message)}`
+        : `${appUrl()}/jobs/${jobId}?${kind}=${encodeURIComponent(message)}`,
+    );
 
   const repo = getRepository();
-  const job = await repo.getJob(jobId);
+  const job = jobId ? await repo.getJob(jobId) : null;
+
+  let actor: Actor | null = null;
+  if (linkToken) {
+    // The emailed link stands in for a sign-in, for this one job only.
+    if (!job || !tokenMatches(job, linkToken)) return NextResponse.redirect(`${appUrl()}/`);
+    actor = linkActor(job);
+  } else {
+    actor = await currentActor();
+    if (!actor) return NextResponse.redirect(`${appUrl()}/login?next=${encodeURIComponent(`/api/paypal/return?job=${jobId}&token=${orderId}`)}`);
+  }
+  if (!jobId || !orderId) return back("error", "PayPal didn't send an order back. Nothing was charged.");
   if (!job) return back("error", "Job not found. Nothing was charged.");
   if (actor.role === "customer" && job.customerId !== actor.id) return back("error", "That job belongs to another customer. Nothing was charged.");
   if (job.paypalOrderId && job.paypalOrderId !== orderId) return back("error", "That PayPal checkout doesn't match this invoice. Nothing was charged.");

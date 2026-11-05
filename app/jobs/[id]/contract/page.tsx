@@ -64,7 +64,7 @@ function OwnerDocTools({ job, settings }: { job: JobRecord; settings: Settings }
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-muted">
-          The link opens without a sign-in. It shows this agreement and invoice, a sign-here box, and stays current as the job moves along.
+          The link opens without a sign-in. From it the customer picks a time (if none is set), signs, and pays with PayPal; it stays current as the job moves along.
           {job.docSentAt ? ` Last emailed ${new Date(job.docSentAt).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}.` : " Not emailed yet."}
         </p>
         <div className="flex flex-wrap items-center gap-2">
