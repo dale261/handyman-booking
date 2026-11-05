@@ -10,6 +10,7 @@ import {
   demoPayAction,
   discountAction,
   editOwnerJobAction,
+  emailPickTimeAction,
   removeDiscountAction,
   holdSlotAction,
   manualPayAction,
@@ -51,7 +52,7 @@ export default async function JobPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string; error?: string; date?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; date?: string; hold?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -81,6 +82,18 @@ export default async function JobPage({
   const dates = [...new Set(slots.map((slot) => slot.date))];
   const selectedDate = query.date && dates.includes(query.date) ? query.date : dates[0];
   const daySlots = slots.filter((slot) => slot.date === selectedDate);
+  // Owner only: how long a hold waits for the payment (a customer who pays by mail or on the day needs more than a day).
+  const holdChoices = [
+    { hours: settings.holdHours, label: `${settings.holdHours} hours` },
+    { hours: 72, label: "3 days" },
+    { hours: 168, label: "1 week" },
+    { hours: 336, label: "2 weeks" },
+  ].filter((choice, index, all) => all.findIndex((other) => other.hours === choice.hours) === index);
+  const holdHours = actor.role === "owner" && holdChoices.some((choice) => String(choice.hours) === query.hold) ? Number(query.hold) : settings.holdHours;
+  const pickHref = (date: string | undefined, hold: number) => {
+    const query = [date ? `date=${date}` : "", hold !== settings.holdHours ? `hold=${hold}` : ""].filter(Boolean).join("&");
+    return `/jobs/${job.id}${query ? `?${query}` : ""}`;
+  };
   const crewName = crews.find((crew) => crew.id === job.crewId)?.name;
   const due = job.status === "balance_due" ? job.balanceDue : job.amountDueNow;
   const canPay = due > 0 && (job.status === "held" || job.status === "balance_due" || job.status === "booked");
@@ -298,16 +311,36 @@ export default async function JobPage({
                 ) : (
                   <>
                     {daysOf(job) > 1 && <p className="text-sm text-muted">This job takes {daysOf(job)} working days. Pick the first day; the crew is reserved for the same hours each day after it.</p>}
+                    {actor.role === "owner" && (
+                      <p className="text-sm text-muted">
+                        Holding a time emails the customer their link to pay. These times are what the crew can make with their hours, the drive, and the jobs already booked.
+                      </p>
+                    )}
+                    {actor.role === "owner" && (
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="font-semibold">Hold it for:</span>
+                        {holdChoices.map((choice) => (
+                          <a
+                            key={choice.hours}
+                            href={pickHref(selectedDate, choice.hours)}
+                            className={choice.hours === holdHours ? "rounded-full bg-pine px-3 py-1 font-semibold text-white" : "rounded-full border border-line bg-card px-3 py-1"}
+                          >
+                            {choice.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <form action={holdSlotAction}>
                       <input type="hidden" name="jobId" value={job.id} />
                       <input type="hidden" name="when" value="earliest" />
+                      <input type="hidden" name="holdHours" value={holdHours} />
                       <SubmitButton>Earliest available · {formatDateRange(slots[0].dates)} at {formatMinutes(slots[0].startMin)}</SubmitButton>
                     </form>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {dates.map((date) => (
                         <a
                           key={date}
-                          href={`/jobs/${job.id}?date=${date}`}
+                          href={pickHref(date, holdHours)}
                           className={date === selectedDate ? "shrink-0 rounded-full bg-pine px-3 py-1 text-sm font-semibold text-white" : "shrink-0 rounded-full border border-line bg-card px-3 py-1 text-sm"}
                         >
                           {formatDate(date)}
@@ -320,6 +353,7 @@ export default async function JobPage({
                           <input type="hidden" name="jobId" value={job.id} />
                           <input type="hidden" name="date" value={slot.date} />
                           <input type="hidden" name="startMin" value={slot.startMin} />
+                          <input type="hidden" name="holdHours" value={holdHours} />
                           <div>
                             <p className="font-semibold">
                               {formatMinutes(slot.startMin)} · {slot.crewName}
@@ -334,6 +368,13 @@ export default async function JobPage({
                       ))}
                     </div>
                   </>
+                )}
+                {actor.role === "owner" && job.customerEmail.trim() && (
+                  <form action={emailPickTimeAction} className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm">
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <span className="text-muted">Or let the customer choose:</span>
+                    <SubmitButton size="sm" variant="outline" pendingLabel="Sending…">Email them the link to pick a time</SubmitButton>
+                  </form>
                 )}
               </CardContent>
             </Card>

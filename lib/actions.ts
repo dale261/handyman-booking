@@ -28,7 +28,7 @@ import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
 import { createPayPalOrder, paypalConfigured } from "@/lib/paypal";
-import { appUrl, formatDate, formatDateRange, formatMinutes } from "@/lib/format";
+import { appUrl, formatDateRange, formatMinutes } from "@/lib/format";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
@@ -296,7 +296,20 @@ export async function submitQuote(input: {
 export async function holdSlotAction(form: FormData) {
   const jobId = field(form, "jobId");
   const when = field(form, "when") === "earliest" ? "earliest" : { date: field(form, "date"), startMin: Number(form.get("startMin")) };
-  await mutate(jobId, when === "earliest" ? "Your earliest time is held." : "That time is held.", (repo, actor) => holdSlot(repo, actor, jobId, when));
+  // Only the owner's hold length is honored (holdSlot ignores it for anyone else).
+  const holdHours = Number(field(form, "holdHours") || "0") || undefined;
+  const actor = await requireActor();
+  const repo = getRepository();
+  const result = await holdSlot(repo, actor, jobId, when, { holdHours });
+  await settle(repo);
+  if (!result.ok) jobBack(jobId, "error", result.error);
+  const data = result.data;
+  const label = `${formatDateRange(jobDates(data))} at ${formatMinutes(data.startMin ?? 0)}`;
+  let notice = data.status === "held" ? `${label} is held.` : `${label} is requested. It's held once the address is approved.`;
+  if (actor.role === "owner" && data.status === "held") {
+    notice += paypalConfigured() ? " The customer was emailed the link to pay." : " The customer was emailed; we'll contact them to take the payment.";
+  }
+  jobBack(jobId, "notice", notice);
 }
 
 export async function releaseHoldAction(form: FormData) {
@@ -723,50 +736,32 @@ export async function createOwnerJobAction(form: FormData) {
         : `Customer account created for ${account.user.email}. No password was set; the contract link works without one.`,
     );
   }
-  const date = field(form, "date");
-  const startMin = Number(field(form, "startMin"));
-  // The hold email carries the customer's link (pay, sign, read). Without a hold, the agreement email does.
-  let emailed = false;
-  if (date) {
-    const holdHours = Number(field(form, "holdHours") || "0") || undefined;
-    const held =
-      /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(startMin)
-        ? await holdSlot(repo, actor, job.id, { date, startMin }, { holdHours })
-        : { ok: false as const, error: "The date or time didn't read right." };
-    if (!held.ok) {
-      // The time the owner agreed with the customer isn't open. Stop here, on the job page's
-      // real open times, and don't email the customer until a time is actually held.
-      await settle(repo);
-      jobBack(
-        job.id,
-        "error",
-        `The job is saved (invoice #${job.invoiceNumber ?? "pending"}), but ${formatDate(date)} at ${formatMinutes(startMin)} couldn't be held: ${held.error} Pick one of the open times below and the customer gets their email then.`,
-      );
-    }
-    const until = held.data.holdUntil
-      ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
-      : "";
-    emailed = true;
-    notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}. The customer was emailed the link to pay and sign.`);
-  }
-  if (!emailed && form.get("emailNow") === "on") {
-    const sent = await sendAgreement(repo, actor, job.id);
-    notes.push(
-      sent.ok
-        ? resendConfigured()
-          ? "The customer was emailed the link to pick a time, sign, and pay."
-          : "The customer's link is queued; email isn't connected yet, so text them the link below instead."
-        : `Couldn't email the customer: ${sent.error} Use the button below to send it.`,
-    );
-  } else if (!emailed) {
-    notes.push("Nothing was emailed yet. Use the button below when you're ready.");
-  }
   const settings = await repo.getSettings();
   if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
     notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part.`);
   }
+  // One scheduling step, from real open times: the job page lists them for this job. Holding
+  // one emails the customer their link; or the owner emails the link and lets them choose.
+  notes.push("Pick a time below and the customer gets their email the moment it's held, or email them the link to choose it themselves.");
   await settle(repo);
-  redirect(`/jobs/${job.id}/contract?notice=${encodeURIComponent(notes.join(" "))}`);
+  jobBack(job.id, "notice", notes.join(" "));
+}
+
+/** Owner: let the customer choose the time. Emails them the link, which lists the open times. */
+export async function emailPickTimeAction(form: FormData) {
+  const actor = await requireRole("owner");
+  const jobId = field(form, "jobId");
+  const repo = getRepository();
+  const result = await sendAgreement(repo, actor, jobId);
+  await settle(repo);
+  if (!result.ok) jobBack(jobId, "error", result.error);
+  jobBack(
+    jobId,
+    "notice",
+    resendConfigured()
+      ? `Emailed ${result.data.customerEmail} the link to pick a time, sign, and pay.`
+      : `Queued for ${result.data.customerEmail}; email isn't connected yet, so text them the link from the contract page instead.`,
+  );
 }
 
 /** The customer types their name to accept the agreement. Works signed in or from the emailed link. */

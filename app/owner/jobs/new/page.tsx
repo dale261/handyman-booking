@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
-import { formatMinutes, todayDetroit } from "@/lib/format";
 import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 
 const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "helper"];
@@ -26,8 +25,6 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
     .map((user) => ({ id: user.id, label: `${user.fullName || user.email}${user.phone ? ` · ${user.phone}` : ""}` }));
   const picked = query.customer ? users.find((user) => user.id === query.customer && user.role === "customer") : undefined;
-  const times: number[] = [];
-  for (let start = settings.slotStartMin; start <= settings.slotEndMin; start += settings.slotStepMin) times.push(start);
   const fieldClass = "grid gap-1 text-sm font-semibold";
   const selectClass = "h-10 rounded-md border border-line bg-card px-3 text-sm font-normal";
 
@@ -39,9 +36,9 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
         </Link>
         <h1 className="font-display text-3xl font-semibold text-ink">Add a job</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          For jobs that come in by phone or in person. Type it once: the job gets an invoice number and an agreement and invoice page right away, and the
-          customer is emailed a link where they pick a time (if you don&apos;t set one), sign, and pay, with no sign-in. Your price is final here; the app
-          won&apos;t recalculate it.
+          For jobs that come in by phone or in person. Type it once: the job gets an invoice number and an agreement and invoice page right away. Then you pick
+          the time from the open times, and the customer gets one email with a link to sign and pay, no sign-in. Your price is final here; the app won&apos;t
+          recalculate it.
         </p>
       </div>
       <Flash error={query.error} />
@@ -114,9 +111,9 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="hours" type="number" step="0.5" min={OWNER_JOB_LIMITS.minHours} max={OWNER_JOB_LIMITS.maxHours} defaultValue={2} required />
             </label>
             <label className={fieldClass}>
-              Working days
+              How many days the job takes
               <Input name="days" type="number" step="1" min={1} max={OWNER_JOB_LIMITS.maxDays} defaultValue={1} required />
-              <span className="font-normal text-muted">More than 1 reserves the crew for the same hours on consecutive working days. Weekends and days off are skipped.</span>
+              <span className="font-normal text-muted">Usually 1. More than 1 reserves the crew for the same hours on back-to-back working days; weekends and days off are skipped.</span>
             </label>
             <label className={fieldClass}>
               People on site
@@ -152,45 +149,10 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Put it on the calendar (optional)</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            <label className={fieldClass}>
-              Date
-              <Input name="date" type="date" min={todayDetroit()} />
-            </label>
-            <label className={fieldClass}>
-              Start time
-              <select name="startMin" defaultValue={String(times[0] ?? 480)} className={selectClass}>
-                {times.map((minute) => (
-                  <option key={minute} value={minute}>
-                    {formatMinutes(minute)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={fieldClass}>
-              Hold the time for (hours)
-              <Input name="holdHours" type="number" step="1" min={1} max={720} defaultValue={settings.holdHours} />
-            </label>
-            <p className="text-sm text-muted sm:col-span-3">
-              The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the hold email with their link to
-              pay. If the crew can&apos;t make that exact time (their hours, the drive, other jobs), nothing is emailed yet and you pick from the open times on
-              the next page. For a multi-day job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the
-              job page to confirm it. Leave the date blank and the customer picks a time from their link (or you do, from the job page).
-            </p>
-          </CardContent>
-        </Card>
-
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="emailNow" defaultChecked className="mt-1" />
-          <span>
-            Email the customer their link right away.{" "}
-            <span className="text-muted">If a time is held they get the hold email either way. Untick this to look the agreement over first and send it from the next page.</span>
-          </span>
-        </label>
+        <p className="text-sm text-muted">
+          Next you pick the time from this job&apos;s open times (the crew and the drive already figured in). The customer is emailed their link the moment a
+          time is held, or you can email them the link to choose it themselves.
+        </p>
 
         <SubmitButton pendingLabel="Adding…">Add the job</SubmitButton>
       </form>
