@@ -24,6 +24,54 @@ async function accessToken(): Promise<string> {
   return body.access_token;
 }
 
+export type PayPalCheck = {
+  /** Keys present and PayPal accepted them. */
+  ok: boolean;
+  /** "live" takes real money; "sandbox" is PayPal's test system. */
+  mode: "live" | "sandbox";
+  /** One plain sentence for the owner. */
+  detail: string;
+};
+
+let lastCheck: { at: number; result: PayPalCheck } | null = null;
+const CHECK_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Ask PayPal whether the keys in the environment work, so the owner can see
+ * "connected" on a page instead of running a test payment to find out.
+ * Cached for ten minutes per server instance.
+ */
+export async function checkPayPalKeys(force = false): Promise<PayPalCheck> {
+  const mode: PayPalCheck["mode"] = process.env.PAYPAL_ENV === "live" ? "live" : "sandbox";
+  if (!paypalConfigured()) {
+    return { ok: false, mode, detail: "No PayPal keys in Vercel yet. Customers see “we'll contact you to take payment”." };
+  }
+  if (!force && lastCheck && Date.now() - lastCheck.at < CHECK_TTL_MS) return lastCheck.result;
+  let result: PayPalCheck;
+  try {
+    await accessToken();
+    result = {
+      ok: true,
+      mode,
+      detail:
+        mode === "live"
+          ? "Connected. PayPal accepted the keys, and payments go to your PayPal Business account."
+          : "Connected to PayPal's TEST system (PAYPAL_ENV is not “live”). Real cards are not charged. Set PAYPAL_ENV to live in Vercel and redeploy.",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "PayPal login failed";
+    result = {
+      ok: false,
+      mode,
+      detail: /401/.test(message)
+        ? "PayPal rejected the keys. Check PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in Vercel (Live tab keys, no extra spaces), then redeploy."
+        : `Couldn't reach PayPal just now (${message}). Reload in a minute.`,
+    };
+  }
+  lastCheck = { at: Date.now(), result };
+  return result;
+}
+
 export async function createPayPalOrder(input: {
   amount: number;
   invoiceNumber: number | null;

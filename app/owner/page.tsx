@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConnectionsCard } from "@/components/connections-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
@@ -17,6 +18,7 @@ export default async function OwnerDayPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-4">
+      <ConnectionsCard />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink">Day route</h1>
