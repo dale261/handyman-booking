@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createOwnerJobAction } from "@/lib/actions";
+import { CustomerPicker } from "@/components/customer-picker";
 import { Flash } from "@/components/flash";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +15,17 @@ import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "helper"];
 
 /** Phone and walk-in jobs: type the customer, the work, and your price once. */
-export default async function NewOwnerJobPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewOwnerJobPage({ searchParams }: { searchParams: Promise<{ error?: string; customer?: string }> }) {
   await requireRole("owner");
   const query = await searchParams;
-  const settings = await getRepository().getSettings();
+  const repo = getRepository();
+  const [settings, users] = await Promise.all([repo.getSettings(), repo.listUsers()]);
+  // Returning customers, by name; picking one fills the Customer card from their account.
+  const customers = users
+    .filter((user) => user.role === "customer")
+    .sort((a, b) => a.fullName.localeCompare(b.fullName))
+    .map((user) => ({ id: user.id, label: `${user.fullName || user.email}${user.phone ? ` · ${user.phone}` : ""}` }));
+  const picked = query.customer ? users.find((user) => user.id === query.customer && user.role === "customer") : undefined;
   const times: number[] = [];
   for (let start = settings.slotStartMin; start <= settings.slotEndMin; start += settings.slotStepMin) times.push(start);
   const fieldClass = "grid gap-1 text-sm font-semibold";
@@ -38,30 +46,31 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
       </div>
       <Flash error={query.error} />
       <form action={createOwnerJobAction} className="space-y-6">
-        <Card>
+        <Card key={picked?.id ?? "new"}>
           <CardHeader>
             <CardTitle>Customer</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
+            {customers.length > 0 && <CustomerPicker customers={customers} selected={picked?.id ?? ""} />}
             <label className={fieldClass}>
               Full name
-              <Input name="fullName" required autoComplete="off" />
+              <Input name="fullName" required autoComplete="off" defaultValue={picked?.fullName ?? ""} />
             </label>
             <label className={fieldClass}>
               Phone
-              <Input name="phone" type="tel" required autoComplete="off" />
+              <Input name="phone" type="tel" required autoComplete="off" defaultValue={picked?.phone ?? ""} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Email
-              <Input name="email" type="email" required autoComplete="off" placeholder="Where the agreement and receipts go" />
+              <Input name="email" type="email" required autoComplete="off" placeholder="Where the agreement and receipts go" defaultValue={picked?.email ?? ""} />
             </label>
             <label className={fieldClass}>
               Billing address
-              <Input name="billingAddress" required autoComplete="off" placeholder="Street, city, state" />
+              <Input name="billingAddress" required autoComplete="off" placeholder="Street, city, state" defaultValue={picked?.billingAddress ?? ""} />
             </label>
             <label className={fieldClass}>
               Billing ZIP
-              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} required autoComplete="off" />
+              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} required autoComplete="off" defaultValue={picked?.billingZip ?? ""} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Temporary password for their sign-in (optional)
