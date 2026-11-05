@@ -73,6 +73,9 @@ describe("owner-entered jobs", () => {
     const emails = await store.listEmails();
     const holdMail = emails.find((email) => email.to === customer.email && email.subject.includes("held for 72 hours"));
     expect(holdMail?.body).toContain(`/contract/${job.id}?k=${job.docToken}`);
+    // The hold email carried the contract link, so the job counts as sent.
+    expect(held.data.docSentAt).toBeTruthy();
+    expect((await store.getJob(job.id))?.docSentAt).toBeTruthy();
 
     const paid = await payJob(store, owner, job.id, "check");
     expect(paid.ok).toBe(true);
@@ -184,6 +187,19 @@ describe("owner-entered jobs", () => {
     expect(open.data.length).toBeGreaterThan(0);
     expect(open.data[0].total).toBe(320);
 
+    // A time the crew can't make says so, and names the open times that day instead of "taken".
+    const tooEarly = await holdSlot(store, owner, job.id, { date: open.data[0].date, startMin: 3 * 60 });
+    expect(tooEarly.ok).toBe(false);
+    if (tooEarly.ok) return;
+    expect(tooEarly.error).toContain("3:00 a.m. isn't open on");
+    expect(tooEarly.error).toContain("Open that day:");
+    const noDay = await holdSlot(store, owner, job.id, { date: "2099-01-01", startMin: 8 * 60 });
+    expect(noDay.ok).toBe(false);
+    if (noDay.ok) return;
+    expect(noDay.error).toContain("Nothing is open on");
+    expect(noDay.error).toContain("The next open time is");
+    expect((await store.getJob(job.id))?.status).toBe("quoted");
+
     const held = await holdSlot(store, link.actor, job.id, "earliest");
     expect(held.ok).toBe(true);
     if (!held.ok) return;
@@ -247,7 +263,7 @@ describe("multi-day owner jobs", () => {
     if (clash.ok) {
       expect(clash.data.workerIds.some((id) => held.data.workerIds.includes(id))).toBe(false);
     } else {
-      expect(clash.error).toMatch(/taken|fits/);
+      expect(clash.error).toMatch(/taken|fits|isn't open|Nothing is open/);
     }
   });
 });

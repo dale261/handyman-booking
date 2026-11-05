@@ -177,8 +177,9 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             </label>
             <p className="text-sm text-muted sm:col-span-3">
               The closest free crew is assigned and the time is held while the booking payment comes in; the customer gets the hold email with their link to
-              pay. For a multi-day job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the job page
-              to confirm it. Leave the date blank and the customer picks a time from their link (or you do, from the job page).
+              pay. If the crew can&apos;t make that exact time (their hours, the drive, other jobs), nothing is emailed yet and you pick from the open times on
+              the next page. For a multi-day job this is the first day, and the crew has to be free for every day of the run. Mark cash or a check paid on the
+              job page to confirm it. Leave the date blank and the customer picks a time from their link (or you do, from the job page).
             </p>
           </CardContent>
         </Card>

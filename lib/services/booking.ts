@@ -781,6 +781,23 @@ export async function listOpenSlots(repo: Repository, actor: Actor, jobId: strin
   });
 }
 
+/**
+ * Why a requested time can't be held, in words the owner can act on: the open times
+ * that day, or the next open day. Nothing is "taken" here; the crew's hours, the drive,
+ * and the jobs already booked decide what's open.
+ */
+function whyNotOpen(slots: SlotOption[], when: { date: string; startMin: number } | "earliest"): string {
+  if (slots.length === 0) return "Nothing in the next two weeks fits this job.";
+  if (when === "earliest") return "That time was just taken. Pick another.";
+  const sameDay = [...new Set(slots.filter((item) => item.date === when.date).map((item) => item.startMin))].sort((a, b) => a - b);
+  if (sameDay.length > 0) {
+    const shown = sameDay.slice(0, 8).map(formatMinutes).join(", ");
+    // Times end in "a.m." or "p.m.", which already closes the sentence.
+    return `${formatMinutes(when.startMin)} isn't open on ${formatDate(when.date)} with the crew's hours and the drive. Open that day: ${shown}${sameDay.length > 8 ? " and later" : ""}`;
+  }
+  return `Nothing is open on ${formatDate(when.date)}. The next open time is ${formatDateRange(slots[0].dates)} at ${formatMinutes(slots[0].startMin)}`;
+}
+
 export async function holdSlot(
   repo: Repository,
   actor: Actor,
@@ -804,7 +821,7 @@ export async function holdSlot(
           : settings.holdHours;
       const slots = await buildSlots(repo, job, settings);
       const slot = when === "earliest" ? slots[0] : slots.find((item) => item.date === when.date && item.startMin === when.startMin);
-      if (!slot) return fail(slots.length === 0 ? "Nothing in the next two weeks fits this job." : "That time was just taken. Pick another.");
+      if (!slot) return fail(whyNotOpen(slots, when));
       placeOnSlot(job, settings, slot);
       const tentative = !job.areaAuto;
       if (tentative) {
@@ -831,6 +848,11 @@ export async function holdSlot(
           `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. ${howToPay}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
+        if (fresh.ownerPriced && !fresh.docSentAt) {
+          // That email carried the contract link, so the contract page can say when it went out.
+          fresh.docSentAt = new Date().toISOString();
+          await repo.saveJob(fresh, { skipOverlap: true });
+        }
         await notify(
           repo,
           settings,

@@ -728,27 +728,26 @@ export async function createOwnerJobAction(form: FormData) {
   // The hold email carries the customer's link (pay, sign, read). Without a hold, the agreement email does.
   let emailed = false;
   if (date) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(startMin)) {
-      notes.push("The date or time didn't read right, so nothing is held yet.");
-    } else {
-      const holdHours = Number(field(form, "holdHours") || "0") || undefined;
-      const held = await holdSlot(repo, actor, job.id, { date, startMin }, { holdHours });
-      if (held.ok) {
-        const until = held.data.holdUntil
-          ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
-          : "";
-        emailed = true;
-        // The hold email carried the contract link, so the contract page can say when it went out.
-        const fresh = await repo.getJob(job.id);
-        if (fresh && !fresh.docSentAt) {
-          fresh.docSentAt = new Date().toISOString();
-          await repo.saveJob(fresh, { skipOverlap: true });
-        }
-        notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}. The customer was emailed the link to pay and sign.`);
-      } else {
-        notes.push(`Couldn't hold ${formatDate(date)} at ${formatMinutes(startMin)}: ${held.error}`);
-      }
+    const holdHours = Number(field(form, "holdHours") || "0") || undefined;
+    const held =
+      /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(startMin)
+        ? await holdSlot(repo, actor, job.id, { date, startMin }, { holdHours })
+        : { ok: false as const, error: "The date or time didn't read right." };
+    if (!held.ok) {
+      // The time the owner agreed with the customer isn't open. Stop here, on the job page's
+      // real open times, and don't email the customer until a time is actually held.
+      await settle(repo);
+      jobBack(
+        job.id,
+        "error",
+        `The job is saved (invoice #${job.invoiceNumber ?? "pending"}), but ${formatDate(date)} at ${formatMinutes(startMin)} couldn't be held: ${held.error} Pick one of the open times below and the customer gets their email then.`,
+      );
     }
+    const until = held.data.holdUntil
+      ? new Date(held.data.holdUntil).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })
+      : "";
+    emailed = true;
+    notes.push(`${formatDateRange(jobDates(held.data))} at ${formatMinutes(startMin)} is held${until ? ` until ${until}` : ""}. The customer was emailed the link to pay and sign.`);
   }
   if (!emailed && form.get("emailNow") === "on") {
     const sent = await sendAgreement(repo, actor, job.id);
