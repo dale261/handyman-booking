@@ -8,6 +8,8 @@ import { customerListPrice, REVIEW_WAIT } from "@/lib/domain/copy";
 import { DEFAULT_PARAMS } from "@/lib/domain/types";
 import { usd } from "@/lib/format";
 import {
+  amountPaid,
+  amountPayable,
   approveWork,
   cancelBeforeWork,
   cancelOnSite,
@@ -15,7 +17,9 @@ import {
   createQuote,
   decidePriceChange,
   holdSlot,
+  listOpenSlots,
   payJob,
+  prepaid,
   proposePriceChange,
   reassignCrew,
   requestCancel,
@@ -629,5 +633,90 @@ describe("booking flow", () => {
     expect(approved.data.balanceDue).toBe(1000);
     const early = await startWork(store, owner, job.id);
     expect(early.ok).toBe(false);
+  });
+});
+
+describe("pay first, schedule later", () => {
+  const tv = {
+    service: "tv" as const,
+    description: "Mount a 55-inch TV on a drywall living-room wall",
+    params: { ...DEFAULT_PARAMS, tvSize: "55" as const, wall: "drywall" as const, conceal: "none" as const },
+    differentSite: false,
+    jobSiteAddress: "",
+    urgent: false,
+    pickup: false,
+    preferredWorkerId: null,
+    photos: [],
+  };
+
+  it("takes the booking payment on a firm quote, locks the price, and books outright when a time is picked", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const owner = await actor(store, DEMO_USERS.owner);
+    const created = await createQuote(store, customer, tv);
+    if (!created.ok) throw new Error(created.error);
+    const job = created.data;
+    expect(job.status).toBe("quoted");
+    const total = job.total;
+    expect(amountPayable(job)).toBe(job.amountDueNow);
+    expect(amountPayable(job)).toBeGreaterThan(0);
+
+    const paid = await payJob(store, customer, job.id, "paypal", "CAP-FIRST");
+    expect(paid.ok).toBe(true);
+    if (!paid.ok) return;
+    expect(paid.data.status).toBe("quoted");
+    expect(paid.data.amountDueNow).toBe(0);
+    expect(paid.data.travelLocked).toBe(true);
+    expect(paid.data.invoiceNumber).toBe(1000);
+    expect(paid.data.total).toBe(total);
+    expect(amountPayable(paid.data)).toBe(0);
+    expect(prepaid(paid.data, amountPaid(await store.listPayments(job.id), job.id))).toBe(true);
+    const receipt = (await store.listEmails()).find((email) => email.to === customer.email && email.subject.includes("Pick a time when you're ready"));
+    expect(receipt?.body).toContain(`/jobs/${job.id}`);
+    expect(receipt?.body).toContain("Your price is locked");
+    // Nothing more can be taken while it waits for a time.
+    expect((await payJob(store, customer, job.id, "paypal", "CAP-SECOND")).ok).toBe(false);
+
+    // Picking a time books it outright: no hold, same price, nothing due.
+    const open = await listOpenSlots(store, customer, job.id);
+    expect(open.ok).toBe(true);
+    if (!open.ok) return;
+    expect(open.data[0].total).toBe(total);
+    const booked = await holdSlot(store, customer, job.id, "earliest");
+    expect(booked.ok).toBe(true);
+    if (!booked.ok) return;
+    expect(booked.data.status).toBe("booked");
+    expect(booked.data.holdUntil).toBeNull();
+    expect(booked.data.total).toBe(total);
+    expect(booked.data.amountDueNow).toBe(0);
+    expect(booked.data.scheduledDate).toBeTruthy();
+    const confirm = (await store.listEmails()).find((email) => email.to === customer.email && email.subject.startsWith("You're booked"));
+    expect(confirm?.body).toContain("already paid");
+    expect((await startWork(store, owner, job.id)).ok).toBe(true);
+  });
+
+  it("refunds a prepaid job cancelled before a time is picked, keeping the cancel fee, and refuses a reschedule", async () => {
+    const store = repo();
+    const customer = await actor(store, DEMO_USERS.customer);
+    const created = await createQuote(store, customer, tv);
+    if (!created.ok) throw new Error(created.error);
+    const job = created.data;
+    const paid = await payJob(store, customer, job.id, "paypal", "CAP-PREPAID");
+    expect(paid.ok).toBe(true);
+    if (!paid.ok) return;
+    const amount = (await store.listPayments(job.id)).reduce((sum, payment) => sum + payment.amount, 0);
+    const settings = await store.getSettings();
+
+    const reschedule = await cancelBeforeWork(store, customer, job.id, "reschedule");
+    expect(reschedule.ok).toBe(false);
+    if (!reschedule.ok) expect(reschedule.error).toContain("Nothing is scheduled yet");
+
+    const cancelled = await cancelBeforeWork(store, customer, job.id, "cancel");
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) return;
+    expect(cancelled.data.job.status).toBe("cancelled");
+    expect(cancelled.data.fee).toBe(Math.min(settings.cancelFee, amount));
+    expect(cancelled.data.refund).toBeCloseTo(Math.max(0, amount - settings.cancelFee), 2);
+    expect(amountPayable(cancelled.data.job)).toBe(0);
   });
 });

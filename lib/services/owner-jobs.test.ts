@@ -172,7 +172,7 @@ describe("owner-entered jobs", () => {
     const sent = await sendAgreement(store, owner, job.id);
     expect(sent.ok).toBe(true);
     const first = (await store.listEmails()).find((email) => email.to === customer.email && email.subject.includes("invoice #1000"));
-    expect(first?.body).toContain("Pick a time, read and sign the agreement, and pay, all from this link (no sign-in needed)");
+    expect(first?.body).toContain("Pick a time and pay, in either order, and read and sign the agreement, all from this link (no sign-in needed)");
 
     // A wrong secret opens nothing; the right one acts for the customer on this job only.
     expect(await jobForLink(store, job.id, "0000")).toBeNull();

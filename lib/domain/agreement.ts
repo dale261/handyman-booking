@@ -63,8 +63,17 @@ export function invoiceSummary(job: Pick<JobRecord, "status" | "total" | "amount
   } else if (job.status === "balance_due") {
     dueNow = roundCents(Math.max(0, job.balanceDue));
     dueLabel = `${usd(dueNow)} balance is due now. The work is done and approved.`;
-  } else if (job.status === "quoted" || job.status === "released" || job.status === "pending_area") {
-    dueLabel = "Nothing is due until a time is booked.";
+  } else if (job.status === "quoted" || job.status === "released") {
+    if (job.amountDueNow > 0) {
+      dueNow = roundCents(Math.max(0, job.amountDueNow));
+      dueLabel = `${usd(dueNow)} is due to book. Pay now and pick a time later, or pick a time first.`;
+    } else if (paid > 0) {
+      dueLabel = balance > 0 ? `Paid ${usd(paid)}. Pick a time when you're ready; ${usd(balance)} is due after the work is done and you approve it.` : "Paid in full. Pick a time when you're ready.";
+    } else {
+      dueLabel = "Nothing is due until a time is booked.";
+    }
+  } else if (job.status === "pending_area") {
+    dueLabel = "Nothing is due until we approve the address and a time is booked.";
   } else if (balance === 0 && total > 0) {
     dueLabel = "Paid in full. Thank you.";
   } else if (balance > 0) {

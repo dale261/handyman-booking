@@ -5,10 +5,15 @@ import { getRepository } from "@/lib/db/index";
 import { formatDateRange, usd } from "@/lib/format";
 import { jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
+import { amountPaid, prepaid } from "@/lib/services/booking";
 
 export default async function OwnerJobsPage() {
   await requireRole("owner");
-  const jobs = (await getRepository().listJobs()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const repo = getRepository();
+  const [jobs, payments] = await Promise.all([repo.listJobs(), repo.listPayments()]);
+  jobs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  // Paid before a time was picked: still "Quote ready", but the money is in.
+  const paidNoTime = new Set(jobs.filter((job) => prepaid(job, amountPaid(payments, job.id))).map((job) => job.id));
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -47,7 +52,10 @@ export default async function OwnerJobsPage() {
                   </td>
                   <td className="px-3 py-2">{job.scheduledDate ? formatDateRange(jobDates(job)) : "—"}</td>
                   <td className="px-3 py-2 text-right">{usd(job.total)}</td>
-                  <td className="px-3 py-2"><Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge></td>
+                  <td className="px-3 py-2">
+                    <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
+                    {paidNoTime.has(job.id) && <Badge tone="ok" className="ml-1">Paid, needs a time</Badge>}
+                  </td>
                   <td className="px-3 py-2">
                     <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
                       {job.agreement ? "Signed" : job.docSentAt ? "Sent" : "Open"}

@@ -109,11 +109,23 @@ export function customerLink(job: Pick<JobRecord, "id" | "docToken" | "ownerPric
   return job.ownerPriced ? contractUrl(job) : jobUrl(job.id);
 }
 
-export function amountPayable(job: Pick<JobRecord, "status" | "amountDueNow" | "balanceDue">): number {
+export function amountPayable(job: Pick<JobRecord, "status" | "amountDueNow" | "balanceDue" | "licenseLevel">): number {
   if (job.status === "held") return roundCents(Math.max(0, job.amountDueNow));
   if (job.status === "balance_due") return roundCents(Math.max(0, job.balanceDue));
   if (job.status === "booked") return roundCents(Math.max(0, job.amountDueNow));
+  // A firm quote can be paid before a time is picked; paying locks the price and the time comes later.
+  if (unscheduledFirm(job)) return roundCents(Math.max(0, job.amountDueNow));
   return 0;
+}
+
+/** Quoted or released, price firm, no time yet: the customer may pay now or pick a time first. */
+export function unscheduledFirm(job: Pick<JobRecord, "status" | "licenseLevel">): boolean {
+  return (job.status === "quoted" || job.status === "released") && job.licenseLevel === "ok";
+}
+
+/** Paid up front with no time picked yet: picking a time books it outright, with no hold. */
+export function prepaid(job: Pick<JobRecord, "status" | "licenseLevel" | "amountDueNow">, paid: number): boolean {
+  return unscheduledFirm(job) && paid > 0 && job.amountDueNow === 0;
 }
 
 export function amountPaid(payments: PaymentRecord[], jobId: string): number {
@@ -187,12 +199,14 @@ function applyQuote(
   source: string,
 ) {
   const estimate = source !== "openrouteservice" && source !== "osrm";
-  if (job.ownerPriced) {
-    // The owner typed this price with travel included. Keep every dollar as it is;
-    // only the drive time changes with where the crew is coming from.
-    job.travelMiles = miles;
-    job.travelFrom = fromLabel;
-    job.travelSource = source;
+  if (job.ownerPriced || job.travelLocked) {
+    // The owner typed this price with travel included, or the customer already paid it.
+    // Keep every dollar as it is; only the drive time changes with where the crew is coming from.
+    if (job.ownerPriced) {
+      job.travelMiles = miles;
+      job.travelFrom = fromLabel;
+      job.travelSource = source;
+    }
     job.driveMinutes = driveMinutes(miles ?? 0, settings.driveFactor, settings.drivePadMinutes);
     if (job.startMin != null) {
       const window = visitWindow(job.startMin, job.driveMinutes, job.onsiteMinutes, settings.bufferMinutes);
@@ -424,8 +438,8 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
       if (days > 1 && (choice.borrowed || runDates.length < days)) continue;
       let total = 0;
       let travelFeeAmount = 0;
-      if (job.ownerPriced) {
-        // The owner's price already carries any discount line.
+      if (job.ownerPriced || job.travelLocked) {
+        // The owner's price already carries any discount line; a paid price is locked.
         total = job.total;
         travelFeeAmount = job.travelFee;
       } else if (isLibraryQuote(job.quoteMeta)) {
@@ -822,20 +836,42 @@ export async function holdSlot(
       const slots = await buildSlots(repo, job, settings);
       const slot = when === "earliest" ? slots[0] : slots.find((item) => item.date === when.date && item.startMin === when.startMin);
       if (!slot) return fail(whyNotOpen(slots, when));
+      const paidUpFront = prepaid(job, amountPaid(await repo.listPayments(job.id), job.id));
       placeOnSlot(job, settings, slot);
       const tentative = !job.areaAuto;
       if (tentative) {
         job.status = "pending_area";
         job.holdUntil = null;
         job.assignNote = `${job.assignNote} We'll hold this time once we approve the address. The payment window starts then.`.trim();
+      } else if (paidUpFront) {
+        // The booking payment is already in, so there is nothing to hold for: it's booked.
+        job.status = "booked";
+        job.holdUntil = null;
       } else {
         job.status = "held";
         job.holdUntil = new Date(Date.now() + holdHours * 3600 * 1000).toISOString();
       }
-      const saved = await repo.saveJob(job, { issueInvoice: job.status === "held" && job.invoiceNumber == null });
+      const saved = await repo.saveJob(job, { issueInvoice: (job.status === "held" || job.status === "booked") && job.invoiceNumber == null });
       if (saved.crewId && saved.scheduledDate) await recalculateDays(repo, settings, jobDates(saved), saved.crewId);
       const fresh = (await repo.getJob(saved.id)) ?? saved;
-      if (fresh.status === "held") {
+      if (fresh.status === "booked") {
+        const when = jobDates(fresh).length > 1 ? `${formatDateRange(jobDates(fresh))}, starting ${formatMinutes(fresh.startMin || 0)} each day` : `${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`;
+        await mail(
+          repo,
+          fresh.customerEmail,
+          `You're booked: ${formatDateRange(jobDates(fresh))} at ${formatMinutes(fresh.startMin || 0)}`,
+          `Hi ${fresh.customerName}, ${fresh.scope} is booked for ${when}. Invoice #${fresh.invoiceNumber}. You've already paid, so nothing more is due now.${fresh.balanceDue > 0 ? ` The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""} If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n\nYour job: ${customerLink(fresh)}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+          fresh.id,
+        );
+        await notify(
+          repo,
+          settings,
+          "pay",
+          `Booked (paid earlier): ${formatDateRange(jobDates(fresh))} at ${formatMinutes(fresh.startMin || 0)}`,
+          `${fresh.customerName} (${fresh.customerPhone}) booked ${fresh.scope} at ${fresh.jobSiteAddress}. Invoice #${fresh.invoiceNumber}. Paid up front; nothing more is due now.`,
+          fresh.id,
+        );
+      } else if (fresh.status === "held") {
         const payLink = customerLink(fresh);
         const when = jobDates(fresh).length > 1 ? `${formatDateRange(jobDates(fresh))}, starting ${formatMinutes(fresh.startMin || 0)} each day,` : `${formatDate(fresh.scheduledDate || "")} at ${formatMinutes(fresh.startMin || 0)}`;
         const howToPay = paypalConfigured()
@@ -925,6 +961,43 @@ export async function payJob(
       return { ok: true, data: job };
     }
     const settings = await repo.getSettings();
+    if (unscheduledFirm(job) && job.amountDueNow > 0) {
+      // Paying first: the price locks now and the time comes later, from the open times.
+      const kind = job.balanceDue > 0 ? "deposit" : "full";
+      await repo.savePayment({
+        id: randomUUID(),
+        jobId,
+        kind,
+        amount: job.amountDueNow,
+        method,
+        status: "paid",
+        closed: false,
+        note: `${kind === "deposit" ? "Deposit, half down" : "Paid in full"}, before a time was picked.${extra}`,
+        paypalCaptureId,
+        createdAt: new Date().toISOString(),
+      });
+      const dueNow = job.amountDueNow;
+      job.amountDueNow = 0;
+      job.status = "quoted";
+      job.travelLocked = true;
+      const saved = await repo.saveJob(job, { issueInvoice: job.invoiceNumber == null, skipOverlap: true });
+      await mail(
+        repo,
+        saved.customerEmail,
+        `Receipt for invoice #${saved.invoiceNumber}: ${usd(dueNow)} paid. Pick a time when you're ready`,
+        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}. Your price is locked at ${usd(saved.total)}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}Pick a time whenever suits you, or we'll set one together: ${customerLink(saved)}\n\nIf you cancel before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
+        saved.id,
+      );
+      await notify(
+        repo,
+        settings,
+        "pay",
+        `Payment received: ${usd(dueNow)} ${saved.balanceDue > 0 ? "50% deposit" : "full payment"}, needs a time`,
+        `${saved.scope}; ${method}. No time picked yet: pick one on the job page or let the customer choose.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} balance due after completion and customer approval.` : ""}${extra}`,
+        saved.id,
+      );
+      return { ok: true, data: saved };
+    }
     if (job.status === "held") {
       if (job.holdUntil && new Date(job.holdUntil).getTime() <= Date.now()) {
         return fail("That hold expired. Pick a new time.");
@@ -1254,10 +1327,12 @@ export async function cancelBeforeWork(
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role !== "owner" && job.customerId !== actor.id) return fail("That job belongs to another customer.");
-    if (job.status !== "booked") return fail("Once work has started, ask us to approve a cancellation.");
-    const settings = await repo.getSettings();
     const payments = await repo.listPayments(jobId);
     const paid = amountPaid(payments, jobId);
+    const paidNoTime = prepaid(job, paid);
+    if (job.status !== "booked" && !paidNoTime) return fail("Once work has started, ask us to approve a cancellation.");
+    if (paidNoTime && kind === "reschedule") return fail("Nothing is scheduled yet. Pick a time instead.");
+    const settings = await repo.getSettings();
     const refund = refundBeforeWork(paid, settings.cancelFee);
     for (const payment of closePayments(payments)) await repo.savePayment(payment);
     await repo.savePayment({

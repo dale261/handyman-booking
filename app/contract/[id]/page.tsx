@@ -7,7 +7,7 @@ import { PrintButton } from "@/components/print-button";
 import { currentActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { linkActor, tokenMatches } from "@/lib/services/agreement";
-import { amountPayable, listOpenSlots, type SlotOption } from "@/lib/services/booking";
+import { amountPaid, amountPayable, listOpenSlots, prepaid, type SlotOption } from "@/lib/services/booking";
 
 /**
  * The customer's copy, opened from the link we email them. No sign-in needed:
@@ -41,6 +41,7 @@ export default async function PublicContractPage({
   const dates = [...new Set(slots.map((slot) => slot.date))];
   const selectedDate = query.date && dates.includes(query.date) ? query.date : dates[0];
   const due = amountPayable(job);
+  const paidUpFront = prepaid(job, amountPaid(payments, job.id));
 
   const todo = [canSchedule ? "pick a time" : "", due > 0 ? "pay" : "", job.agreement ? "" : "sign it at the bottom"].filter(Boolean);
 
@@ -65,7 +66,7 @@ export default async function PublicContractPage({
         <Flash notice={query.notice} error={query.error} />
       </div>
       {due > 0 && <LinkPayCard job={job} token={token} due={due} />}
-      {canSchedule && <LinkTimePicker job={job} token={token} slots={slots} slotError={slotError} selectedDate={selectedDate} />}
+      {canSchedule && <LinkTimePicker job={job} token={token} slots={slots} slotError={slotError} selectedDate={selectedDate} paidUpFront={paidUpFront} />}
       <AgreementDocument job={job} payments={payments} settings={settings} viewer={viewer} token={token} />
     </div>
   );

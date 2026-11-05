@@ -119,7 +119,9 @@ export async function sendAgreement(repo: Repository, actor: Actor, jobId: strin
     // What the link lets them do next. No sign-in: the link itself is their key.
     const nextStep =
       !job.scheduledDate && (job.status === "quoted" || job.status === "released")
-        ? "Pick a time, read and sign the agreement, and pay, all from this link (no sign-in needed): "
+        ? job.amountDueNow > 0
+          ? "Pick a time and pay, in either order, and read and sign the agreement, all from this link (no sign-in needed): "
+          : "Pick a time and read and sign the agreement, all from this link (no sign-in needed): "
         : job.status === "held"
           ? "Read and sign the agreement and pay to keep your time, all from this link (no sign-in needed): "
           : "Read it, sign it, and keep a copy here: ";

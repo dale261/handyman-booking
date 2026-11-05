@@ -305,9 +305,16 @@ export async function holdSlotAction(form: FormData) {
   if (!result.ok) jobBack(jobId, "error", result.error);
   const data = result.data;
   const label = `${formatDateRange(jobDates(data))} at ${formatMinutes(data.startMin ?? 0)}`;
-  let notice = data.status === "held" ? `${label} is held.` : `${label} is requested. It's held once the address is approved.`;
+  let notice =
+    data.status === "booked"
+      ? `${label} is booked. It was already paid, so nothing more is due now.`
+      : data.status === "held"
+        ? `${label} is held.`
+        : `${label} is requested. It's held once the address is approved.`;
   if (actor.role === "owner" && data.status === "held") {
     notice += paypalConfigured() ? " The customer was emailed the link to pay." : " The customer was emailed; we'll contact them to take the payment.";
+  } else if (actor.role === "owner" && data.status === "booked") {
+    notice += " The customer was emailed the confirmation.";
   }
   jobBack(jobId, "notice", notice);
 }

@@ -45,7 +45,7 @@ import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
-import { amountPaid, listOpenSlots, visibleTo, type SlotOption } from "@/lib/services/booking";
+import { amountPaid, amountPayable, listOpenSlots, prepaid, visibleTo, type SlotOption } from "@/lib/services/booking";
 
 export default async function JobPage({
   params,
@@ -95,8 +95,10 @@ export default async function JobPage({
     return `/jobs/${job.id}${query ? `?${query}` : ""}`;
   };
   const crewName = crews.find((crew) => crew.id === job.crewId)?.name;
-  const due = job.status === "balance_due" ? job.balanceDue : job.amountDueNow;
-  const canPay = due > 0 && (job.status === "held" || job.status === "balance_due" || job.status === "booked");
+  const due = amountPayable(job);
+  const canPay = due > 0;
+  // Paid before picking a time: the next pick books it outright, with no hold.
+  const paidNoTime = prepaid(job, paid);
   const pendingChange = [...(job.priceChanges ?? [])].reverse().find((change) => change.outcome === "pending");
   const revisionPreview =
     job.status === "price_change"
@@ -121,7 +123,10 @@ export default async function JobPage({
             </Link>
           )}
         </div>
-        <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
+        <span className="flex flex-wrap gap-1">
+          <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
+          {paidNoTime && <Badge tone="ok">Paid</Badge>}
+        </span>
       </div>
       <Flash notice={query.notice} error={query.error} />
 
@@ -189,6 +194,7 @@ export default async function JobPage({
                 ) : (
                   <p className="text-sm">
                     Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(paid in full)."}
+                    {canSchedule && canPay ? " Pay now and pick a time later, or pick a time first; either way the price is locked once it's paid." : ""}
                   </p>
                 )}
                 {job.payRule && <p className="text-sm text-muted">{job.payRule}</p>}
@@ -311,12 +317,13 @@ export default async function JobPage({
                 ) : (
                   <>
                     {daysOf(job) > 1 && <p className="text-sm text-muted">This job takes {daysOf(job)} working days. Pick the first day; the crew is reserved for the same hours each day after it.</p>}
-                    {actor.role === "owner" && (
+                    {paidNoTime && <p className="text-sm text-muted">This job is paid, so picking a time books it outright; no hold, nothing more due now.</p>}
+                    {actor.role === "owner" && !paidNoTime && (
                       <p className="text-sm text-muted">
                         Holding a time emails the customer their link to pay. These times are what the crew can make with their hours, the drive, and the jobs already booked.
                       </p>
                     )}
-                    {actor.role === "owner" && (
+                    {actor.role === "owner" && !paidNoTime && (
                       <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="font-semibold">Hold it for:</span>
                         {holdChoices.map((choice) => (
@@ -363,7 +370,7 @@ export default async function JobPage({
                               {slot.memberNames.join(", ")} · {slot.travelMiles.toFixed(1)} miles from {slot.travelFrom} · travel {usd(slot.travelFee)}
                             </p>
                           </div>
-                          <SubmitButton size="sm" variant="outline">Hold {usd(slot.dueNow)}</SubmitButton>
+                          <SubmitButton size="sm" variant="outline">{paidNoTime ? "Book this time" : `Hold ${usd(slot.dueNow)}`}</SubmitButton>
                         </form>
                       ))}
                     </div>
@@ -391,6 +398,7 @@ export default async function JobPage({
               {canPay && (
                 <div className="space-y-2">
                   <p className="font-semibold">Due now: {usd(due)}</p>
+                  {canSchedule && <p className="text-muted">Paying now locks the price; the time can come later.</p>}
                   {actor.role === "customer" && !job.agreement && (
                     <p className="text-muted">
                       Paying accepts the{" "}
@@ -450,24 +458,28 @@ export default async function JobPage({
             </form>
           ) : null}
 
-          {job.status === "booked" && (actor.role === "customer" || actor.role === "owner") && (
+          {(job.status === "booked" || paidNoTime) && (actor.role === "customer" || actor.role === "owner") && (
             <Card>
               <CardHeader>
                 <CardTitle>Before work starts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p>Cancel or reschedule before work starts and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0. If we find something different on site, you can approve a new price or get refunded everything except travel.</p>
+                <p>
+                  {paidNoTime ? "Cancel" : "Cancel or reschedule"} before work starts and we keep {usd(settings.cancelFee)}. If you paid that amount or less, the refund is $0. If we find something different on site, you can approve a new price or get refunded everything except travel.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <form action={cancelAction}>
                     <input type="hidden" name="jobId" value={job.id} />
                     <input type="hidden" name="kind" value="cancel" />
                     <SubmitButton variant="danger" size="sm">Cancel</SubmitButton>
                   </form>
-                  <form action={cancelAction}>
-                    <input type="hidden" name="jobId" value={job.id} />
-                    <input type="hidden" name="kind" value="reschedule" />
-                    <SubmitButton variant="outline" size="sm">Reschedule</SubmitButton>
-                  </form>
+                  {!paidNoTime && (
+                    <form action={cancelAction}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <input type="hidden" name="kind" value="reschedule" />
+                      <SubmitButton variant="outline" size="sm">Reschedule</SubmitButton>
+                    </form>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -19,12 +19,15 @@ export function LinkTimePicker({
   slots,
   slotError,
   selectedDate,
+  paidUpFront,
 }: {
   job: JobRecord;
   token: string;
   slots: SlotOption[];
   slotError: string;
   selectedDate: string | undefined;
+  /** Already paid: picking a time books it outright, with no hold. */
+  paidUpFront: boolean;
 }) {
   const dates = [...new Set(slots.map((slot) => slot.date))];
   const daySlots = slots.filter((slot) => slot.date === selectedDate);
@@ -40,7 +43,8 @@ export function LinkTimePicker({
         ) : (
           <>
             <p className="text-sm text-muted">
-              Picking a time holds it while you pay. {daysOf(job) > 1 ? `This job takes ${daysOf(job)} working days; pick the first day and the same hours are reserved each day after it.` : ""}
+              {paidUpFront ? "You're paid, so picking a time books it." : "Picking a time holds it while you pay, or pay first and pick the time whenever suits you."}{" "}
+              {daysOf(job) > 1 ? `This job takes ${daysOf(job)} working days; pick the first day and the same hours are reserved each day after it.` : ""}
             </p>
             <form action={holdSlotLinkAction}>
               <input type="hidden" name="jobId" value={job.id} />
@@ -76,7 +80,7 @@ export function LinkTimePicker({
                       {job.ownerPriced ? "" : ` · ${slot.travelMiles.toFixed(1)} miles from ${slot.travelFrom} · travel ${usd(slot.travelFee)}`}
                     </p>
                   </div>
-                  <SubmitButton size="sm" variant="outline">Hold this time</SubmitButton>
+                  <SubmitButton size="sm" variant="outline">{paidUpFront ? "Book this time" : "Hold this time"}</SubmitButton>
                 </form>
               ))}
             </div>
@@ -89,7 +93,14 @@ export function LinkTimePicker({
 
 export function LinkPayCard({ job, token, due }: { job: JobRecord; token: string; due: number }) {
   const heldUntil = job.status === "held" && job.holdUntil ? new Date(job.holdUntil).toLocaleString("en-US", { timeZone: TZ, dateStyle: "medium", timeStyle: "short" }) : "";
-  const why = job.status === "held" ? "to keep this time" : job.status === "balance_due" ? "for the finished work" : "for the new price";
+  const why =
+    job.status === "held"
+      ? "to keep this time"
+      : job.status === "balance_due"
+        ? "for the finished work"
+        : job.status === "quoted" || job.status === "released"
+          ? "to book; pick a time now or whenever suits you, the price is locked once it's paid"
+          : "for the new price";
   return (
     <Card className="no-print">
       <CardHeader>

@@ -7,7 +7,7 @@ import { appUrl, usd } from "@/lib/format";
 import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal";
 import { allowRequest, ANON_LIMIT } from "@/lib/rate-limit";
 import { linkActor, tokenMatches } from "@/lib/services/agreement";
-import { amountPayable, notify, payJob } from "@/lib/services/booking";
+import { amountPayable, notify, payJob, unscheduledFirm } from "@/lib/services/booking";
 
 /**
  * Where PayPal sends the customer after they approve the payment.
@@ -87,6 +87,7 @@ export async function GET(request: Request) {
       return back("error", "PayPal declined the payment. Nothing was charged. Try another way to pay.");
     }
     const alreadyBooked = job.status === "booked";
+    const noTimeYet = unscheduledFirm(job);
     const result = await payJob(repo, actor, jobId, "paypal", capture.captureId, {
       note: capture.status === "PENDING" ? "PayPal shows this payment as pending. Check PayPal before the work starts." : undefined,
     });
@@ -106,7 +107,10 @@ export async function GET(request: Request) {
       await flushEmails(repo).catch((error) => console.error("[email] flush failed", error));
       return back("error", `${result.error} Your PayPal payment did go through, and we'll match it to this invoice.`);
     }
-    return back("notice", alreadyBooked ? "Payment received." : "Payment received. You're booked.");
+    return back(
+      "notice",
+      alreadyBooked ? "Payment received." : noTimeYet ? "Payment received. Your price is locked; pick a time below whenever you're ready." : "Payment received. You're booked.",
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "PayPal capture failed.";
     return back("error", message);
