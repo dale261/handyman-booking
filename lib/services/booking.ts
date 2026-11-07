@@ -42,6 +42,7 @@ import {
   type ServiceId,
   type Settings,
 } from "@/lib/domain/types";
+import { invoiceOnly } from "@/lib/domain/agreement";
 import { addDays, contractUrl, formatDate, formatDateRange, formatMinutes, jobUrl, nowMinutesDetroit, todayDetroit, usd, weekday } from "@/lib/format";
 import { geocodeAddress, measureLeg, type Point } from "@/lib/mileage";
 import { paypalConfigured, refundPayPalCapture } from "@/lib/paypal";
@@ -1078,10 +1079,23 @@ export async function payJob(
         createdAt: new Date().toISOString(),
       });
       const paid = job.balanceDue;
+      const invoiceForDoneWork = invoiceOnly(job);
       job.balanceDue = 0;
       job.amountDueNow = 0;
       job.status = "completed";
       const saved = await repo.saveJob(job, { skipOverlap: true });
+      if (invoiceForDoneWork) {
+        // Written up after the work was done: this payment settles the whole invoice.
+        await mail(
+          repo,
+          saved.customerEmail,
+          `Receipt for invoice #${saved.invoiceNumber}: ${usd(paid)} paid`,
+          `Hi ${saved.customerName}, we received ${usd(paid)} by ${paidWith(method)} for ${saved.scope}. Invoice #${saved.invoiceNumber} is paid in full. Thank you.\n\nYour receipt and invoice: ${customerLink(saved)}${emailFooter(settings)}`,
+          saved.id,
+        );
+        await notify(repo, settings, "pay", `Payment received: ${usd(paid)} on invoice #${saved.invoiceNumber}`, `${saved.scope}; ${method}. Finished work, paid in full.${extra}`, saved.id);
+        return { ok: true, data: saved };
+      }
       await mail(
         repo,
         saved.customerEmail,

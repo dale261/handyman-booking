@@ -27,6 +27,7 @@ import {
   revisePriceAction,
   startPayPalAction,
   startWorkAction,
+  voidInvoiceAction,
 } from "@/lib/actions";
 import { Flash } from "@/components/flash";
 import { SubmitButton } from "@/components/submit-button";
@@ -38,6 +39,7 @@ import { requireActor } from "@/lib/auth";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
+import { invoiceOnly } from "@/lib/domain/agreement";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
 import { grossTotal } from "@/lib/domain/discount";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
@@ -108,7 +110,10 @@ export default async function JobPage({
   const unpaidStep = ["scope_review", "quoted", "released", "pending_area", "held"].includes(job.status);
   const paidStep = ["booked", "in_progress", "awaiting_approval", "disputed", "balance_due"].includes(job.status);
   const canDiscount = (unpaidStep || paidStep) && !(job.status === "booked" && job.amountDueNow > 0);
-  const canEdit = Boolean(job.ownerPriced) && unpaidStep && paid === 0;
+  // Finished work written up after the fact: an invoice, with no schedule and nothing to sign.
+  const invoice = invoiceOnly(job);
+  const canEdit = Boolean(job.ownerPriced) && (unpaidStep || (invoice && job.status === "balance_due")) && paid === 0;
+  const canVoid = invoice && job.status === "balance_due" && paid === 0;
 
   return (
     <div className="space-y-4">
@@ -119,7 +124,7 @@ export default async function JobPage({
           <p className="text-sm text-muted">{job.jobSiteAddress}</p>
           {!hidePrice && (
             <Link className="text-sm font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
-              Contract and invoice{job.agreement ? " (signed)" : ""}
+              {invoice ? "Invoice" : `Contract and invoice${job.agreement ? " (signed)" : ""}`}
             </Link>
           )}
         </div>
@@ -253,6 +258,7 @@ export default async function JobPage({
               <p className="text-muted">
                 {job.city} {job.jobZip} · {job.county} County · {job.areaLabel}
               </p>
+              {invoice && job.workDoneOn && <p>Work done on {formatDate(job.workDoneOn)}. Nothing to schedule; this job is an invoice.</p>}
               {job.scheduledDate && (
                 <p>
                   {jobDates(job).length > 1 ? `${formatDateRange(jobDates(job))}, ${formatMinutes(job.startMin || 0)} each day` : `${formatDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}`}
@@ -403,7 +409,7 @@ export default async function JobPage({
                     <p className="text-muted">
                       Paying accepts the{" "}
                       <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
-                        agreement
+                        {invoice ? "invoice" : "agreement"}
                       </Link>
                       .
                     </p>
@@ -485,7 +491,7 @@ export default async function JobPage({
             </Card>
           )}
 
-          {["in_progress", "awaiting_approval", "balance_due", "disputed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
+          {["in_progress", "awaiting_approval", "balance_due", "disputed"].includes(job.status) && !invoice && (actor.role === "customer" || actor.role === "owner") && (
             <form action={requestCancelAction} className="space-y-2">
               <input type="hidden" name="jobId" value={job.id} />
               <p className="text-sm text-muted">Work has started, so we have to approve a cancellation. We&apos;ll set any refund.</p>
@@ -623,7 +629,7 @@ export default async function JobPage({
             </Card>
           )}
 
-          {actor.role === "owner" && <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} />}
+          {actor.role === "owner" && <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} canVoid={canVoid} />}
         </div>
       </div>
     </div>
@@ -666,7 +672,8 @@ function PaymentRow({ payment, jobId, owner }: { payment: PaymentRecord; jobId: 
   );
 }
 
-function OwnerTools({ job, crews, canDiscount, canEdit }: { job: JobRecord; crews: { id: string; name: string }[]; canDiscount: boolean; canEdit: boolean }) {
+function OwnerTools({ job, crews, canDiscount, canEdit, canVoid }: { job: JobRecord; crews: { id: string; name: string }[]; canDiscount: boolean; canEdit: boolean; canVoid: boolean }) {
+  const invoice = invoiceOnly(job);
   return (
     <Card>
       <CardHeader>
@@ -720,21 +727,36 @@ function OwnerTools({ job, crews, canDiscount, canEdit }: { job: JobRecord; crew
                 Of that, travel ($)
                 <Input name="travel" inputMode="decimal" defaultValue={job.travelFee} className="font-normal" />
               </label>
-              {!job.scheduledDate && (
-                <>
-                  <label className="grid gap-1 font-semibold">
-                    Hours on site each day
-                    <Input name="hours" type="number" step="0.5" min={0.5} max={12} defaultValue={job.onsiteMinutes / 60} className="font-normal" />
-                  </label>
-                  <label className="grid gap-1 font-semibold">
-                    Working days
-                    <Input name="days" type="number" step="1" min={1} max={30} defaultValue={job.durationDays ?? 1} className="font-normal" />
-                  </label>
-                </>
+              {invoice ? (
+                <label className="grid gap-1 font-semibold">
+                  Date the work was done
+                  <Input name="doneOn" type="date" defaultValue={job.workDoneOn ?? ""} className="font-normal" />
+                </label>
+              ) : (
+                !job.scheduledDate && (
+                  <>
+                    <label className="grid gap-1 font-semibold">
+                      Hours on site each day
+                      <Input name="hours" type="number" step="0.5" min={0.5} max={12} defaultValue={job.onsiteMinutes / 60} className="font-normal" />
+                    </label>
+                    <label className="grid gap-1 font-semibold">
+                      Working days
+                      <Input name="days" type="number" step="1" min={1} max={30} defaultValue={job.durationDays ?? 1} className="font-normal" />
+                    </label>
+                  </>
+                )
               )}
             </div>
             <SubmitButton size="sm" variant="outline">Save changes</SubmitButton>
-            <p className="text-muted">Only while nothing has been paid. If the customer already signed, email them the contract again.</p>
+            <p className="text-muted">{invoice ? "Only while nothing has been paid. If you already emailed the invoice, email it again afterwards." : "Only while nothing has been paid. If the customer already signed, email them the contract again."}</p>
+          </form>
+        )}
+        {canVoid && (
+          <form action={voidInvoiceAction} className="space-y-2 border-b border-line pb-4">
+            <input type="hidden" name="jobId" value={job.id} />
+            <p className="font-semibold">Void this invoice</p>
+            <p className="text-muted">For an invoice written up by mistake. It&apos;s marked cancelled, and the customer gets a short email saying nothing is due if the invoice was already sent.</p>
+            <SubmitButton size="sm" variant="danger">Void the invoice</SubmitButton>
           </form>
         )}
         {job.status === "scope_review" && (

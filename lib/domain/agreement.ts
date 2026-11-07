@@ -12,6 +12,21 @@ export function canSign(status: JobStatus): boolean {
   return !["scope_review", "referred", "declined", "cancelled", "cancel_requested"].includes(status);
 }
 
+/**
+ * Work that was finished before it was written up. The job skips scheduling and the
+ * customer gets an invoice to pay rather than an agreement to sign.
+ */
+export function invoiceOnly(job: Pick<JobRecord, "workDoneOn" | "scheduledDate">): boolean {
+  return Boolean(job.workDoneOn) && !job.scheduledDate;
+}
+
+/** "Saturday, November 7, 2026" for a calendar date like 2026-11-07. */
+export function longDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return isoDate;
+  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
 /** True once the customer has agreed to the price in some way: a signature or money paid. */
 export function accepted(job: Pick<JobRecord, "agreement">, payments: PaymentRecord[]): boolean {
   if (job.agreement) return true;
@@ -46,7 +61,10 @@ export type InvoiceSummary = {
   dueLabel: string;
 };
 
-export function invoiceSummary(job: Pick<JobRecord, "status" | "total" | "amountDueNow" | "balanceDue">, payments: PaymentRecord[]): InvoiceSummary {
+export function invoiceSummary(
+  job: Pick<JobRecord, "status" | "total" | "amountDueNow" | "balanceDue"> & Partial<Pick<JobRecord, "workDoneOn" | "scheduledDate">>,
+  payments: PaymentRecord[],
+): InvoiceSummary {
   const open = payments.filter((payment) => !payment.closed);
   const paidIn = open.filter((payment) => payment.kind !== "refund" && payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
   const refunded = open.filter((payment) => payment.kind === "refund").reduce((sum, payment) => sum + payment.amount, 0);
@@ -62,7 +80,9 @@ export function invoiceSummary(job: Pick<JobRecord, "status" | "total" | "amount
     dueLabel = job.status === "held" ? `${usd(dueNow)} is due now to confirm the booking.` : `${usd(dueNow)} is due now for the new price.`;
   } else if (job.status === "balance_due") {
     dueNow = roundCents(Math.max(0, job.balanceDue));
-    dueLabel = `${usd(dueNow)} balance is due now. The work is done and approved.`;
+    dueLabel = invoiceOnly({ workDoneOn: job.workDoneOn ?? null, scheduledDate: job.scheduledDate ?? null })
+      ? `${usd(dueNow)} is due now for the finished work.`
+      : `${usd(dueNow)} balance is due now. The work is done and approved.`;
   } else if (job.status === "quoted" || job.status === "released") {
     if (job.amountDueNow > 0) {
       dueNow = roundCents(Math.max(0, job.amountDueNow));
@@ -86,7 +106,12 @@ export function invoiceSummary(job: Pick<JobRecord, "status" | "total" | "amount
  * Michigan's licensing statement, worded for the license we actually hold.
  * Not legal advice: the owner should have a lawyer look at the whole agreement once.
  */
-export function licensingStatement(settings: Pick<Settings, "licenseNumber" | "businessName" | "builderThreshold">, total: number): string[] {
+export function licensingStatement(
+  settings: Pick<Settings, "licenseNumber" | "businessName" | "builderThreshold">,
+  total: number,
+  /** The work is already done, so the "before work starts" wording doesn't fit. */
+  done = false,
+): string[] {
   const threshold = `$${Math.round(settings.builderThreshold).toLocaleString("en-US")}`;
   const trades =
     "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
@@ -103,9 +128,47 @@ export function licensingStatement(settings: Pick<Settings, "licenseNumber" | "b
     ];
   }
   return [
-    `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is at or over that amount, so a licensed contractor does the licensed part of the work. We confirm that contractor and their license number with you before work starts.`,
+    `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
     trades,
   ];
+}
+
+/**
+ * The terms for an invoice on finished work: no scheduling, holds, or cancellation rules,
+ * because none of that applies once the work is done. Paying is the acceptance.
+ */
+export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] {
+  const done = job.workDoneOn ? ` on ${longDate(job.workDoneOn)}` : "";
+  const sections: TermSection[] = [
+    {
+      title: "The price",
+      body: [
+        `The price covers the work listed above, which was done${done}. Travel is included.`,
+        "Materials and anything else not listed are not included.",
+      ],
+    },
+    {
+      title: "Payment",
+      body: [
+        "The full amount is due now.",
+        `You can pay online from this page (PayPal), or by check payable to ${settings.businessName}, or cash. We mark checks and cash paid when we receive them, and this page shows the payment once it's recorded.`,
+      ],
+    },
+    {
+      title: "If something isn't right",
+      body: ["If anything about the work isn't right, tell us and we come back to make it right."],
+    },
+  ];
+  if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true) });
+  if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
+  sections.push({
+    title: "Paying this invoice",
+    body: [
+      "Paying this invoice, online or by cash or check, confirms that the work listed above was done and accepts the price. We keep a record of when and how it was paid, and you can print or save a copy any time from this page.",
+    ],
+  });
+  return sections;
 }
 
 /** The agreement terms, built from the rules the app actually enforces. */

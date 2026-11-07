@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
+import { todayDetroit } from "@/lib/format";
 import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 
 const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "helper"];
@@ -27,6 +28,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
   const picked = query.customer ? users.find((user) => user.id === query.customer && user.role === "customer") : undefined;
   const fieldClass = "grid gap-1 text-sm font-semibold";
   const selectClass = "h-10 rounded-md border border-line bg-card px-3 text-sm font-normal";
+  const today = todayDetroit();
 
   return (
     <div className="space-y-6">
@@ -37,8 +39,8 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
         <h1 className="font-display text-3xl font-semibold text-ink">Add a job</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           For jobs that come in by phone or in person. Type it once: the job gets an invoice number and an agreement and invoice page right away. Then you pick
-          the time from the open times, and the customer gets one email with a link to sign and pay, no sign-in. Your price is final here; the app won&apos;t
-          recalculate it.
+          the time from the open times, and the customer gets one email with a link to sign and pay, no sign-in. Work that&apos;s already done skips the
+          scheduling and goes out as an invoice. Your price is final here; the app won&apos;t recalculate it.
         </p>
       </div>
       <Flash error={query.error} />
@@ -85,6 +87,19 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             <label className={fieldClass}>
+              Is the work done yet?
+              <select name="done" defaultValue="schedule" className={selectClass}>
+                <option value="schedule">Not yet: we&apos;ll schedule it (agreement)</option>
+                <option value="done">Already done: send an invoice</option>
+              </select>
+              <span className="font-normal text-muted">Already done means no time to pick, nothing to sign, and the whole price is due now.</span>
+            </label>
+            <label className={fieldClass}>
+              Date the work was done
+              <Input name="doneOn" type="date" max={today} defaultValue={today} />
+              <span className="font-normal text-muted">Only used when the work is already done. It prints on the invoice.</span>
+            </label>
+            <label className={fieldClass}>
               Service
               <select name="service" defaultValue="other" className={selectClass}>
                 {SERVICE_ORDER.map((id) => (
@@ -109,6 +124,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             <label className={fieldClass}>
               Hours on site each day
               <Input name="hours" type="number" step="0.5" min={OWNER_JOB_LIMITS.minHours} max={OWNER_JOB_LIMITS.maxHours} defaultValue={2} required />
+              <span className="font-normal text-muted">Hours, days, and people only matter for work still to schedule.</span>
             </label>
             <label className={fieldClass}>
               How many days the job takes
@@ -137,7 +153,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <span className="font-normal text-muted">Shown as its own line. It&apos;s what we keep if the customer declines a new price on site.</span>
             </label>
             <p className="text-sm text-muted sm:col-span-2">
-              Under ${settings.depositThreshold.toLocaleString("en-US")} is paid in full to book; ${settings.depositThreshold.toLocaleString("en-US")} or more is half down.
+              Under ${settings.depositThreshold.toLocaleString("en-US")} is paid in full to book; ${settings.depositThreshold.toLocaleString("en-US")} or more is half down. Work that&apos;s already done is due in full.
               {!settings.licenseNumber && (
                 <>
                   {" "}
@@ -151,7 +167,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
 
         <p className="text-sm text-muted">
           Next you pick the time from this job&apos;s open times (the crew and the drive already figured in). The customer is emailed their link the moment a
-          time is held, or you can email them the link to choose it themselves.
+          time is held, or you can email them the link to choose it themselves. For work that&apos;s already done you land on the invoice instead, ready to email.
         </p>
 
         <SubmitButton pendingLabel="Adding…">Add the job</SubmitButton>

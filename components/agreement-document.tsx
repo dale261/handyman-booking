@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { accepted, agreementTerms, canSign, invoiceSummary } from "@/lib/domain/agreement";
+import { accepted, agreementTerms, canSign, invoiceOnly, invoiceSummary, invoiceTerms, longDate } from "@/lib/domain/agreement";
 import type { Settings } from "@/lib/domain/types";
 import { contractUrl, formatMinutes, jobUrl, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
@@ -12,13 +12,6 @@ import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
 
 const TZ = "America/Detroit";
-
-/** "November 7, 2026" for a calendar date like 2026-11-07. */
-function longDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return isoDate;
-  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-}
 
 /** "Oct 30, 2026, 7:15 PM" for a timestamp, in Michigan time. */
 function stamp(iso: string): string {
@@ -61,12 +54,14 @@ export function AgreementDocument({
   /** The link secret, when the page was opened from the emailed link. */
   token?: string;
 }) {
+  // Finished work written up after the fact: an invoice to pay, with no schedule and nothing to sign.
+  const invoice = invoiceOnly(job);
   const summary = invoiceSummary(job, payments);
-  const terms = agreementTerms(job, settings);
+  const terms = invoice ? invoiceTerms(job, settings) : agreementTerms(job, settings);
   const contact = [settings.businessPhone, settings.businessEmail].filter(Boolean);
   const paidPayments = payments.filter((payment) => !payment.closed && (payment.kind === "refund" || payment.status === "paid"));
   const firstPaid = paidPayments.find((payment) => payment.kind !== "refund");
-  const showSign = (viewer === "customer" || viewer === "public") && !job.agreement && canSign(job.status);
+  const showSign = !invoice && (viewer === "customer" || viewer === "public") && !job.agreement && canSign(job.status);
   const priceChanged = job.agreement != null && Math.abs(job.agreement.total - job.total) >= 0.01;
   const issued = job.invoiceNumber != null;
   const hours = job.onsiteMinutes / 60;
@@ -87,7 +82,7 @@ export function AgreementDocument({
           </div>
         </div>
         <div className="text-sm sm:text-right">
-          <h1 className="font-display text-2xl font-semibold">Agreement and invoice</h1>
+          <h1 className="font-display text-2xl font-semibold">{invoice ? "Invoice" : "Agreement and invoice"}</h1>
           <p className="font-semibold">{issued ? `Invoice #${job.invoiceNumber}` : "Invoice number issued when a time is booked"}</p>
           <p>Prepared {stamp(job.createdAt)}</p>
           <p className="mt-1">
@@ -120,27 +115,35 @@ export function AgreementDocument({
         <h2 className="font-display text-lg font-semibold">The work</h2>
         <p className="text-base font-semibold">{job.scope || "Job"}</p>
         {job.description && job.description !== job.scope && <p className="whitespace-pre-line">{job.description}</p>}
-        <p>
-          {job.scheduledDate ? (
-            <>
-              <span className="font-semibold">Scheduled:</span>{" "}
-              {dates.length > 1
-                ? `${longDate(dates[0])} through ${longDate(dates[dates.length - 1])} (${dates.length} working days), starting ${formatMinutes(job.startMin || 0)} each day`
-                : `${longDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}`}
-              {crewName && viewer !== "public" ? ` · ${crewName}` : ""}
-              {job.status === "held" && job.holdUntil ? ` (held until ${stamp(job.holdUntil)}, pending payment)` : ""}
-            </>
-          ) : (
-            <>
-              <span className="font-semibold">Scheduled:</span> not yet{days > 1 ? ` (${days} working days)` : ""}. The customer picks an open time, or we set one together.
-            </>
-          )}
-        </p>
-        <p>
-          <span className="font-semibold">Time on site:</span> about {hoursLabel}
-          {days > 1 ? " a day" : ""}
-          {job.crewSize && job.crewSize > 1 ? `, ${job.crewSize} people` : ""}.
-        </p>
+        {invoice ? (
+          <p>
+            <span className="font-semibold">Work done:</span> {job.workDoneOn ? longDate(job.workDoneOn) : "before this invoice was prepared"}.
+          </p>
+        ) : (
+          <>
+            <p>
+              {job.scheduledDate ? (
+                <>
+                  <span className="font-semibold">Scheduled:</span>{" "}
+                  {dates.length > 1
+                    ? `${longDate(dates[0])} through ${longDate(dates[dates.length - 1])} (${dates.length} working days), starting ${formatMinutes(job.startMin || 0)} each day`
+                    : `${longDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}`}
+                  {crewName && viewer !== "public" ? ` · ${crewName}` : ""}
+                  {job.status === "held" && job.holdUntil ? ` (held until ${stamp(job.holdUntil)}, pending payment)` : ""}
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">Scheduled:</span> not yet{days > 1 ? ` (${days} working days)` : ""}. The customer picks an open time, or we set one together.
+                </>
+              )}
+            </p>
+            <p>
+              <span className="font-semibold">Time on site:</span> about {hoursLabel}
+              {days > 1 ? " a day" : ""}
+              {job.crewSize && job.crewSize > 1 ? `, ${job.crewSize} people` : ""}.
+            </p>
+          </>
+        )}
       </section>
 
       <section className="space-y-3 text-sm print:break-inside-avoid">
@@ -283,6 +286,8 @@ export function AgreementDocument({
           <p>
             Accepted by payment: {usd(firstPaid.amount)} by {methodLabel(firstPaid.method)} on {stamp(firstPaid.createdAt)}.
           </p>
+        ) : invoice ? (
+          <p className="text-muted">{job.status === "cancelled" ? "This invoice was cancelled." : "Not paid yet. Paying this invoice accepts it."}</p>
         ) : (
           <p className="text-muted">Not signed yet.</p>
         )}

@@ -1,12 +1,12 @@
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord, JobStatus } from "@/lib/db/types";
-import { ownerPriceLines } from "@/lib/domain/agreement";
+import { invoiceOnly, longDate, ownerPriceLines } from "@/lib/domain/agreement";
 import { grossTotal, withDiscount } from "@/lib/domain/discount";
 import { roundCents } from "@/lib/domain/money";
 import { splitPayment } from "@/lib/domain/pricing";
-import { contractUrl, usd } from "@/lib/format";
+import { contractUrl, todayDetroit, usd } from "@/lib/format";
 import { amountPaid, emailFooter, mail } from "@/lib/services/booking";
-import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
+import { checkDoneOn, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -126,6 +126,8 @@ export type OwnerJobEdit = {
   /** Only while nothing is scheduled; blank keeps the current value. */
   hoursOnSite?: number | null;
   days?: number | null;
+  /** Invoices for finished work only: the date the work was done. Blank keeps the current date. */
+  doneOn?: string | null;
 };
 
 /**
@@ -138,9 +140,15 @@ export async function editOwnerJob(repo: Repository, actor: Actor, jobId: string
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (!job.ownerPriced) return fail("Only jobs you typed in can be edited this way. Use a discount or an on-site price change for quoted jobs.");
-    if (!UNPAID.includes(job.status)) return fail("This job has a payment on it. Use a discount or an on-site price change instead.");
+    const invoice = invoiceOnly(job);
+    if (!UNPAID.includes(job.status) && !(invoice && job.status === "balance_due")) return fail("This job has a payment on it. Use a discount or an on-site price change instead.");
     const payments = await repo.listPayments(job.id);
     if (amountPaid(payments, job.id) > 0) return fail("This job has a payment on it. Use a discount instead.");
+    if (invoice && input.doneOn && input.doneOn.trim()) {
+      const checked = checkDoneOn(input.doneOn, todayDetroit());
+      if (!checked.ok) return fail(checked.error);
+      job.workDoneOn = checked.date;
+    }
     const scope = input.scope.replace(/\s+/g, " ").trim();
     if (scope.length < 3 || scope.length > 120) return fail("Give the job a short title, 3 to 120 characters.");
     const total = roundCents(input.total);
@@ -172,8 +180,41 @@ export async function editOwnerJob(repo: Repository, actor: Actor, jobId: string
     }
     const problem = settleMoney(job, 0, settings.depositThreshold);
     if (problem) return fail(problem);
+    if (invoice && job.workDoneOn) job.payRule = `Due in full. The work was done on ${longDate(job.workDoneOn)}.`;
     if (Math.abs(job.total - previousTotal) >= 0.01) priceChangeNote(job, previousTotal, "Price corrected by the owner");
     const saved = await repo.saveJob(job, { skipOverlap: true });
+    return { ok: true, data: saved };
+  });
+}
+
+/**
+ * Owner only: cancel an invoice for finished work that was written up by mistake,
+ * before anything is paid. Once money is in, a refund is the way to undo it.
+ */
+export async function voidInvoice(repo: Repository, actor: Actor, jobId: string): Promise<Ok<JobRecord> | Err> {
+  return repo.run(async () => {
+    if (actor.role !== "owner") return fail("Only the owner can void an invoice.");
+    const job = await repo.getJob(jobId);
+    if (!job) return fail("Job not found.");
+    if (!invoiceOnly(job)) return fail("Only an invoice for finished work can be voided. Cancel other jobs from the job page.");
+    if (job.status !== "balance_due") return fail("This invoice is already settled or cancelled.");
+    const payments = await repo.listPayments(job.id);
+    if (amountPaid(payments, job.id) > 0) return fail("This invoice has a payment on it. Refund it instead of voiding it.");
+    job.priorStatus = job.status;
+    job.status = "cancelled";
+    job.balanceDue = 0;
+    job.amountDueNow = 0;
+    const saved = await repo.saveJob(job, { skipOverlap: true });
+    if (saved.docSentAt && saved.customerEmail.trim()) {
+      const settings = await repo.getSettings();
+      await mail(
+        repo,
+        saved.customerEmail,
+        `Invoice #${saved.invoiceNumber} is cancelled: nothing is due`,
+        `Hi ${saved.customerName}, we cancelled invoice #${saved.invoiceNumber} for ${saved.scope || "the work"}. Nothing is due on it. If we sent it by mistake, sorry for the confusion; a corrected invoice will come separately if one is needed.${emailFooter(settings)}`,
+        saved.id,
+      );
+    }
     return { ok: true, data: saved };
   });
 }

@@ -186,6 +186,11 @@ export type JobRecord = {
   docSentAt?: string | null;
   /** A discount the owner gave. Re-applied whenever the app rebuilds the price lines. */
   discount?: Discount | null;
+  /**
+   * The date the work was done, for a job written up after the fact. Such a job never
+   * reserves a crew: it starts at "balance due" and goes out as an invoice, not an agreement.
+   */
+  workDoneOn?: string | null;
   createdAt: string;
   updatedAt: string;
 };

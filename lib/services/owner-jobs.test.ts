@@ -4,9 +4,12 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser } from "@/lib/db/types";
+import { invoiceOnly, invoiceSummary, invoiceTerms, longDate } from "@/lib/domain/agreement";
+import { addDays, todayDetroit } from "@/lib/format";
+import { editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { jobForLink, sendAgreement, signAgreement, tokenMatches } from "@/lib/services/agreement";
 import { amountPayable, holdSlot, listOpenSlots, payJob } from "@/lib/services/booking";
-import { createOwnerJob } from "@/lib/services/owner-jobs";
+import { checkDoneOn, createOwnerJob } from "@/lib/services/owner-jobs";
 
 const dirs: string[] = [];
 
@@ -265,5 +268,137 @@ describe("multi-day owner jobs", () => {
     } else {
       expect(clash.error).toMatch(/taken|fits|isn't open|Nothing is open/);
     }
+  });
+});
+
+describe("finished work written up after the fact", () => {
+  const base = {
+    service: "other" as const,
+    scope: "Rehang the garage door opener",
+    description: "Done Thursday; customer supplied the bracket.",
+    jobSiteAddress: "",
+    hoursOnSite: 2,
+    days: 1,
+    crewSize: 1,
+    total: 320,
+    travel: 40,
+  };
+
+  it("skips scheduling: due in full as an invoice, paid once, and never on a crew's calendar", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const customer = await user(store, DEMO_USERS.customer);
+    const created = await createOwnerJob(store, owner, { ...base, customer, doneOn: todayDetroit() });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const job = created.data;
+    expect(job.status).toBe("balance_due");
+    expect(job.workDoneOn).toBe(todayDetroit());
+    expect(invoiceOnly(job)).toBe(true);
+    expect(job.invoiceNumber).toBe(1000);
+    expect(job.scheduledDate).toBeNull();
+    expect(job.crewId).toBeNull();
+    expect(job.amountDueNow).toBe(0);
+    expect(job.balanceDue).toBe(320);
+    expect(job.payRule).toContain("Due in full");
+    expect(amountPayable(job)).toBe(320);
+    // Nothing to pick: the slot list refuses rather than offering times.
+    expect((await listOpenSlots(store, owner, job.id)).ok).toBe(false);
+    // The terms are the invoice's: no holds or cancellation rules.
+    const settings = await store.getSettings();
+    const titles = invoiceTerms(job, settings).map((section) => section.title);
+    expect(titles).toContain("Payment");
+    expect(titles).not.toContain("Cancelling or rescheduling");
+    expect(titles).not.toContain("Booking and payment");
+    expect(invoiceSummary(job, []).dueLabel).toContain("for the finished work");
+
+    const sent = await sendAgreement(store, owner, job.id);
+    expect(sent.ok).toBe(true);
+    const emails = await store.listEmails();
+    const invoiceMail = emails.find((email) => email.to === customer.email && email.subject.startsWith("Invoice #1000"));
+    expect(invoiceMail?.body).toContain("$320.00 is due now");
+    expect(invoiceMail?.body).toContain(`/contract/${job.id}?k=${job.docToken}`);
+    expect(invoiceMail?.body).not.toContain("sign the agreement");
+    expect(invoiceMail?.body).not.toContain("pick a time");
+
+    const paid = await payJob(store, owner, job.id, "cash");
+    expect(paid.ok).toBe(true);
+    if (!paid.ok) return;
+    expect(paid.data.status).toBe("completed");
+    expect(paid.data.balanceDue).toBe(0);
+    expect(amountPayable(paid.data)).toBe(0);
+    const payments = await store.listPayments(job.id);
+    expect(payments.map((payment) => [payment.kind, payment.amount])).toEqual([["balance", 320]]);
+    const receipt = (await store.listEmails()).find((email) => email.subject === "Receipt for invoice #1000: $320.00 paid");
+    expect(receipt?.body).toContain("paid in full");
+    // Paid: nothing more to collect, and it can't be voided.
+    expect((await voidInvoice(store, owner, job.id)).ok).toBe(false);
+  });
+
+  it("checks the date: no future dates, no nonsense, nothing over a year old", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const customer = await user(store, DEMO_USERS.customer);
+    const today = todayDetroit();
+    expect(checkDoneOn(today, today).ok).toBe(true);
+    expect(checkDoneOn("2026-02-30", "2026-11-07").ok).toBe(false);
+    expect(checkDoneOn("11/07/2026", "2026-11-07").ok).toBe(false);
+    expect(checkDoneOn("2026-11-08", "2026-11-07").ok).toBe(false);
+    expect(checkDoneOn("2025-11-06", "2026-11-07").ok).toBe(false);
+    expect(checkDoneOn("2025-11-07", "2026-11-07").ok).toBe(true);
+    const future = await createOwnerJob(store, owner, { ...base, customer, doneOn: addDays(today, 1) });
+    expect(future.ok).toBe(false);
+    // Blank means ordinary work to schedule.
+    const blank = await createOwnerJob(store, owner, { ...base, customer, doneOn: "" });
+    expect(blank.ok).toBe(true);
+    if (!blank.ok) return;
+    expect(blank.data.status).toBe("quoted");
+    expect(invoiceOnly(blank.data)).toBe(false);
+  });
+
+  it("can be corrected or discounted before payment, and voided if it was a mistake", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const customer = await user(store, DEMO_USERS.customer);
+    const today = todayDetroit();
+    const created = await createOwnerJob(store, owner, { ...base, customer, doneOn: today });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const job = created.data;
+
+    const edited = await editOwnerJob(store, owner, job.id, { scope: "Rehang the garage door opener and the sensor", description: "", total: 350, travel: 40, doneOn: addDays(today, -2) });
+    expect(edited.ok).toBe(true);
+    if (!edited.ok) return;
+    expect(edited.data.total).toBe(350);
+    expect(edited.data.balanceDue).toBe(350);
+    expect(edited.data.amountDueNow).toBe(0);
+    expect(edited.data.workDoneOn).toBe(addDays(today, -2));
+    expect(edited.data.payRule).toContain(longDate(addDays(today, -2)));
+    expect(amountPayable(edited.data)).toBe(350);
+
+    const discounted = await setDiscount(store, owner, job.id, { amount: 50, reason: "Neighbor discount", notify: false });
+    expect(discounted.ok).toBe(true);
+    if (!discounted.ok) return;
+    expect(discounted.data.total).toBe(300);
+    expect(discounted.data.balanceDue).toBe(300);
+    expect(discounted.data.amountDueNow).toBe(0);
+
+    // Sent, then voided: the customer hears that nothing is due.
+    expect((await sendAgreement(store, owner, job.id)).ok).toBe(true);
+    const customerActor = actorFromUser(customer);
+    expect((await voidInvoice(store, customerActor, job.id)).ok).toBe(false);
+    const voided = await voidInvoice(store, owner, job.id);
+    expect(voided.ok).toBe(true);
+    if (!voided.ok) return;
+    expect(voided.data.status).toBe("cancelled");
+    expect(amountPayable(voided.data)).toBe(0);
+    const notice = (await store.listEmails()).find((email) => email.subject.includes("is cancelled: nothing is due"));
+    expect(notice?.to).toBe(customer.email);
+    expect((await voidInvoice(store, owner, job.id)).ok).toBe(false);
+    // A normal job to schedule can't be voided this way.
+    const normal = await createOwnerJob(store, owner, { ...base, customer });
+    expect(normal.ok).toBe(true);
+    if (!normal.ok) return;
+    expect((await voidInvoice(store, owner, normal.data.id)).ok).toBe(false);
   });
 });

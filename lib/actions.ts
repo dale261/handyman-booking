@@ -7,8 +7,8 @@ import { ensureCustomerAccount } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, signAgreement } from "@/lib/services/agreement";
-import { createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
-import { clearDiscount, editOwnerJob, setDiscount } from "@/lib/services/adjust";
+import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
+import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
@@ -28,7 +28,7 @@ import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
 import { createPayPalOrder, paypalConfigured } from "@/lib/paypal";
-import { appUrl, formatDateRange, formatMinutes } from "@/lib/format";
+import { appUrl, formatDate, formatDateRange, formatMinutes, todayDetroit } from "@/lib/format";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { publicEstimate, recentLeadForPhone, recordLead, type PublicEstimate } from "@/lib/services/estimate";
 import {
@@ -707,6 +707,14 @@ export async function createOwnerJobAction(form: FormData) {
   }
   const days = Number(field(form, "days") || "1");
   if (!Number.isFinite(days) || days < 1 || days > OWNER_JOB_LIMITS.maxDays) newJobBack(`Days must be between 1 and ${OWNER_JOB_LIMITS.maxDays}.`);
+  // Work already done goes out as an invoice: no scheduling, due in full. Checked before the account is touched.
+  const alreadyDone = field(form, "done") === "done";
+  let doneOn: string | null = null;
+  if (alreadyDone) {
+    const checked = checkDoneOn(field(form, "doneOn"), todayDetroit());
+    if (!checked.ok) newJobBack(checked.error);
+    doneOn = checked.date;
+  }
   const siteText = field(form, "jobSiteAddress") || billingZip;
   if (!areaCheck(siteText, await repo.listZips()).found) newJobBack("Add a 5-digit ZIP to the job site address.");
 
@@ -731,11 +739,12 @@ export async function createOwnerJobAction(form: FormData) {
     crewSize: Number(field(form, "crewSize") || "1"),
     total,
     travel,
+    doneOn,
   });
   if (!created.ok) newJobBack(created.error);
   const job = created.data;
 
-  const notes = [`Job added${job.invoiceNumber ? `, invoice #${job.invoiceNumber}` : ""}.`];
+  const notes = [doneOn ? `Invoice #${job.invoiceNumber} created for work done ${formatDate(doneOn)}.` : `Job added${job.invoiceNumber ? `, invoice #${job.invoiceNumber}` : ""}.`];
   if (account.created) {
     notes.push(
       password
@@ -746,6 +755,12 @@ export async function createOwnerJobAction(form: FormData) {
   const settings = await repo.getSettings();
   if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
     notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part.`);
+  }
+  if (doneOn) {
+    // Nothing to schedule: straight to the invoice, where the owner emails it or copies the link.
+    notes.push("Email it to the customer below, or share the link. Cash or a check gets marked paid on the job page.");
+    await settle(repo);
+    redirect(`/jobs/${job.id}/contract?notice=${encodeURIComponent(notes.join(" "))}`);
   }
   // One scheduling step, from real open times: the job page lists them for this job. Holding
   // one emails the customer their link; or the owner emails the link and lets them choose.
@@ -973,6 +988,13 @@ export async function editOwnerJobAction(form: FormData) {
       travel: Number(field(form, "travel").replace(/[$,]/g, "") || "0"),
       hoursOnSite: hoursRaw ? Number(hoursRaw) : null,
       days: daysRaw ? Number(daysRaw) : null,
+      doneOn: field(form, "doneOn") || null,
     }),
   );
+}
+
+/** Owner: cancel an invoice for finished work that was written up by mistake (nothing paid). */
+export async function voidInvoiceAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "The invoice is voided. Nothing is due on it.", (repo, actor) => voidInvoice(repo, actor, jobId));
 }

@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord } from "@/lib/db/types";
-import { canSign, invoiceSummary } from "@/lib/domain/agreement";
+import { canSign, invoiceOnly, invoiceSummary } from "@/lib/domain/agreement";
 import { splitPayment } from "@/lib/domain/pricing";
 import { contractUrl, formatDate, formatMinutes, usd } from "@/lib/format";
 import { emailFooter, mail, notify } from "@/lib/services/booking";
@@ -107,6 +107,24 @@ export async function sendAgreement(repo: Repository, actor: Actor, jobId: strin
     const settings = await repo.getSettings();
     const payments = await repo.listPayments(job.id);
     const summary = invoiceSummary(job, payments);
+    if (invoiceOnly(job)) {
+      // Finished work: an invoice to pay, not an agreement to sign.
+      const done = job.workDoneOn ? ` (done ${formatDate(job.workDoneOn)})` : "";
+      const ask =
+        summary.balance > 0
+          ? `${usd(summary.balance)} is due now. Pay online from this link, no sign-in needed: ${contractUrl(job)}\n\nOr pay by check payable to ${settings.businessName}, or cash; we mark it paid when we receive it.`
+          : `It's paid in full. Your copy is here: ${contractUrl(job)}`;
+      await mail(
+        repo,
+        job.customerEmail,
+        `Invoice #${job.invoiceNumber} from ${settings.businessName}: ${usd(job.total)} for ${job.scope || "your job"}`,
+        `Hi ${job.customerName}, here is the invoice for ${job.scope || "your job"}${done}. The price is ${usd(job.total)}. ${ask}\n\nYou can print it or save it as a PDF from that page. Reply to this email with any questions.${emailFooter(settings)}`,
+        job.id,
+      );
+      job.docSentAt = new Date().toISOString();
+      const saved = await repo.saveJob(job, { skipOverlap: true });
+      return { ok: true, data: saved };
+    }
     const split = splitPayment(job.total, settings.depositThreshold);
     const invoice = job.invoiceNumber ? `invoice #${job.invoiceNumber}` : "agreement";
     const when = job.scheduledDate ? ` on ${formatDate(job.scheduledDate)} at ${formatMinutes(job.startMin || 0)}` : "";

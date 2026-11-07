@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord, UserRecord } from "@/lib/db/types";
-import { ownerPriceLines } from "@/lib/domain/agreement";
+import { longDate, ownerPriceLines } from "@/lib/domain/agreement";
 import { areaCheck } from "@/lib/domain/area";
 import { roundCents } from "@/lib/domain/money";
 import { splitPayment } from "@/lib/domain/pricing";
 import { DEFAULT_PARAMS, SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
 import { driveMinutes } from "@/lib/domain/travel";
+import { todayDetroit } from "@/lib/format";
 import { geocodeAddress, measureLeg } from "@/lib/mileage";
 import { newDocToken } from "@/lib/services/agreement";
 
@@ -35,19 +36,46 @@ export type OwnerJobInput = {
   total: number;
   /** The part of the total that is travel, if the owner wants it shown. */
   travel: number;
+  /**
+   * Set when the work is already finished: the calendar date it was done (YYYY-MM-DD).
+   * The job then skips scheduling, starts at "balance due" for the whole price, and
+   * goes out as an invoice. Blank or null means normal work to schedule.
+   */
+  doneOn?: string | null;
 };
 
-export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000 };
+export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000, maxDoneDaysAgo: 365 };
+
+/** A calendar date for finished work: a real date, not in the future, not older than a year. */
+export function checkDoneOn(value: string, today: string): { ok: true; date: string } | { ok: false; error: string } {
+  const date = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Enter the date the work was done." };
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return { ok: false, error: "That isn't a real date." };
+  if (date > today) return { ok: false, error: "The date the work was done can't be in the future. For work still to do, leave it as work to schedule." };
+  const [ty, tm, td] = today.split("-").map(Number);
+  const ageDays = Math.round((Date.UTC(ty, tm - 1, td) - dt.getTime()) / 86_400_000);
+  if (ageDays > OWNER_JOB_LIMITS.maxDoneDaysAgo) return { ok: false, error: "The date the work was done is more than a year ago. Check the year." };
+  return { ok: true, date };
+}
 
 /**
  * A job that came in by phone or in person. The owner types the customer, the work,
  * and the price once; the app issues the invoice number and the contract link right away.
  * The price is the owner's and is never recomputed. Scheduling and payment then follow
- * the normal hold → pay → booked path.
+ * the normal hold → pay → booked path. Work that is already done (`doneOn` set) skips
+ * all of that: it starts at "balance due" for the whole price and goes out as an invoice.
  */
 export async function createOwnerJob(repo: Repository, actor: Actor, input: OwnerJobInput): Promise<Ok<JobRecord> | Err> {
   return repo.run(async () => {
     if (actor.role !== "owner") return fail("Only the owner can add a job this way.");
+    let doneOn: string | null = null;
+    if (input.doneOn && input.doneOn.trim()) {
+      const checked = checkDoneOn(input.doneOn, todayDetroit());
+      if (!checked.ok) return fail(checked.error);
+      doneOn = checked.date;
+    }
     const customer = input.customer;
     if (customer.role !== "customer") return fail("That email belongs to a worker or the owner, not a customer.");
     if (!customer.fullName.trim() || !customer.phone.trim()) return fail("The customer needs a name and a phone number.");
@@ -86,7 +114,10 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       lng = geocoded.lng;
     }
     const measured = await measureLeg(repo, settings, "shop", { address: jobSiteAddress, lat, lng, zipMiles: area.milesFromCadillac });
-    const split = splitPayment(total, settings.depositThreshold);
+    // Finished work is due in full now; work to schedule follows the usual deposit rule.
+    const split = doneOn
+      ? { now: 0, later: total, rule: `Due in full. The work was done on ${longDate(doneOn)}.` }
+      : splitPayment(total, settings.depositThreshold);
     const now = new Date().toISOString();
     const job: JobRecord = {
       id: randomUUID(),
@@ -142,7 +173,8 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       // Locked from the start: the price is the owner's and includes travel.
       travelLocked: true,
       travelSource: measured.source,
-      status: "quoted",
+      // Finished work: nothing to schedule, the whole price is the balance due.
+      status: doneOn ? "balance_due" : "quoted",
       priorStatus: null,
       holdUntil: null,
       invoiceNumber: null,
@@ -157,6 +189,7 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       docToken: newDocToken(),
       agreement: null,
       docSentAt: null,
+      workDoneOn: doneOn,
       createdAt: now,
       updatedAt: now,
     };

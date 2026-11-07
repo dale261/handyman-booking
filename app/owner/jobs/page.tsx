@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { formatDateRange, usd } from "@/lib/format";
+import { formatDate, formatDateRange, usd } from "@/lib/format";
+import { invoiceOnly } from "@/lib/domain/agreement";
 import { jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { amountPaid, prepaid } from "@/lib/services/booking";
@@ -48,9 +49,9 @@ export default async function OwnerJobsPage() {
                   <td className="px-3 py-2">{job.customerName}</td>
                   <td className="px-3 py-2">
                     <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}`}>{job.scope || job.description}</Link>
-                    {job.ownerPriced && <span className="ml-2 text-xs text-muted">phone job</span>}
+                    {job.ownerPriced && <span className="ml-2 text-xs text-muted">{invoiceOnly(job) ? "invoice, work done" : "phone job"}</span>}
                   </td>
-                  <td className="px-3 py-2">{job.scheduledDate ? formatDateRange(jobDates(job)) : "—"}</td>
+                  <td className="px-3 py-2">{job.scheduledDate ? formatDateRange(jobDates(job)) : invoiceOnly(job) && job.workDoneOn ? `done ${formatDate(job.workDoneOn)}` : "—"}</td>
                   <td className="px-3 py-2 text-right">{usd(job.total)}</td>
                   <td className="px-3 py-2">
                     <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
@@ -58,7 +59,7 @@ export default async function OwnerJobsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>
-                      {job.agreement ? "Signed" : job.docSentAt ? "Sent" : "Open"}
+                      {job.agreement ? "Signed" : job.docSentAt ? "Sent" : invoiceOnly(job) ? "Invoice" : "Open"}
                     </Link>
                   </td>
                 </tr>

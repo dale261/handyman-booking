@@ -2,6 +2,7 @@ import { holdSlotLinkAction, startPayPalLinkAction } from "@/lib/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { JobRecord } from "@/lib/db/types";
+import { invoiceOnly } from "@/lib/domain/agreement";
 import { daysOf } from "@/lib/domain/scheduling";
 import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
 import { paypalConfigured } from "@/lib/paypal";
@@ -121,7 +122,7 @@ export function LinkPayCard({ job, token, due }: { job: JobRecord; token: string
             <input type="hidden" name="jobId" value={job.id} />
             <input type="hidden" name="token" value={token} />
             <SubmitButton pendingLabel="Opening PayPal…">Pay {usd(due)} with PayPal</SubmitButton>
-            <p className="mt-1 text-xs text-muted">Card or PayPal balance, no PayPal account needed. {job.agreement ? "" : "Paying accepts the agreement below."}</p>
+            <p className="mt-1 text-xs text-muted">Card or PayPal balance, no PayPal account needed. {job.agreement ? "" : invoiceOnly(job) ? "Paying accepts the invoice below." : "Paying accepts the agreement below."}</p>
           </form>
         ) : (
           <p>We&apos;ll contact you to take the payment.</p>

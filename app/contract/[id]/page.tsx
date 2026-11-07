@@ -6,6 +6,7 @@ import { LinkPayCard, LinkTimePicker } from "@/components/link-tools";
 import { PrintButton } from "@/components/print-button";
 import { currentActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
+import { invoiceOnly } from "@/lib/domain/agreement";
 import { linkActor, tokenMatches } from "@/lib/services/agreement";
 import { amountPaid, amountPayable, listOpenSlots, prepaid, type SlotOption } from "@/lib/services/booking";
 
@@ -43,15 +44,19 @@ export default async function PublicContractPage({
   const due = amountPayable(job);
   const paidUpFront = prepaid(job, amountPaid(payments, job.id));
 
-  const todo = [canSchedule ? "pick a time" : "", due > 0 ? "pay" : "", job.agreement ? "" : "sign it at the bottom"].filter(Boolean);
+  // Finished work: an invoice to pay, nothing to schedule or sign.
+  const invoice = invoiceOnly(job);
+  const todo = invoice
+    ? [due > 0 ? "pay" : ""].filter(Boolean)
+    : [canSchedule ? "pick a time" : "", due > 0 ? "pay" : "", job.agreement ? "" : "sign it at the bottom"].filter(Boolean);
 
   return (
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-ink">Your agreement and invoice</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">{invoice ? "Your invoice" : "Your agreement and invoice"}</h1>
           <p className="text-sm text-muted">
-            {todo.length > 0 ? `Everything happens right here, no sign-in needed: ${todo.join(", ")}.` : "Keep this link; it stays current as the job moves along."}{" "}
+            {todo.length > 0 ? `Everything happens right here, no sign-in needed: ${todo.join(", ")}.` : invoice && due === 0 ? "This invoice is settled. Keep this link for your records." : "Keep this link; it stays current as the job moves along."}{" "}
             Print or save a copy any time.{" "}
             {viewer !== "public" && (
               <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}`}>

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord } from "@/lib/db/types";
-import { canSign } from "@/lib/domain/agreement";
+import { canSign, invoiceOnly } from "@/lib/domain/agreement";
 import type { Settings } from "@/lib/domain/types";
 import { contractUrl } from "@/lib/format";
 import { ensureDocToken } from "@/lib/services/agreement";
@@ -40,7 +40,7 @@ export default async function ContractPage({
           <Link className="text-sm font-semibold text-pine underline" href={`/jobs/${job.id}`}>
             Back to the job
           </Link>
-          <h1 className="font-display text-3xl font-semibold text-ink">Contract and invoice</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">{invoiceOnly(job) ? "Invoice" : "Contract and invoice"}</h1>
           <p className="text-sm text-muted">Everything here comes from the job record. Print it or save it as a PDF from your phone or computer.</p>
         </div>
         <PrintButton />
@@ -57,6 +57,7 @@ export default async function ContractPage({
 function OwnerDocTools({ job, settings }: { job: JobRecord; settings: Settings }) {
   const sendable = canSign(job.status) && Boolean(job.customerEmail.trim());
   const missing = !settings.businessPhone && !settings.businessEmail;
+  const invoice = invoiceOnly(job);
   return (
     <Card className="no-print">
       <CardHeader>
@@ -64,7 +65,9 @@ function OwnerDocTools({ job, settings }: { job: JobRecord; settings: Settings }
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-muted">
-          The link opens without a sign-in. From it the customer picks a time (if none is set), signs, and pays with PayPal; it stays current as the job moves along.
+          {invoice
+            ? "The link opens without a sign-in. From it the customer pays with PayPal; if they pay by cash or check, mark it paid on the job page and this invoice updates."
+            : "The link opens without a sign-in. From it the customer picks a time (if none is set), signs, and pays with PayPal; it stays current as the job moves along."}
           {job.docSentAt ? ` Last emailed ${new Date(job.docSentAt).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}.` : " Not emailed yet."}
         </p>
         <div className="flex flex-wrap items-center gap-2">
