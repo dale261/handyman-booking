@@ -96,12 +96,12 @@ export function AgreementDocument({
           <h2 className="font-display text-base font-semibold">Customer</h2>
           <p className="font-semibold">{job.customerName}</p>
           <p>{job.customerPhone}</p>
-          <p>{job.customerEmail}</p>
-          <p className="text-muted">{job.billingAddress}</p>
+          {job.customerEmail && <p>{job.customerEmail}</p>}
+          {job.billingAddress && <p className="text-muted">{job.billingAddress}</p>}
         </div>
         <div>
           <h2 className="font-display text-base font-semibold">Job site</h2>
-          <p>{job.jobSiteAddress}</p>
+          <p>{job.jobSiteAddress || "Not given"}</p>
           {(job.city || job.county) && (
             <p className="text-muted">
               {job.city} {job.jobZip}

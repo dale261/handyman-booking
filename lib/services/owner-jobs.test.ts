@@ -4,7 +4,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser } from "@/lib/db/types";
+import { ensureCustomerAccount } from "@/lib/accounts";
 import { invoiceOnly, invoiceSummary, invoiceTerms, longDate } from "@/lib/domain/agreement";
+import { isPlaceholderEmail, realEmail } from "@/lib/domain/contact";
 import { addDays, todayDetroit } from "@/lib/format";
 import { editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { jobForLink, sendAgreement, signAgreement, tokenMatches } from "@/lib/services/agreement";
@@ -400,5 +402,90 @@ describe("finished work written up after the fact", () => {
     expect(normal.ok).toBe(true);
     if (!normal.ok) return;
     expect((await voidInvoice(store, owner, normal.data.id)).ok).toBe(false);
+  });
+});
+
+describe("phone-only customers", () => {
+  it("invoices finished work with just a name and a phone: no email, no address, nothing sent", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const account = await ensureCustomerAccount(store, { fullName: "Walk-in Wanda", email: "", phone: "(231) 555-0199", billingAddress: "", billingZip: "", password: "" });
+    expect(account.ok).toBe(true);
+    if (!account.ok) return;
+    expect(account.created).toBe(true);
+    expect(isPlaceholderEmail(account.user.email)).toBe(true);
+    expect(realEmail(account.user.email)).toBe("");
+
+    const created = await createOwnerJob(store, owner, {
+      customer: account.user,
+      service: "other",
+      scope: "Hang two shelves",
+      description: "",
+      jobSiteAddress: "",
+      hoursOnSite: 1,
+      days: 1,
+      crewSize: 1,
+      total: 120,
+      travel: 0,
+      doneOn: todayDetroit(),
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const job = created.data;
+    expect(job.customerEmail).toBe("");
+    expect(job.customerPhone).toBe("(231) 555-0199");
+    expect(job.jobSiteAddress).toBe("");
+    expect(job.jobZip).toBe("");
+    expect(job.travelMiles).toBeNull();
+    expect(job.status).toBe("balance_due");
+    expect(job.invoiceNumber).toBe(1000);
+    // Nothing to email: sending is refused, the link is the way.
+    expect((await sendAgreement(store, owner, job.id)).ok).toBe(false);
+    const paid = await payJob(store, owner, job.id, "cash");
+    expect(paid.ok).toBe(true);
+    if (!paid.ok) return;
+    expect(paid.data.status).toBe("completed");
+    // The owner still gets their notice; the customer gets nothing because there is nowhere to send it.
+    const after = await store.listEmails();
+    expect(after.some((email) => email.jobId === job.id)).toBe(true);
+    expect(after.some((email) => email.to.trim() === "" || isPlaceholderEmail(email.to))).toBe(false);
+
+    // The same phone number next time is the same customer, and a stand-in email typed back in is treated as blank.
+    const again = await ensureCustomerAccount(store, { fullName: "", email: account.user.email, phone: "231-555-0199", billingAddress: "", billingZip: "", password: "" });
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.created).toBe(false);
+    expect(again.user.id).toBe(account.user.id);
+    expect(again.user.fullName).toBe("Walk-in Wanda");
+    // A customer who already has a real email is found by phone too.
+    const demo = await user(store, DEMO_USERS.customer);
+    const byPhone = await ensureCustomerAccount(store, { fullName: "", email: "", phone: demo.phone, billingAddress: "", billingZip: "", password: "" });
+    expect(byPhone.ok).toBe(true);
+    if (!byPhone.ok) return;
+    expect(byPhone.user.id).toBe(demo.id);
+    expect(byPhone.user.email).toBe(demo.email);
+  });
+
+  it("still needs an address for work to schedule", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const account = await ensureCustomerAccount(store, { fullName: "Phone Pat", email: "", phone: "231-555-0100", billingAddress: "", billingZip: "", password: "" });
+    expect(account.ok).toBe(true);
+    if (!account.ok) return;
+    const base = { customer: account.user, service: "other" as const, scope: "Fix a gate", description: "", hoursOnSite: 1, days: 1, crewSize: 1, total: 150, travel: 0 };
+    const noAddress = await createOwnerJob(store, owner, { ...base, jobSiteAddress: "" });
+    expect(noAddress.ok).toBe(false);
+    const noZip = await createOwnerJob(store, owner, { ...base, jobSiteAddress: "12 Lake St, Cadillac MI" });
+    expect(noZip.ok).toBe(false);
+    const withZip = await createOwnerJob(store, owner, { ...base, jobSiteAddress: "12 Lake St, Cadillac MI 49601" });
+    expect(withZip.ok).toBe(true);
+    if (!withZip.ok) return;
+    expect(withZip.data.status).toBe("quoted");
+    expect(withZip.data.customerEmail).toBe("");
+    expect(withZip.data.jobZip).toBe("49601");
+    // No email: nothing is queued when a time is held, but the hold itself works.
+    const held = await holdSlot(store, owner, withZip.data.id, "earliest", { holdHours: 24 });
+    expect(held.ok).toBe(true);
+    expect((await store.listEmails()).some((email) => email.jobId === withZip.data.id && (email.to.trim() === "" || isPlaceholderEmail(email.to)))).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord, UserRecord } from "@/lib/db/types";
 import { longDate, ownerPriceLines } from "@/lib/domain/agreement";
 import { areaCheck } from "@/lib/domain/area";
+import { realEmail } from "@/lib/domain/contact";
 import { roundCents } from "@/lib/domain/money";
 import { splitPayment } from "@/lib/domain/pricing";
 import { DEFAULT_PARAMS, SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
@@ -100,20 +101,23 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
 
     const differentSite = Boolean(input.jobSiteAddress.trim()) && input.jobSiteAddress.trim() !== customer.billingAddress.trim();
     const jobSiteAddress = differentSite ? input.jobSiteAddress.trim() : customer.billingAddress.trim();
-    if (!jobSiteAddress) return fail("Add the job site address.");
+    const settings = await repo.getSettings();
     const zips = await repo.listZips();
     const area = areaCheck(differentSite ? jobSiteAddress : customer.billingZip || jobSiteAddress, zips);
-    if (!area.found) return fail("Add a 5-digit ZIP to the job site address.");
-
-    const settings = await repo.getSettings();
-    let lat = area.lat;
-    let lng = area.lng;
-    const geocoded = await geocodeAddress(repo, jobSiteAddress);
-    if (geocoded) {
-      lat = geocoded.lat;
-      lng = geocoded.lng;
+    // Work to schedule needs a place to drive to. Finished work can be invoiced with no address at all.
+    if (!doneOn && !jobSiteAddress) return fail("Add the job site address. The crew needs somewhere to go; only finished work can skip it.");
+    if (!doneOn && !area.found) return fail("Add a 5-digit ZIP to the job site address.");
+    let lat = area.found ? area.lat : null;
+    let lng = area.found ? area.lng : null;
+    let measured = { miles: 0, fromLabel: "", source: "none" as string };
+    if (jobSiteAddress && area.found) {
+      const geocoded = await geocodeAddress(repo, jobSiteAddress);
+      if (geocoded) {
+        lat = geocoded.lat;
+        lng = geocoded.lng;
+      }
+      measured = await measureLeg(repo, settings, "shop", { address: jobSiteAddress, lat, lng, zipMiles: area.milesFromCadillac });
     }
-    const measured = await measureLeg(repo, settings, "shop", { address: jobSiteAddress, lat, lng, zipMiles: area.milesFromCadillac });
     // Finished work is due in full now; work to schedule follows the usual deposit rule.
     const split = doneOn
       ? { now: 0, later: total, rule: `Due in full. The work was done on ${longDate(doneOn)}.` }
@@ -123,7 +127,8 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       id: randomUUID(),
       customerId: customer.id,
       customerName: customer.fullName.trim(),
-      customerEmail: customer.email,
+      // A phone-only customer has a stand-in address on the account; the job carries none, so nothing is ever sent.
+      customerEmail: realEmail(customer.email),
       customerPhone: customer.phone.trim(),
       service: input.service,
       description,
@@ -131,16 +136,16 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       billingAddress: customer.billingAddress,
       jobSiteAddress,
       differentSite,
-      jobZip: area.zip,
-      county: area.county,
-      city: area.city,
+      jobZip: area.found ? area.zip : "",
+      county: area.found ? area.county : "",
+      city: area.found ? area.city : "",
       // The owner took this job on the phone, so the address is already approved.
       areaAuto: true,
-      areaLabel: area.inTable ? area.label : "Added by the owner",
-      areaDetail: area.detail,
+      areaLabel: !jobSiteAddress ? "No address given" : area.found && area.inTable ? area.label : "Added by the owner",
+      areaDetail: area.found ? area.detail : "",
       jobLat: lat,
       jobLng: lng,
-      zipMiles: area.milesFromCadillac,
+      zipMiles: area.found ? area.milesFromCadillac : null,
       scope,
       lines: ownerPriceLines({ scope, total, travel }),
       assumptions: [],
@@ -167,7 +172,7 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       driveMinutes: driveMinutes(measured.miles, settings.driveFactor, settings.drivePadMinutes),
       reserveStartMin: null,
       reserveEndMin: null,
-      travelMiles: measured.miles,
+      travelMiles: jobSiteAddress && area.found ? measured.miles : null,
       travelFrom: measured.fromLabel,
       travelFee: travel,
       // Locked from the start: the price is the owner's and includes travel.

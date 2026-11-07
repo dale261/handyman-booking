@@ -252,11 +252,11 @@ export default async function JobPage({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>{job.description}</p>
+              <p className="text-muted">{[job.customerName, job.customerPhone, job.customerEmail || (actor.role === "owner" ? "no email (text them their link)" : "")].filter(Boolean).join(" · ")}</p>
               <p className="text-muted">
-                {job.customerName} · {job.customerPhone} · {job.customerEmail}
-              </p>
-              <p className="text-muted">
-                {job.city} {job.jobZip} · {job.county} County · {job.areaLabel}
+                {job.jobSiteAddress
+                  ? [`${job.city} ${job.jobZip}`.trim(), job.county ? `${job.county} County` : "", job.areaLabel].filter(Boolean).join(" · ")
+                  : "No address given"}
               </p>
               {invoice && job.workDoneOn && <p>Work done on {formatDate(job.workDoneOn)}. Nothing to schedule; this job is an invoice.</p>}
               {job.scheduledDate && (
@@ -326,7 +326,7 @@ export default async function JobPage({
                     {paidNoTime && <p className="text-sm text-muted">This job is paid, so picking a time books it outright; no hold, nothing more due now.</p>}
                     {actor.role === "owner" && !paidNoTime && (
                       <p className="text-sm text-muted">
-                        Holding a time emails the customer their link to pay. These times are what the crew can make with their hours, the drive, and the jobs already booked.
+                        {job.customerEmail.trim() ? "Holding a time emails the customer their link to pay." : "No email on file: after you hold a time, text them the link from the Contract and invoice page."} These times are what the crew can make with their hours, the drive, and the jobs already booked.
                       </p>
                     )}
                     {actor.role === "owner" && !paidNoTime && (

@@ -10,6 +10,7 @@ import { jobForLink, sendAgreement, signAgreement } from "@/lib/services/agreeme
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
+import { phoneDigits } from "@/lib/domain/contact";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
@@ -695,7 +696,9 @@ export async function createOwnerJobAction(form: FormData) {
   const service = field(form, "service") as ServiceId;
   if (!(service in SERVICE_LABELS)) newJobBack("Pick a service.");
   const billingZip = field(form, "billingZip");
-  if (!/^\d{5}$/.test(billingZip)) newJobBack("The billing ZIP must be 5 digits.");
+  if (billingZip && !/^\d{5}$/.test(billingZip)) newJobBack("The billing ZIP must be 5 digits, or blank.");
+  if (!field(form, "fullName")) newJobBack("Enter the customer's name.");
+  if (phoneDigits(field(form, "phone")).length < 7) newJobBack("Enter the customer's phone number.");
   const password = String(form.get("password") ?? "");
   if (password && password.length < 8) newJobBack("A temporary password needs at least 8 characters.");
   // Cheap checks first, so a typo doesn't leave behind a customer account with no job.
@@ -715,8 +718,12 @@ export async function createOwnerJobAction(form: FormData) {
     if (!checked.ok) newJobBack(checked.error);
     doneOn = checked.date;
   }
-  const siteText = field(form, "jobSiteAddress") || billingZip;
-  if (!areaCheck(siteText, await repo.listZips()).found) newJobBack("Add a 5-digit ZIP to the job site address.");
+  // Finished work can be invoiced with no address at all; work to schedule needs one with a ZIP.
+  const siteText = field(form, "jobSiteAddress") || field(form, "billingAddress") || billingZip;
+  if (!alreadyDone) {
+    if (!siteText) newJobBack("Add the job site address (or the billing address). The crew needs somewhere to go; only finished work can skip it.");
+    if (!areaCheck(field(form, "jobSiteAddress") || billingZip || siteText, await repo.listZips()).found) newJobBack("Add a 5-digit ZIP to the job site address.");
+  }
 
   const account = await ensureCustomerAccount(repo, {
     fullName: field(form, "fullName"),
@@ -745,20 +752,24 @@ export async function createOwnerJobAction(form: FormData) {
   const job = created.data;
 
   const notes = [doneOn ? `Invoice #${job.invoiceNumber} created for work done ${formatDate(doneOn)}.` : `Job added${job.invoiceNumber ? `, invoice #${job.invoiceNumber}` : ""}.`];
+  const noEmail = !job.customerEmail;
   if (account.created) {
     notes.push(
-      password
-        ? `Customer account created for ${account.user.email} with the temporary password you set.`
-        : `Customer account created for ${account.user.email}. No password was set; the contract link works without one.`,
+      noEmail
+        ? `Customer account created for ${job.customerName} (phone only, no email).`
+        : password
+          ? `Customer account created for ${account.user.email} with the temporary password you set.`
+          : `Customer account created for ${account.user.email}. No password was set; the contract link works without one.`,
     );
   }
+  if (noEmail) notes.push("No email on file, so nothing is sent automatically: copy the link and text it to them.");
   const settings = await repo.getSettings();
   if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
     notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part.`);
   }
   if (doneOn) {
     // Nothing to schedule: straight to the invoice, where the owner emails it or copies the link.
-    notes.push("Email it to the customer below, or share the link. Cash or a check gets marked paid on the job page.");
+    notes.push(noEmail ? "Copy the link below and text it to them. Cash or a check gets marked paid on the job page." : "Email it to the customer below, or share the link. Cash or a check gets marked paid on the job page.");
     await settle(repo);
     redirect(`/jobs/${job.id}/contract?notice=${encodeURIComponent(notes.join(" "))}`);
   }

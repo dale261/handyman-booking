@@ -885,7 +885,7 @@ export async function holdSlot(
           `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. ${howToPay}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
-        if (fresh.ownerPriced && !fresh.docSentAt) {
+        if (fresh.ownerPriced && !fresh.docSentAt && fresh.customerEmail.trim()) {
           // That email carried the contract link, so the contract page can say when it went out.
           fresh.docSentAt = new Date().toISOString();
           await repo.saveJob(fresh, { skipOverlap: true });

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
+import { realEmail } from "@/lib/domain/contact";
 import { SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
 import { todayDetroit } from "@/lib/format";
 import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
@@ -60,16 +61,17 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="phone" type="tel" required autoComplete="off" defaultValue={picked?.phone ?? ""} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
-              Email
-              <Input name="email" type="email" required autoComplete="off" placeholder="Where the agreement and receipts go" defaultValue={picked?.email ?? ""} />
+              Email (optional)
+              <Input name="email" type="email" autoComplete="off" placeholder="Where the agreement and receipts go" defaultValue={realEmail(picked?.email)} />
+              <span className="font-normal text-muted">Leave it blank for a phone-only customer: nothing is emailed, and you text them their link instead.</span>
             </label>
             <label className={fieldClass}>
-              Billing address
-              <Input name="billingAddress" required autoComplete="off" placeholder="Street, city, state" defaultValue={picked?.billingAddress ?? ""} />
+              Billing address (optional for finished work)
+              <Input name="billingAddress" autoComplete="off" placeholder="Street, city, state" defaultValue={picked?.billingAddress ?? ""} />
             </label>
             <label className={fieldClass}>
               Billing ZIP
-              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} required autoComplete="off" defaultValue={picked?.billingZip ?? ""} />
+              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} autoComplete="off" defaultValue={picked?.billingZip ?? ""} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Temporary password for their sign-in (optional)
@@ -120,6 +122,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             <label className={`${fieldClass} sm:col-span-2`}>
               Job site address (leave blank if it&apos;s the billing address)
               <Input name="jobSiteAddress" autoComplete="off" placeholder="Street, city, state, ZIP" />
+              <span className="font-normal text-muted">Work to schedule needs an address with a ZIP so the crew can get there. Finished work can go without one.</span>
             </label>
             <label className={fieldClass}>
               Hours on site each day

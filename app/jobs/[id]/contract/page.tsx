@@ -71,13 +71,17 @@ function OwnerDocTools({ job, settings }: { job: JobRecord; settings: Settings }
           {job.docSentAt ? ` Last emailed ${new Date(job.docSentAt).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}.` : " Not emailed yet."}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <form action={sendAgreementAction}>
-            <input type="hidden" name="jobId" value={job.id} />
-            <SubmitButton pendingLabel="Sending…">{job.docSentAt ? `Email it again to ${job.customerEmail}` : `Email it to ${job.customerEmail}`}</SubmitButton>
-          </form>
-          {!sendable && <span className="text-muted">{job.customerEmail.trim() ? "The price isn't firm yet, so it can't be sent." : "This customer has no email on file."}</span>}
+          {job.customerEmail.trim() ? (
+            <form action={sendAgreementAction}>
+              <input type="hidden" name="jobId" value={job.id} />
+              <SubmitButton pendingLabel="Sending…">{job.docSentAt ? `Email it again to ${job.customerEmail}` : `Email it to ${job.customerEmail}`}</SubmitButton>
+            </form>
+          ) : (
+            <span className="font-semibold">No email on file for {job.customerName}: copy the link below and text it to {job.customerPhone || "them"}.</span>
+          )}
+          {!sendable && job.customerEmail.trim() && <span className="text-muted">The price isn&apos;t firm yet, so it can&apos;t be sent.</span>}
         </div>
-        <CopyField label="Or share the link by text or in person" value={contractUrl(job)} />
+        <CopyField label={job.customerEmail.trim() ? "Or share the link by text or in person" : "Their link (text it or read it out)"} value={contractUrl(job)} />
         {missing && (
           <p className="text-muted">
             Tip: add your business phone, email, license number, and workmanship promise under{" "}
