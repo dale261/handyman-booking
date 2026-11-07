@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser } from "@/lib/db/types";
-import { ensureCustomerAccount } from "@/lib/accounts";
+import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { invoiceOnly, invoiceSummary, invoiceTerms, longDate } from "@/lib/domain/agreement";
 import { isPlaceholderEmail, realEmail } from "@/lib/domain/contact";
 import { addDays, todayDetroit } from "@/lib/format";
@@ -487,5 +487,59 @@ describe("phone-only customers", () => {
     const held = await holdSlot(store, owner, withZip.data.id, "earliest", { holdHours: 24 });
     expect(held.ok).toBe(true);
     expect((await store.listEmails()).some((email) => email.jobId === withZip.data.id && (email.to.trim() === "" || isPlaceholderEmail(email.to)))).toBe(false);
+  });
+});
+
+describe("fixing a customer's contact details", () => {
+  it("moves a corrected email onto the account and all their jobs, then the resend goes to the new address", async () => {
+    const store = repo();
+    const owner = actorFromUser(await user(store, DEMO_USERS.owner));
+    const account = await ensureCustomerAccount(store, { fullName: "Tina Typo", email: "tina@gnail.com", phone: "231-555-0123", billingAddress: "5 Elm St, Cadillac MI", billingZip: "49601", password: "" });
+    expect(account.ok).toBe(true);
+    if (!account.ok) return;
+    const base = { customer: account.user, service: "other" as const, scope: "Fix the porch rail", description: "", jobSiteAddress: "", hoursOnSite: 2, days: 1, crewSize: 1, total: 950, travel: 0 };
+    const first = await createOwnerJob(store, owner, { ...base, doneOn: todayDetroit() });
+    const second = await createOwnerJob(store, owner, { ...base, scope: "Paint the porch" });
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect((await sendAgreement(store, owner, first.data.id)).ok).toBe(true);
+
+    // Another customer already has the address the owner wants to use.
+    const other = await user(store, DEMO_USERS.customer);
+    const clash = await updateCustomerContact(store, owner, first.data.id, { fullName: "Tina Typo", email: other.email, phone: "231-555-0123", billingAddress: "", billingZip: "" });
+    expect(clash.ok).toBe(false);
+    // Customers can't do this themselves.
+    const asCustomer = await updateCustomerContact(store, actorFromUser(account.user), first.data.id, { fullName: "Tina Typo", email: "tina@gmail.com", phone: "231-555-0123", billingAddress: "", billingZip: "" });
+    expect(asCustomer.ok).toBe(false);
+
+    const fixed = await updateCustomerContact(store, owner, first.data.id, { fullName: "Tina Right", email: "Tina@gmail.com", phone: "(231) 555-0123", billingAddress: "5 Elm St, Cadillac, MI", billingZip: "49601" });
+    expect(fixed.ok).toBe(true);
+    if (!fixed.ok) return;
+    expect(fixed.emailChanged).toBe(true);
+    expect(fixed.jobsUpdated).toBe(2);
+    expect(fixed.user.email).toBe("tina@gmail.com");
+    expect((await store.getUserByEmail("tina@gmail.com"))?.id).toBe(account.user.id);
+    expect(await store.getUserByEmail("tina@gnail.com")).toBeNull();
+    const one = await store.getJob(first.data.id);
+    const two = await store.getJob(second.data.id);
+    expect(one?.customerEmail).toBe("tina@gmail.com");
+    expect(two?.customerEmail).toBe("tina@gmail.com");
+    expect(one?.customerName).toBe("Tina Right");
+    // The work itself is untouched.
+    expect(one?.total).toBe(950);
+    expect(two?.jobSiteAddress).toBe("5 Elm St, Cadillac MI");
+
+    expect((await sendAgreement(store, owner, first.data.id)).ok).toBe(true);
+    const emails = await store.listEmails();
+    expect(emails.filter((email) => email.to === "tina@gnail.com").length).toBe(1);
+    expect(emails.filter((email) => email.to === "tina@gmail.com").length).toBe(1);
+
+    // Blank email means "none": nothing more is sent, the account keeps its address for sign-in.
+    const blanked = await updateCustomerContact(store, owner, first.data.id, { fullName: "Tina Right", email: "", phone: "231-555-0123", billingAddress: "", billingZip: "" });
+    expect(blanked.ok).toBe(true);
+    if (!blanked.ok) return;
+    expect(blanked.user.email).toBe("tina@gmail.com");
+    expect((await store.getJob(first.data.id))?.customerEmail).toBe("");
+    expect((await sendAgreement(store, owner, first.data.id)).ok).toBe(false);
   });
 });

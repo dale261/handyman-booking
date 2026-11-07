@@ -25,6 +25,7 @@ import {
   resumeProblemAction,
   reviewAction,
   revisePriceAction,
+  fixContactAction,
   startPayPalAction,
   startWorkAction,
   voidInvoiceAction,
@@ -63,12 +64,13 @@ export default async function JobPage({
   const job = await repo.getJob(id);
   if (!job || !(await visibleTo(repo, actor, job))) notFound();
 
-  const [payments, crews, workers, review, settings] = await Promise.all([
+  const [payments, crews, workers, review, settings, customerAccount] = await Promise.all([
     repo.listPayments(job.id),
     repo.listCrews(),
     repo.listWorkers(),
     repo.getReview(job.id),
     repo.getSettings(),
+    actor.role === "owner" ? repo.getUser(job.customerId) : Promise.resolve(null),
   ]);
   const paid = amountPaid(payments, job.id);
   const hidePrice = actor.role === "customer" && (job.status === "scope_review" || job.status === "referred");
@@ -629,7 +631,9 @@ export default async function JobPage({
             </Card>
           )}
 
-          {actor.role === "owner" && <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} canVoid={canVoid} />}
+          {actor.role === "owner" && (
+            <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} canVoid={canVoid} billingZip={customerAccount?.billingZip ?? ""} />
+          )}
         </div>
       </div>
     </div>
@@ -672,7 +676,21 @@ function PaymentRow({ payment, jobId, owner }: { payment: PaymentRecord; jobId: 
   );
 }
 
-function OwnerTools({ job, crews, canDiscount, canEdit, canVoid }: { job: JobRecord; crews: { id: string; name: string }[]; canDiscount: boolean; canEdit: boolean; canVoid: boolean }) {
+function OwnerTools({
+  job,
+  crews,
+  canDiscount,
+  canEdit,
+  canVoid,
+  billingZip,
+}: {
+  job: JobRecord;
+  crews: { id: string; name: string }[];
+  canDiscount: boolean;
+  canEdit: boolean;
+  canVoid: boolean;
+  billingZip: string;
+}) {
   const invoice = invoiceOnly(job);
   return (
     <Card>
@@ -751,6 +769,41 @@ function OwnerTools({ job, crews, canDiscount, canEdit, canVoid }: { job: JobRec
             <p className="text-muted">{invoice ? "Only while nothing has been paid. If you already emailed the invoice, email it again afterwards." : "Only while nothing has been paid. If the customer already signed, email them the contract again."}</p>
           </form>
         )}
+        <form action={fixContactAction} className="space-y-2 border-b border-line pb-4">
+          <input type="hidden" name="jobId" value={job.id} />
+          <p className="font-semibold">Fix contact details</p>
+          <p className="text-muted">
+            For a mistyped email (bounced mail), a new phone number, or a changed billing address. Saves to their account and all their jobs; the job site address
+            stays as it is.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="grid gap-1 font-semibold">
+              Name
+              <Input name="fullName" defaultValue={job.customerName} className="font-normal" required />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Phone
+              <Input name="phone" defaultValue={job.customerPhone} className="font-normal" required />
+            </label>
+            <label className="grid gap-1 font-semibold sm:col-span-2">
+              Email (blank = none; you text them the link)
+              <Input name="email" type="email" defaultValue={job.customerEmail} className="font-normal" />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Billing address
+              <Input name="billingAddress" defaultValue={job.billingAddress} className="font-normal" />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Billing ZIP
+              <Input name="billingZip" inputMode="numeric" maxLength={5} defaultValue={billingZip} className="font-normal" />
+            </label>
+          </div>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="resend" defaultChecked={Boolean(job.docSentAt)} />
+            Email them the {invoice ? "invoice" : "agreement and invoice"} again after saving
+          </label>
+          <SubmitButton size="sm" variant="outline">Save contact details</SubmitButton>
+        </form>
         {canVoid && (
           <form action={voidInvoiceAction} className="space-y-2 border-b border-line pb-4">
             <input type="hidden" name="jobId" value={job.id} />

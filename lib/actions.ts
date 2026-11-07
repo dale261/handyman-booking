@@ -3,14 +3,14 @@
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ensureCustomerAccount } from "@/lib/accounts";
+import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, signAgreement } from "@/lib/services/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
-import { phoneDigits } from "@/lib/domain/contact";
+import { phoneDigits, realEmail } from "@/lib/domain/contact";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
@@ -1002,6 +1002,35 @@ export async function editOwnerJobAction(form: FormData) {
       doneOn: field(form, "doneOn") || null,
     }),
   );
+}
+
+/** Owner: correct a customer's name, phone, email or billing address, on the account and all their jobs; optionally resend the document. */
+export async function fixContactAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const resend = form.get("resend") === "on";
+  const actor = await requireActor();
+  const repo = getRepository();
+  const result = await updateCustomerContact(repo, actor, jobId, {
+    fullName: field(form, "fullName"),
+    email: field(form, "email"),
+    phone: field(form, "phone"),
+    billingAddress: field(form, "billingAddress"),
+    billingZip: field(form, "billingZip"),
+  });
+  if (!result.ok) {
+    await settle(repo);
+    jobBack(jobId, "error", result.error);
+  }
+  const notes = [`Contact details saved${result.jobsUpdated > 1 ? ` on all ${result.jobsUpdated} of their jobs` : ""}.`];
+  const email = realEmail(result.user.email);
+  if (resend && email) {
+    const sent = await sendAgreement(repo, actor, jobId);
+    notes.push(sent.ok ? `Sent again to ${email}.` : `Not resent: ${sent.error}`);
+  } else if (resend) {
+    notes.push("No email on file, so nothing was sent; text them the link from the contract page.");
+  }
+  await settle(repo);
+  jobBack(jobId, "notice", notes.join(" "));
 }
 
 /** Owner: cancel an invoice for finished work that was written up by mistake (nothing paid). */
