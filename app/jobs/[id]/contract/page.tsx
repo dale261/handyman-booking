@@ -81,7 +81,11 @@ function OwnerDocTools({ job, settings }: { job: JobRecord; settings: Settings }
           )}
           {!sendable && job.customerEmail.trim() && <span className="text-muted">The price isn&apos;t firm yet, so it can&apos;t be sent.</span>}
         </div>
-        <CopyField label={job.customerEmail.trim() ? "Or share the link by text or in person" : "Their link (text it or read it out)"} value={contractUrl(job)} />
+        <CopyField
+          label={job.customerEmail.trim() ? "Or share the link by text or in person" : "Their link (text it or read it out)"} value={contractUrl(job)}
+          phone={job.customerPhone}
+          textBody={`${settings.businessName}: your ${invoice ? "invoice" : "agreement and invoice"}${job.invoiceNumber ? ` #${job.invoiceNumber}` : ""} for ${job.scope || "your job"}.`}
+        />
         {missing && (
           <p className="text-muted">
             Tip: add your business phone, email, license number, and workmanship promise under{" "}
