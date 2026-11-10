@@ -39,7 +39,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
           ) : (
             <div className="space-y-3 text-sm">
               <Flash error={query.error} />
-              <p>This reset link has expired, was already used, or was opened somewhere else. Ask for a fresh one and open it in the same browser.</p>
+              <p>This reset link has expired or was already used. Ask for a fresh one; only the newest email works.</p>
               <Link className="font-semibold text-pine underline" href="/forgot">
                 Send me a new link
               </Link>

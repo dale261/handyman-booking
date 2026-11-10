@@ -15,7 +15,13 @@ export async function flushEmails(repo: Repository): Promise<void> {
   }
 }
 
-async function sendResend(email: EmailRecord): Promise<boolean> {
+/** Send one email right away without putting it in the queue (password reset links must not be stored). */
+export async function sendEmailNow(email: { to: string; subject: string; body: string }): Promise<boolean> {
+  if (!resendConfigured()) return false;
+  return sendResend(email);
+}
+
+async function sendResend(email: Pick<EmailRecord, "to" | "subject" | "body">): Promise<boolean> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

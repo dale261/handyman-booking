@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
     console.error("[auth] code exchange failed", error.message);
     return back("That link has expired or was opened in a different browser than the one you asked from. Ask for a new one and open it in the same browser.");
   }
-  if (tokenHash && (type === "recovery" || type === "email" || type === "signup" || type === "magiclink" || type === "invite")) {
+  // A reset link waits for a tap on its own page, so a mail scanner opening the link can't use it up.
+  if (tokenHash && type === "recovery") {
+    return NextResponse.redirect(new URL(`/reset/open?token_hash=${encodeURIComponent(tokenHash)}`, url.origin));
+  }
+  if (tokenHash && (type === "email" || type === "signup" || type === "magiclink" || type === "invite")) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) return NextResponse.redirect(new URL(await landing(), url.origin));
     console.error("[auth] token verify failed", error.message);

@@ -28,6 +28,7 @@ import { DEFAULT_PARAMS, SERVICE_LABELS } from "@/lib/domain/types";
 import { flushEmails, resendConfigured } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
+import { sendResetEmail } from "@/lib/reset-email";
 import { createPayPalOrder, paypalConfigured } from "@/lib/paypal";
 import { appUrl, formatDate, formatDateRange, formatMinutes, todayDetroit } from "@/lib/format";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
@@ -908,6 +909,10 @@ export async function requestPasswordResetAction(form: FormData) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect("/forgot?error=" + encodeURIComponent("Enter the email you signed up with."));
   const repo = getRepository();
   if (supabaseConfigured()) {
+    // Our own email first: its link opens in any browser. Supabase's mailer is the fallback.
+    if (resendConfigured() && (await sendResetEmail(email)) !== "failed") {
+      redirect("/forgot?notice=" + encodeURIComponent(RESET_SENT));
+    }
     const supabase = await createSupabaseServer();
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${appUrl()}/auth/confirm?next=/reset` });
     if (error) {
@@ -938,6 +943,23 @@ export async function requestPasswordResetAction(form: FormData) {
     await settle(repo);
   }
   redirect("/forgot?notice=" + encodeURIComponent(RESET_SENT));
+}
+
+/** The button on /reset/open: swap the emailed one-time token for a session, then on to the new-password page. */
+export async function openResetLinkAction(form: FormData) {
+  const expired = "/forgot?error=" + encodeURIComponent("That link has expired or was already used. Only the newest email works. Ask for a new one below.");
+  const tokenHash = field(form, "tokenHash");
+  if (!tokenHash || !supabaseConfigured()) redirect(expired);
+  if (!(await allowRequest(ANON_LIMIT))) {
+    redirect("/forgot?error=" + encodeURIComponent("Too many attempts from this network. Wait a few minutes and try again."));
+  }
+  const supabase = await createSupabaseServer();
+  const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash });
+  if (error) {
+    console.error("[auth] reset token verify failed", error.message);
+    redirect(expired);
+  }
+  redirect("/reset");
 }
 
 /** Save the new password. On the live site this needs the recovery session the emailed link created. */
