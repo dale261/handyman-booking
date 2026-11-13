@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createOwnerJobAction } from "@/lib/actions";
 import { CustomerPicker } from "@/components/customer-picker";
 import { Flash } from "@/components/flash";
+import { PasteFill } from "@/components/paste-fill";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "helper"];
 
 /** Phone and walk-in jobs: type the customer, the work, and your price once. */
-export default async function NewOwnerJobPage({ searchParams }: { searchParams: Promise<{ error?: string; customer?: string }> }) {
+export default async function NewOwnerJobPage({ searchParams }: { searchParams: Promise<{ error?: string; customer?: string; lead?: string }> }) {
   await requireRole("owner");
   const query = await searchParams;
   const repo = getRepository();
@@ -27,6 +28,16 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
     .map((user) => ({ id: user.id, label: `${user.fullName || user.email}${user.phone ? ` · ${user.phone}` : ""}` }));
   const picked = query.customer ? users.find((user) => user.id === query.customer && user.role === "customer") : undefined;
+  // Coming from Leads: the request they typed on the price page fills the form.
+  const found = !picked && query.lead && /^[0-9a-f-]{36}$/i.test(query.lead) ? await repo.getLead(query.lead) : null;
+  const lead = found && !found.jobId ? found : null;
+  const start = {
+    fullName: picked?.fullName ?? lead?.fullName ?? "",
+    phone: picked?.phone ?? lead?.phone ?? "",
+    email: picked ? realEmail(picked.email) : (lead?.email ?? ""),
+    billingAddress: picked?.billingAddress ?? lead?.address ?? "",
+    billingZip: picked?.billingZip ?? lead?.zip ?? "",
+  };
   const fieldClass = "grid gap-1 text-sm font-semibold";
   const selectClass = "h-10 rounded-md border border-line bg-card px-3 text-sm font-normal";
   const today = todayDetroit();
@@ -46,7 +57,18 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
       </div>
       <Flash error={query.error} />
       <form action={createOwnerJobAction} className="space-y-6">
-        <Card key={picked?.id ?? "new"}>
+        {lead ? (
+          <>
+            <input type="hidden" name="leadId" value={lead.id} />
+            <p className="rounded-md border border-line bg-card p-4 text-sm">
+              Filled in from {lead.fullName}&apos;s request on the price page. Check it, then add the title and your price.
+              {lead.total != null ? ` They saw $${lead.total.toLocaleString("en-US")} on the site.` : ""}
+            </p>
+          </>
+        ) : (
+          !picked && <PasteFill />
+        )}
+        <Card key={picked?.id ?? lead?.id ?? "new"}>
           <CardHeader>
             <CardTitle>Customer</CardTitle>
           </CardHeader>
@@ -54,24 +76,24 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             {customers.length > 0 && <CustomerPicker customers={customers} selected={picked?.id ?? ""} />}
             <label className={fieldClass}>
               Full name
-              <Input name="fullName" required autoComplete="off" defaultValue={picked?.fullName ?? ""} />
+              <Input name="fullName" required autoComplete="off" defaultValue={start.fullName} />
             </label>
             <label className={fieldClass}>
               Phone
-              <Input name="phone" type="tel" required autoComplete="off" defaultValue={picked?.phone ?? ""} />
+              <Input name="phone" type="tel" required autoComplete="off" defaultValue={start.phone} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Email (optional)
-              <Input name="email" type="email" autoComplete="off" placeholder="Where the agreement and receipts go" defaultValue={realEmail(picked?.email)} />
+              <Input name="email" type="email" autoComplete="off" placeholder="Where the agreement and receipts go" defaultValue={start.email} />
               <span className="font-normal text-muted">Leave it blank for a phone-only customer: nothing is emailed, and you text them their link instead.</span>
             </label>
             <label className={fieldClass}>
               Billing address (optional for finished work)
-              <Input name="billingAddress" autoComplete="off" placeholder="Street, city, state" defaultValue={picked?.billingAddress ?? ""} />
+              <Input name="billingAddress" autoComplete="off" placeholder="Street, city, state" defaultValue={start.billingAddress} />
             </label>
             <label className={fieldClass}>
               Billing ZIP
-              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} autoComplete="off" defaultValue={picked?.billingZip ?? ""} />
+              <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} autoComplete="off" defaultValue={start.billingZip} />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Temporary password for their sign-in (optional)
@@ -103,7 +125,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             </label>
             <label className={fieldClass}>
               Service
-              <select name="service" defaultValue="other" className={selectClass}>
+              <select name="service" defaultValue={lead?.service ?? "other"} className={selectClass}>
                 {SERVICE_ORDER.map((id) => (
                   <option key={id} value={id}>
                     {SERVICE_LABELS[id]}
@@ -117,7 +139,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Details
-              <Textarea name="description" placeholder="What you agreed to do, what they supply, anything you noticed. This prints on the agreement." />
+              <Textarea name="description" defaultValue={lead?.description ?? ""} placeholder="What you agreed to do, what they supply, anything you noticed. This prints on the agreement." />
             </label>
             <label className={`${fieldClass} sm:col-span-2`}>
               Job site address (leave blank if it&apos;s the billing address)

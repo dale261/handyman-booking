@@ -682,14 +682,14 @@ export async function removeTimeOffAction(form: FormData) {
 // Owner-entered jobs (phone and in-person) and the contract and invoice page
 // ---------------------------------------------------------------------------
 
-function newJobBack(message: string): never {
-  redirect("/owner/jobs/new?error=" + encodeURIComponent(message));
-}
-
 /** The owner types a phone or in-person job once: customer, work, firm price, and (optionally) the time. */
 export async function createOwnerJobAction(form: FormData) {
   const actor = await requireRole("owner");
   const repo = getRepository();
+  // Started from a lead: keep its details on the form if a check below sends the owner back.
+  const leadId = field(form, "leadId");
+  const newJobBack: (message: string) => never = (message) =>
+    redirect(`/owner/jobs/new?${leadId ? `lead=${encodeURIComponent(leadId)}&` : ""}error=${encodeURIComponent(message)}`);
   const total = Number(field(form, "total").replace(/[$,]/g, ""));
   if (!Number.isFinite(total) || total <= 0) newJobBack("Enter the price as a dollar amount.");
   const travel = Number(field(form, "travel").replace(/[$,]/g, "") || "0");
@@ -751,6 +751,10 @@ export async function createOwnerJobAction(form: FormData) {
   });
   if (!created.ok) newJobBack(created.error);
   const job = created.data;
+  if (leadId) {
+    const lead = await repo.getLead(leadId);
+    if (lead && !lead.jobId) await repo.saveLead({ ...lead, jobId: job.id, updatedAt: new Date().toISOString() });
+  }
 
   const notes = [doneOn ? `Invoice #${job.invoiceNumber} created for work done ${formatDate(doneOn)}.` : `Job added${job.invoiceNumber ? `, invoice #${job.invoiceNumber}` : ""}.`];
   const noEmail = !job.customerEmail;

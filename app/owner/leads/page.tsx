@@ -24,7 +24,7 @@ export default async function LeadsPage() {
         </p>
       </div>
       {leads.length === 0 ? (
-        <p className="text-sm text-muted">No leads yet. They show up here as soon as someone checks a price on the public page.</p>
+        <p className="text-sm text-muted">No leads yet. They show up here as soon as someone checks a price on the public page. A request sent from the contact form on the main website comes to you by email instead: paste it into Add a job.</p>
       ) : (
         <div className="grid gap-3">
           {leads.map((lead) => (
@@ -55,6 +55,13 @@ export default async function LeadsPage() {
                   {SERVICE_LABELS[lead.service]} · {lead.address || `ZIP ${lead.zip}`} · {lead.review ? "Needed your look before a price" : `Saw ${usd(lead.total ?? 0)}`}
                 </p>
                 <p className="text-muted">&ldquo;{lead.description}&rdquo;</p>
+                {!lead.jobId && (
+                  <p>
+                    <Link className="inline-flex h-10 items-center rounded-md border border-pine px-4 font-semibold text-pine" href={`/owner/jobs/new?lead=${lead.id}`}>
+                      Add a job for {lead.fullName.split(" ")[0] || "them"}
+                    </Link>
+                  </p>
+                )}
                 <p className="text-muted">
                   First check {when(lead.createdAt)}
                   {lead.updatedAt !== lead.createdAt ? ` · last check ${when(lead.updatedAt)}` : ""}
