@@ -27,7 +27,7 @@ export function Shell({
             </span>
           </Link>
           <nav className="flex flex-wrap items-center gap-1 text-sm">
-            <Nav href="/book">Get a quote</Nav>
+            <Nav href="/book">See your price</Nav>
             {actor?.role === "customer" && <Nav href="/jobs">My jobs</Nav>}
             {actor?.role === "worker" && <Nav href="/worker">My crew</Nav>}
             {actor?.role === "owner" && (
@@ -51,10 +51,7 @@ export function Shell({
                 </form>
               </>
             ) : (
-              <>
-                <Nav href="/login">Sign in</Nav>
-                <Nav href="/signup">Create account</Nav>
-              </>
+              <Nav href="/login">Sign in</Nav>
             )}
           </nav>
         </div>
@@ -72,7 +69,10 @@ export function Shell({
       )}
       <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">{children}</main>
       <footer className="border-t border-line py-8 text-center text-sm text-muted print:hidden">
-        eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work around Cadillac
+        eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work around Cadillac ·{" "}
+        <a className="underline" href="https://exconstructionlc.com">
+          exconstructionlc.com
+        </a>
       </footer>
     </div>
   );

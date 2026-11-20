@@ -23,9 +23,6 @@ export default async function HomePage() {
             <Link href="/book" className="inline-flex h-12 items-center rounded-md bg-pine px-6 font-semibold text-white">
               See your price
             </Link>
-            <Link href="/signup" className="inline-flex h-12 items-center rounded-md border border-line bg-card px-6 font-semibold">
-              Create an account
-            </Link>
           </div>
         </div>
         <Card>
@@ -64,11 +61,9 @@ export default async function HomePage() {
         </Card>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-2xl font-semibold">Recent reviews</h2>
-        {published.length === 0 ? (
-          <p className="text-sm text-muted">No reviews yet. After a job is paid, you can leave one.</p>
-        ) : (
+      {published.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-display text-2xl font-semibold">Recent reviews</h2>
           <div className="grid gap-3 md:grid-cols-2">
             {published.slice(0, 4).map((review) => (
               <Card key={review.jobId}>
@@ -80,8 +75,8 @@ export default async function HomePage() {
               </Card>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

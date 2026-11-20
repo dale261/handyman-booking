@@ -72,6 +72,7 @@ export function BookForm({
   helperMaxHours: number;
 }) {
   const [service, setService] = useState<ServiceId>("tv");
+  const [picked, setPicked] = useState(false);
   const [params, setParams] = useState<QuoteParams>(DEFAULT_PARAMS);
   const [description, setDescription] = useState("");
   const [differentSite, setDifferentSite] = useState(false);
@@ -88,7 +89,8 @@ export function BookForm({
   }
 
   function chooseService(id: ServiceId) {
-    if (id === service) return;
+    if (picked && id === service) return;
+    setPicked(true);
     setService(id);
     setDescription("");
     setError("");
@@ -150,7 +152,7 @@ export function BookForm({
               type="button"
               onClick={() => chooseService(id)}
               className={
-                service === id
+                picked && service === id
                   ? "rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-white"
                   : "rounded-full border border-line bg-card px-3 py-1.5 text-sm font-semibold"
               }
@@ -161,7 +163,8 @@ export function BookForm({
         </div>
       </fieldset>
 
-      <ServiceFields service={service} params={params} patch={patch} helperMax={helperMax} helperMaxHours={helperMaxHours} />
+      {!picked && <p className="text-sm text-muted">Pick a job above and we&apos;ll ask a few quick questions about it.</p>}
+      {picked && <ServiceFields service={service} params={params} patch={patch} helperMax={helperMax} helperMaxHours={helperMaxHours} />}
 
       <Field label="Describe the job">
         <Textarea
@@ -209,11 +212,11 @@ export function BookForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex items-center gap-3">
             <Switch checked={urgent} onCheckedChange={setUrgent} id="urgent" />
-            <Label htmlFor="urgent">Need it soon</Label>
+            <Label htmlFor="urgent">Need it soon (adds a rush charge, shown in your price)</Label>
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={pickup} onCheckedChange={setPickup} id="pickup" />
-            <Label htmlFor="pickup">Pick up materials for me</Label>
+            <Label htmlFor="pickup">Pick up materials for me (adds a pickup charge, shown in your price)</Label>
           </div>
         </div>
       )}
@@ -250,7 +253,7 @@ export function BookForm({
       )}
 
       {error && <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</p>}
-      <Button type="submit" size="lg" disabled={pending}>
+      <Button type="submit" size="lg" disabled={pending || !picked}>
         {pending ? "Working on your quote…" : "Get my quote"}
       </Button>
     </form>

@@ -47,6 +47,7 @@ export function PublicQuote({
   initialError?: string;
 }) {
   const [service, setService] = useState<ServiceId>("tv");
+  const [picked, setPicked] = useState(false);
   const [params, setParams] = useState<QuoteParams>(DEFAULT_PARAMS);
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -82,7 +83,8 @@ export function PublicQuote({
   }
 
   function chooseService(id: ServiceId) {
-    if (id === service) return;
+    if (picked && id === service) return;
+    setPicked(true);
     setService(id);
     setDescription("");
     setEstimate(null);
@@ -108,7 +110,7 @@ export function PublicQuote({
         }}
       >
         <fieldset className="grid gap-3">
-          <legend className="font-display text-xl font-semibold">What do you need done?</legend>
+          <legend className="font-display text-xl font-semibold">1. What do you need done?</legend>
           <div className="flex flex-wrap gap-2">
             {SERVICES.map((id) => (
               <button
@@ -116,7 +118,7 @@ export function PublicQuote({
                 type="button"
                 onClick={() => chooseService(id)}
                 className={
-                  service === id
+                  picked && service === id
                     ? "rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-white"
                     : "rounded-full border border-line bg-card px-3 py-1.5 text-sm font-semibold"
                 }
@@ -127,7 +129,9 @@ export function PublicQuote({
           </div>
         </fieldset>
 
-        {service === "other" ? (
+        {!picked ? (
+          <p className="text-sm text-muted">Pick a job above and we&apos;ll ask a few quick questions about it. Then you see one firm price.</p>
+        ) : service === "other" ? (
           <Card>
             <CardContent className="space-y-3 text-sm">
               <p>
@@ -161,6 +165,7 @@ export function PublicQuote({
               />
             </Field>
 
+            <p className="font-display text-xl font-semibold">2. Where is the work?</p>
             <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
               <Field label="Street address where the work is">
                 <Input
@@ -203,7 +208,7 @@ export function PublicQuote({
                     }}
                     id="public-urgent"
                   />
-                  <Label htmlFor="public-urgent">Need it soon</Label>
+                  <Label htmlFor="public-urgent">Need it soon (adds a rush charge, shown in your price)</Label>
                 </div>
                 <div className="flex items-center gap-3">
                   <Switch
@@ -214,13 +219,13 @@ export function PublicQuote({
                     }}
                     id="public-pickup"
                   />
-                  <Label htmlFor="public-pickup">Pick up materials for me</Label>
+                  <Label htmlFor="public-pickup">Pick up materials for me (adds a pickup charge, shown in your price)</Label>
                 </div>
               </div>
             )}
 
             <div className="rounded-lg border border-line bg-card p-4">
-              <p className="text-sm font-semibold">Who&apos;s asking?</p>
+              <p className="font-display text-xl font-semibold">3. Who&apos;s asking?</p>
               <p className="mt-1 text-sm text-muted">A name and phone number, so we can follow up on this job. Email is optional. No spam, and we never share it.</p>
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <Field label="Your name">
@@ -281,7 +286,7 @@ export function PublicQuote({
         )}
       </form>
 
-      {estimate && service !== "other" && (
+      {estimate && picked && service !== "other" && (
         <Card>
           <CardHeader>
             <CardTitle>{estimate.review ? "We'll take a look first" : `Your price: ${usd(estimate.total)}`}</CardTitle>
