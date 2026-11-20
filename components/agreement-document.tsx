@@ -73,7 +73,7 @@ export function AgreementDocument({
     <article className="mx-auto max-w-3xl space-y-8 rounded-xl border border-line bg-card p-6 text-ink shadow-sm print:max-w-none print:space-y-6 print:rounded-none print:border-0 print:p-0 print:shadow-none sm:p-8">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
         <div className="flex items-start gap-3">
-          <Image src="/brand/logo-header.png" alt="" width={48} height={48} className="h-12 w-12" />
+          <Image src="/brand/logo-doc.png" alt="" width={48} height={48} className="h-12 w-12" />
           <div className="text-sm">
             <p className="font-display text-xl font-semibold">{settings.businessName}</p>
             <p>{settings.shopAddress}</p>
