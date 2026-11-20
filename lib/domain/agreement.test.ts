@@ -174,6 +174,23 @@ describe("agreement wording", () => {
     expect(text).not.toContain("Dale");
   });
 
+  it("says how job photos are used and how to opt out of posting", () => {
+    const finishing = agreementTerms(job(), DEFAULT_SETTINGS).find((section) => section.title === "Finishing the job");
+    expect(finishing?.body).toContain(
+      "We take photos of the job site and the work before, during, and after the job. We use them for quality control and may post them on our Facebook page and other marketing. We never show your street address, house number, or family members, and we never use your name without asking. If you don't want your photos posted, tell us before the job starts and we'll keep them for our records only.",
+    );
+    const text = finishing?.body.join(" ") ?? "";
+    expect(text).not.toContain("before-and-after photos");
+    expect(text).not.toContain("when you leave a review");
+  });
+
+  it("states the one-time late fee on an unpaid balance", () => {
+    const finishing = agreementTerms(job(), DEFAULT_SETTINGS).find((section) => section.title === "Finishing the job");
+    expect(finishing?.body).toContain(
+      "Payment is due when you approve the finished work. If the balance isn't paid within 15 days after that, we add a one-time $50 late fee.",
+    );
+  });
+
   it("explains half down on a bigger job and leaves optional clauses out when blank", () => {
     const terms = agreementTerms(job({ total: 2000, amountDueNow: 1000, balanceDue: 1000, travelFee: 0, lines: ownerPriceLines({ scope: "Deck boards", total: 2000, travel: 0 }) }), DEFAULT_SETTINGS);
     const text = terms.map((section) => section.body.join(" ")).join("\n");

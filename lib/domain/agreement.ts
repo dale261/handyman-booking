@@ -222,7 +222,8 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
       body: [
         "When the crew is done, we mark the job finished and you look it over. Approve it on your job page, or report a problem and we come back to make it right before you approve.",
         "Any balance is due after you approve the finished work.",
-        "We may take before-and-after photos of the work for our records. We only show them publicly if you say so when you leave a review.",
+        "Payment is due when you approve the finished work. If the balance isn't paid within 15 days after that, we add a one-time $50 late fee.",
+        "We take photos of the job site and the work before, during, and after the job. We use them for quality control and may post them on our Facebook page and other marketing. We never show your street address, house number, or family members, and we never use your name without asking. If you don't want your photos posted, tell us before the job starts and we'll keep them for our records only.",
       ],
     },
     {
