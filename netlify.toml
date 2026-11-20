@@ -1,0 +1,6 @@
+# Netlify settings for the marketing site (exconstructionlc.com).
+# The site is plain HTML in the marketing-site folder. There is no build step.
+# The booking app in the rest of this repo is deployed by Vercel, not Netlify.
+[build]
+  base = "marketing-site"
+  publish = "."

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://exconstructionlc.com/sitemap.xml

@@ -256,3 +256,7 @@ Fill in **Rates → On contracts and invoices** first: business name, phone, ema
 9. The area premium (20% in Grand Traverse, Leelanau, Emmet, and Charlevoix) applies to labor and service, including helpers. It is never applied to travel.
 
 The closest free crew is assigned automatically. A tie goes to the crew with fewer jobs that day. You can reassign. A paid job keeps its locked travel.
+
+## Marketing site (exconstructionlc.com)
+
+The public marketing site lives in the `marketing-site` folder: plain HTML, no build step. Netlify publishes that folder (settings are in `netlify.toml`). The booking app in the rest of this repo is deployed by Vercel. Change the marketing site on a branch, check the Netlify preview, then merge to `main` to publish.
