@@ -4,3 +4,4 @@
 [build]
   base = "marketing-site"
   publish = "."
+  command = "echo 'Plain HTML site, nothing to build'"
