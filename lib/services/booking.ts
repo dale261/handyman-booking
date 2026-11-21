@@ -243,6 +243,7 @@ function applyQuote(
     pickup: job.pickup,
     travelFrom: fromLabel,
     milesAreEstimate: estimate,
+    city: job.city,
   });
   const discounted = withDiscount(quote.lines, job.discount);
   const split = splitPayment(discounted.total, settings.depositThreshold);
@@ -452,6 +453,7 @@ async function buildSlots(repo: Repository, job: JobRecord, settings: Settings):
           urgent: job.urgent,
           pickup: job.pickup,
           travelFrom: info.fromLabel,
+          city: job.city,
         });
         total = withDiscount(quote.lines, job.discount).total;
         travelFeeAmount = quote.lines.find((line) => line.kind === "travel")?.amount ?? 0;

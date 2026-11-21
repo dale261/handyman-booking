@@ -79,6 +79,7 @@ export async function publicEstimate(repo: Repository, draft: QuoteDraft): Promi
       pickup: draft.pickup,
       travelFrom: "the shop",
       milesAreEstimate: estimate,
+      city: area.city,
     });
     const flag = classify(draft.service, draft.description, draft.params, licenseEstimate(quote), settings);
     const review = flag.level !== "ok";

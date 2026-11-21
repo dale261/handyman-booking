@@ -67,7 +67,7 @@ export function quoteCalc(
   r: Settings,
   county: string,
   oneWayMiles: number | null,
-  opts?: { urgent?: boolean; pickup?: boolean; travelFrom?: string; milesAreEstimate?: boolean },
+  opts?: { urgent?: boolean; pickup?: boolean; travelFrom?: string; milesAreEstimate?: boolean; city?: string },
 ): QuoteResult {
   const lines: QuoteLine[] = [];
   const assumptions: string[] = [];
@@ -214,7 +214,11 @@ export function quoteCalc(
 
   const miles = oneWayMiles == null ? null : Math.max(0, oneWayMiles);
   const from = opts?.travelFrom || "the shop";
-  if (miles == null) {
+  // Owner's rule: drain clearing in the town of Cadillac has no travel charge. Every other job and town pays travel.
+  const freeTravel = id === "drain" && (opts?.city ?? "").trim().toLowerCase() === "cadillac";
+  if (freeTravel) {
+    lines.push(line("Travel", "No travel charge for drain clearing in Cadillac", 0, "travel"));
+  } else if (miles == null) {
     lines.push(
       line(
         "Travel",
