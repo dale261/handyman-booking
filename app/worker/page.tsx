@@ -10,10 +10,11 @@ import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { formatDate, formatDateRange, formatMinutes, todayDetroit, usd } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
-import { removeCrewEntryAction } from "@/lib/actions";
+import { removeCrewEntryAction, removeMyJobHoursAction } from "@/lib/actions";
 import type { ExpenseEntry, ShopHoursEntry } from "@/lib/db/types";
 import { EXPENSE_LIMITS, totalOwed } from "@/lib/domain/expenses";
-import { addDays, entriesFor, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
+import { addDays, entriesFor, HOURS_LIMITS, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
+import { paidJobIds, pickList } from "@/lib/domain/job-pick-list";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 
 export default async function WorkerPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
@@ -45,16 +46,11 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
   // Every receipt still owed, then the ones paid back in the last two months.
   const shownReceipts = receipts.filter((entry) => !entry.reimbursedAt || entry.date >= addDays(today, -EXPENSE_LIMITS.daysBack));
   const owed = totalOwed(receipts);
-  // Jobs a receipt can be tied to: this person's jobs from the last two months, newest first, each with where and when.
-  const receiptJobs = jobs
-    .filter((job) => !job.scheduledDate || job.scheduledDate >= addDays(today, -EXPENSE_LIMITS.daysBack))
-    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
-    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
-  // Jobs hours can be logged on: the same list, limited to booked, underway and finished work in the window hours can be entered for.
-  const hoursJobs = receiptJobs.filter((item) => {
-    const job = jobs.find((other) => other.id === item.id);
-    return Boolean(job && HOURS_STATUSES.includes(job.status) && (!job.scheduledDate || job.scheduledDate >= addDays(today, -HOURS_LIMITS.daysBack - 14)));
-  });
+  // Jobs hours and receipts can go on: every job a customer has accepted, whichever crew it is
+  // scheduled for (the owner's rule). Each one carries where and when so the right job is easy to tell.
+  const pickJobs = me ? pickList(allJobs, paidJobIds(await repo.listPayments()), today) : [];
+  // Only jobs on this person's own list open as a page for them.
+  const openable = new Set(jobs.map((job) => job.id));
   const mine = me ? entriesFor(allJobs, me.id, thisWeek, addDays(thisWeek, 6), shop) : [];
   const mineLastWeek = me ? entriesFor(allJobs, me.id, lastWeek, addDays(lastWeek, 6), shop) : [];
 
@@ -78,10 +74,12 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
                   <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2">
                     <span>
                       {formatDate(entry.date)}: {hoursLabel(entry.hours)} ·{" "}
-                      {entry.jobId ? (
+                      {entry.jobId && openable.has(entry.jobId) ? (
                         <Link className="font-semibold text-pine underline" href={`/jobs/${entry.jobId}`}>
                           {entry.scope}
                         </Link>
+                      ) : entry.jobId ? (
+                        <span className="font-semibold">{entry.scope}</span>
                       ) : (
                         <span className="font-semibold">
                           {entry.scope}
@@ -89,15 +87,14 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
                         </span>
                       )}
                     </span>
-                    {!entry.jobId && (
-                      <form action={removeCrewEntryAction}>
-                        <input type="hidden" name="back" value="/worker" />
-                        <input type="hidden" name="entryId" value={entry.id} />
-                        <SubmitButton size="sm" variant="ghost">
-                          Remove
-                        </SubmitButton>
-                      </form>
-                    )}
+                    <form action={entry.jobId ? removeMyJobHoursAction : removeCrewEntryAction}>
+                      <input type="hidden" name="back" value="/worker" />
+                      {entry.jobId && <input type="hidden" name="jobId" value={entry.jobId} />}
+                      <input type="hidden" name="entryId" value={entry.id} />
+                      <SubmitButton size="sm" variant="ghost">
+                        Remove
+                      </SubmitButton>
+                    </form>
                   </li>
                 ))}
               </ul>
@@ -106,9 +103,9 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
             <div className="space-y-3 border-t border-line pt-3">
               <div>
                 <p className="font-semibold">Add hours</p>
-                <p className="text-muted">Pick the job you worked on. Use shop time for loading up, cleaning tools or a supply run. If your job isn&apos;t in the list, ask the owner to add it.</p>
+                <p className="text-muted">Pick the job you worked on. Use shop time for loading up, cleaning tools or a supply run. A job shows in the list once the customer has accepted it.</p>
               </div>
-              {logReady ? <HoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" jobs={hoursJobs} /> : <CrewLogSetupNote owner={false} />}
+              {logReady ? <HoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" jobs={pickJobs} /> : <CrewLogSetupNote owner={false} />}
             </div>
           </CardContent>
         </Card>
@@ -117,7 +114,7 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
       {jobs.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted">
-            {actor.role === "owner" ? "Nothing is scheduled right now." : "No jobs are listed for you right now. If you worked a job that isn't here, ask the owner to add it."}
+            {actor.role === "owner" ? "Nothing is scheduled right now." : "No jobs are scheduled for your crew right now."}
           </CardContent>
         </Card>
       ) : (
@@ -161,7 +158,7 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
             <div className="space-y-3 border-t border-line pt-3">
               <p className="font-semibold">Add a receipt</p>
               {logReady ? (
-                <ReceiptForm today={today} minDate={addDays(today, -EXPENSE_LIMITS.daysBack)} back="/worker" jobs={receiptJobs} />
+                <ReceiptForm today={today} minDate={addDays(today, -EXPENSE_LIMITS.daysBack)} back="/worker" jobs={pickJobs} />
               ) : (
                 <CrewLogSetupNote owner={false} />
               )}

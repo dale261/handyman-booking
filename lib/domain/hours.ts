@@ -9,6 +9,21 @@ export const HOURS_LIMITS = { min: 0.25, max: 16, step: 0.25, daysBack: 31, note
 /** Jobs a crew member can log time against: booked work, work underway, and finished work. */
 export const HOURS_STATUSES: JobStatus[] = ["booked", "price_change", "in_progress", "awaiting_approval", "disputed", "balance_due", "completed", "reviewed", "cancel_requested"];
 
+/** Jobs that ended with no work to log. */
+const NO_HOURS: JobStatus[] = ["cancelled", "declined", "referred"];
+
+/**
+ * A job a crew member can pick when recording hours or turning in a receipt.
+ * The owner's rule: once a job has been accepted (the customer signed, or paid), anyone on
+ * the crew can pick it, whichever crew it is scheduled for. A job that is already booked,
+ * underway or finished counts, and so does work the owner wrote up after it was done.
+ * `paid` is whether the customer has made a payment on it.
+ */
+export function canLogHours(job: Pick<JobRecord, "status" | "agreement" | "workDoneOn">, paid: boolean): boolean {
+  if (NO_HOURS.includes(job.status)) return false;
+  return Boolean(job.agreement?.signedAt) || paid || Boolean(job.workDoneOn) || HOURS_STATUSES.includes(job.status);
+}
+
 function toUtc(date: string): Date {
   const [y, m, d] = date.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d, 12));

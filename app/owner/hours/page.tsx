@@ -8,9 +8,9 @@ import { removeCrewEntryAction } from "@/lib/actions";
 import type { ShopHoursEntry } from "@/lib/db/types";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { addDays, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, isDate, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
-import { jobDates } from "@/lib/domain/scheduling";
-import { formatDate, formatDateRange, todayDetroit } from "@/lib/format";
+import { addDays, HOURS_LIMITS, hoursLabel, isDate, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
+import { paidJobIds, pickList } from "@/lib/domain/job-pick-list";
+import { formatDate, todayDetroit } from "@/lib/format";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -32,12 +32,8 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
   const shopThisWeek = shop.filter((entry) => entry.date >= start && entry.date <= days[6]);
   const workers = (await repo.listWorkers()).filter((worker) => worker.active).map((worker) => ({ id: worker.id, fullName: worker.fullName }));
   const people = weekTotals(jobs, start, shop);
-  // Jobs hours can be added to from here: booked, underway and finished work, newest first.
-  const pickJobs = jobs
-    .filter((job) => HOURS_STATUSES.includes(job.status))
-    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
-    .slice(0, 40)
-    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
+  // The same list the crew picks from: every accepted job, nearest to today first.
+  const pickJobs = pickList(jobs, paidJobIds(await repo.listPayments()), today);
   const everyone = roundHours(people.reduce((sum, person) => sum + person.total, 0));
   const isThisWeek = start === weekStart(today);
 

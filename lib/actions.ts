@@ -471,6 +471,11 @@ export async function addExpenseAction(form: FormData) {
   );
 }
 
+/** A crew member takes back job hours from their own crew page (the job itself may not be on their list to open). */
+export async function removeMyJobHoursAction(form: FormData) {
+  await crewLog(form, "Hours removed.", (repo, actor) => removeHours(repo, actor, field(form, "jobId"), field(form, "entryId")));
+}
+
 export async function removeCrewEntryAction(form: FormData) {
   await crewLog(form, "Removed.", (repo, actor) => removeCrewEntry(repo, actor, field(form, "entryId")));
 }

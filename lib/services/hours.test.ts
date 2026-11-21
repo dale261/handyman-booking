@@ -98,6 +98,35 @@ describe("logging hours on a job", () => {
     expect(added.data.hours?.[0].workerId).toBe(onJob.id);
   });
 
+  it("lets anyone on the crew log hours on an accepted job, even one scheduled for another crew", async () => {
+    const store = repo();
+    const { job } = await booked(store);
+    const fresh = await store.getJob(job.id);
+    const workers = await store.listWorkers();
+    // Someone who is neither assigned to this job nor on its crew.
+    const outsider = workers.find((worker) => !fresh?.workerIds.includes(worker.id) && worker.crewId !== fresh?.crewId);
+    if (!outsider) throw new Error("demo data needs a worker on another crew");
+    const crew = { id: "other-crew-login", role: "worker" as const, email: outsider.email, fullName: outsider.fullName, phone: "", workerId: outsider.id };
+    const added = await addHours(store, crew, job.id, { date: today, hours: 5, note: "Helped on the mount" });
+    if (!added.ok) throw new Error(added.error);
+    expect(added.data.hours?.[0]).toMatchObject({ workerId: outsider.id, hours: 5 });
+    // Being able to log hours does not put the job on their crew or change who is assigned.
+    expect(added.data.crewId).toBe(fresh?.crewId);
+    expect(added.data.workerIds).toEqual(fresh?.workerIds);
+  });
+
+  it("takes hours once the customer has signed, even before a time or a payment", async () => {
+    const store = repo();
+    const { job } = await quoted(store);
+    const owner = await actor(store, DEMO_USERS.owner);
+    const worker = (await store.listWorkers())[0];
+    expect((await addHours(store, owner, job.id, { workerId: worker.id, date: today, hours: 2, note: "" })).ok).toBe(false);
+    const record = await store.getJob(job.id);
+    if (!record) throw new Error("job missing");
+    await store.saveJob({ ...record, agreement: { signedName: "Sample Customer", signedAt: new Date().toISOString(), total: record.total, ip: "", userAgent: "" } }, { skipOverlap: true });
+    expect((await addHours(store, owner, job.id, { workerId: worker.id, date: today, hours: 2, note: "" })).ok).toBe(true);
+  });
+
   it("refuses customers, jobs that aren't booked yet, and bad entries", async () => {
     const store = repo();
     const { customer, owner, job } = await booked(store);

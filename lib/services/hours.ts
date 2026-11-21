@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord } from "@/lib/db/types";
-import { checkHours, HOURS_LIMITS, HOURS_STATUSES } from "@/lib/domain/hours";
+import { canLogHours, checkHours, HOURS_LIMITS } from "@/lib/domain/hours";
 import { todayDetroit } from "@/lib/format";
-import { visibleTo } from "@/lib/services/booking";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -27,8 +26,9 @@ export async function addHours(
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role === "customer") return fail("Only the crew can log hours.");
-    if (!(await visibleTo(repo, actor, job))) return fail("This job isn't on your list.");
-    if (!HOURS_STATUSES.includes(job.status)) return fail("Hours can be logged once the job is booked.");
+    // Any crew member can log hours on any accepted job, whichever crew it is scheduled for.
+    const paid = (await repo.listPayments(job.id)).some((payment) => payment.kind !== "refund" && payment.status === "paid");
+    if (!canLogHours(job, paid)) return fail("Hours can be logged once the customer has accepted the job.");
 
     const workers = await repo.listWorkers();
     const workerId = actor.role === "owner" ? (input.workerId ?? "") : (actor.workerId ?? "");

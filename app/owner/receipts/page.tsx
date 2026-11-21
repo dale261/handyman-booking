@@ -7,9 +7,9 @@ import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import type { ExpenseEntry } from "@/lib/db/types";
 import { EXPENSE_LIMITS, owedByWorker, totalOwed } from "@/lib/domain/expenses";
-import { addDays, HOURS_STATUSES } from "@/lib/domain/hours";
-import { jobDates } from "@/lib/domain/scheduling";
-import { formatDateRange, todayDetroit, usd } from "@/lib/format";
+import { addDays } from "@/lib/domain/hours";
+import { paidJobIds, pickList } from "@/lib/domain/job-pick-list";
+import { todayDetroit, usd } from "@/lib/format";
 
 /** How many paid-back receipts stay on the page. Older ones are still in the record. */
 const PAID_SHOWN = 20;
@@ -32,12 +32,8 @@ export default async function OwnerReceiptsPage({ searchParams }: { searchParams
     .slice(0, PAID_SHOWN);
   const people = owedByWorker(receipts);
   const workers = (await repo.listWorkers()).filter((worker) => worker.active).map((worker) => ({ id: worker.id, fullName: worker.fullName }));
-  // Jobs a receipt can be tied to: booked, underway and finished work, newest first.
-  const jobs = (await repo.listJobs())
-    .filter((job) => HOURS_STATUSES.includes(job.status))
-    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
-    .slice(0, 40)
-    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
+  // The same list the crew picks from: every accepted job, nearest to today first.
+  const jobs = pickList(await repo.listJobs(), paidJobIds(await repo.listPayments()), today);
 
   return (
     <div className="space-y-4">
