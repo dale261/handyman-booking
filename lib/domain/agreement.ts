@@ -111,9 +111,11 @@ export function invoiceSummary(
  */
 export function builderRuleApplies(job: Pick<JobRecord, "service" | "quoteMeta" | "licenseTrade" | "notBuilderWork">): boolean {
   if (job.notBuilderWork) return false;
-  if (job.licenseTrade.startsWith("Residential")) return true;
+  // Older saved jobs may be missing a field, so read them defensively.
+  if ((job.licenseTrade ?? "").startsWith("Residential")) return true;
   if (isLibraryQuote(job.quoteMeta)) {
-    return job.quoteMeta.kind === "hourly_fallback" || job.quoteMeta.items.length === 0 || job.quoteMeta.items.some((item) => item.group === "build");
+    const items = job.quoteMeta.items ?? [];
+    return job.quoteMeta.kind === "hourly_fallback" || items.length === 0 || items.some((item) => item.group === "build");
   }
   return job.service === "other";
 }

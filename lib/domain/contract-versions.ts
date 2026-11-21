@@ -14,10 +14,11 @@ import { usd } from "@/lib/format";
  * wording that was live when the customer accepted it. Everything else, including
  * a price that hasn't been accepted yet, prints the current wording.
  *
- * SET THIS TO THE MOMENT THE NEW WORDING GOES LIVE. When the terms are reworded
- * again, add another date and another "before" pair below; never edit an old pair.
+ * This is the moment the new wording went live (Nov 21, 2026, about 4 pm Michigan time).
+ * When the terms are reworded again, add another date and another "before" pair below;
+ * never edit this date or an old pair.
  */
-export const NEW_TERMS_FROM = "2026-11-22T00:00:00.000Z";
+export const NEW_TERMS_FROM = "2026-11-21T20:57:00.000Z";
 
 /** When the customer agreed: their signature, or the first payment they made. Null if neither yet. */
 export function acceptedAt(job: Pick<JobRecord, "agreement">, payments: PaymentRecord[]): string | null {
