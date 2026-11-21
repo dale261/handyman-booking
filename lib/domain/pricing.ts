@@ -22,7 +22,7 @@ export function splitPayment(total: number, threshold: number): PaymentSplit {
   const safe = roundCents(Math.max(0, num(total, 0)));
   const line = roundCents(Math.max(0, num(threshold, 1500)));
   if (safe < line) {
-    return { now: safe, later: 0, rule: `Jobs under $${line.toLocaleString("en-US")} are paid in full to book.` };
+    return { now: safe, later: 0, rule: "This job is paid in full to book." };
   }
   const cents = Math.round(safe * 100);
   const nowCents = Math.floor(cents / 2);

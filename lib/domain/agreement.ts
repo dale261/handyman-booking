@@ -190,7 +190,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
           `Jobs of ${usd(settings.depositThreshold)} or more are half down to book. The rest is due after the work is done and you approve it.`,
           `For this job that is ${usd(split.now)} to book and ${usd(split.later)} after approval.`,
         ]
-      : [`Jobs under ${usd(settings.depositThreshold)} are paid in full to book. For this job that is ${usd(split.now)}.`];
+      : [`This job is paid in full to book: ${usd(split.now)}.`];
   const sections: TermSection[] = [
     {
       title: "The price",

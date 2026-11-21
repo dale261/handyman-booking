@@ -178,7 +178,8 @@ describe("agreement wording", () => {
     expect(text).toContain("except $50.00 for travel");
     expect(text).toContain("Thirty days on our workmanship.");
     expect(terms.find((section) => section.title === "Other terms")?.body).toEqual(["Pets stay in another room.", "We park in the driveway."]);
-    expect(text).toContain("paid in full to book. For this job that is $450.00");
+    expect(text).toContain("This job is paid in full to book: $450.00.");
+    expect(text).not.toContain("Jobs under");
     expect(text).not.toContain("Dale");
   });
 
