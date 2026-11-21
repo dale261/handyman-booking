@@ -134,6 +134,7 @@
         <div class="card"><h4>Furniture Assembly</h4><p>Desks, bookcases, and other furniture put together for you.</p></div>
         <div class="card"><h4>Yard Cleanup</h4><p>Seasonal cleanup, with yard waste hauled away if needed.</p></div>
         <div class="card"><h4>Household Cleaning</h4><p>Routine or deep cleaning.</p></div>
+        <div class="card"><h4>Drain Clearing</h4><p>Clogged sink, tub, and toilet drains snaked and running again.</p></div>
         <div class="card"><h4>Hire a Helper</h4><p>An extra set of hands for moving, carrying, and heavy lifting.</p></div>
       </div>
     </div>
@@ -144,7 +145,7 @@
   <div class="wrap">
     <h2>Store &amp; Property Maintenance</h2>
     <p class="lead">Managing a location in the Cadillac area from somewhere else? We're your local crew.</p>
-    <p>We handle quick repairs and maintenance for stores, offices, and rentals across the 231 area code. Call or text with the job, and we'll give you one firm price and a time.</p>
+    <p>We handle quick repairs and maintenance, like clogged drains, for stores, offices, and rentals across the 231 area code. Call or text with the job, and we'll give you one firm price and a time.</p>
     <div class="small-jobs">
       <div class="card"><h4>Fast scheduling</h4><p>Quick-turn jobs get on the calendar fast.</p></div>
       <div class="card"><h4>Before and after photos</h4><p>Sent with every job, so you can see the work from anywhere.</p></div>
@@ -205,7 +206,8 @@
         </div>
         <div class="field full">
           <label for="q-type">Type of job</label>
-          <select id="q-type" name="job-type">
+          <select id="q-type" name="job-type" required>
+            <option value="" selected disabled>Choose a job type</option>
             <option>Painting</option>
             <option>TV mounting</option>
             <option>Blinds &amp; curtains</option>
@@ -213,6 +215,7 @@
             <option>Yard cleanup</option>
             <option>Household cleaning</option>
             <option>Hire a helper</option>
+            <option>Drain clearing</option>
             <option>Store or property maintenance</option>
             <option>Other</option>
           </select>
