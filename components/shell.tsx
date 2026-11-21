@@ -69,7 +69,7 @@ export function Shell({
       )}
       <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">{children}</main>
       <footer className="border-t border-line py-8 text-center text-sm text-muted print:hidden">
-        eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work around Cadillac ·{" "}
+        eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work across the 231 area code ·{" "}
         <a className="underline" href="https://exconstructionlc.com">
           exconstructionlc.com
         </a>

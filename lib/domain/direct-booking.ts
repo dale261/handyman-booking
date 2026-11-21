@@ -13,13 +13,13 @@ type Clause = { ids: readonly BookableId[]; text: string };
 
 /**
  * Home-page wording. Membership comes from PREAPPROVED.
- * Hire a helper stays last. TV mounting and window coverings share one sentence.
+ * Hire a helper stays last. TV mounting, blinds and curtains share one sentence.
  */
 const CLAUSES: Clause[] = [
   { ids: ["paint"], text: "Painting, including large jobs" },
-  { ids: ["clean"], text: "House cleaning" },
+  { ids: ["clean"], text: "Household cleaning" },
   { ids: ["yard"], text: "Yard cleanup" },
-  { ids: ["tv", "blinds"], text: "TV mounting and window coverings" },
+  { ids: ["tv", "blinds"], text: "TV mounting, blinds and curtains" },
   { ids: ["furniture"], text: "Furniture assembly" },
   { ids: ["helper"], text: "Hire a helper" },
 ];
@@ -27,10 +27,10 @@ const CLAUSES: Clause[] = [
 /** Used when a grouped sentence no longer matches the catalog, so a service cannot disappear. */
 const SOLO: Record<BookableId, string> = {
   paint: "Painting, including large jobs",
-  clean: "House cleaning",
+  clean: "Household cleaning",
   yard: "Yard cleanup",
   tv: "TV mounting",
-  blinds: "Window coverings",
+  blinds: "Blinds and curtains",
   furniture: "Furniture assembly",
   helper: "Hire a helper",
 };
