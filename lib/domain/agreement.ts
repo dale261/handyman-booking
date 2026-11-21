@@ -262,7 +262,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
     {
       title: "Finishing the job",
       body: [
-        "When we're done, look the work over. If anything isn't right, tell us from your job page and we'll come back and make it right.",
+        "When we're done, look the work over. If anything doesn't seem right, just let us know and we'll come back and make it right.",
         "Any balance is due when the work is finished.",
         ...(isWhiteLabel(job) ? [] : [PHOTO_LINE]),
       ],
