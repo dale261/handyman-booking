@@ -863,7 +863,7 @@ export async function holdSlot(
           repo,
           fresh.customerEmail,
           `You're booked: ${formatDateRange(jobDates(fresh))} at ${formatMinutes(fresh.startMin || 0)}`,
-          `Hi ${fresh.customerName}, ${fresh.scope} is booked for ${when}. Invoice #${fresh.invoiceNumber}. You've already paid, so nothing more is due now.${fresh.balanceDue > 0 ? ` The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""} If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n\nYour job: ${customerLink(fresh)}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+          `Hi ${fresh.customerName}, ${fresh.scope} is booked for ${when}. Invoice #${fresh.invoiceNumber}. You've already paid, so nothing more is due now.${fresh.balanceDue > 0 ? ` The ${usd(fresh.balanceDue)} balance is due when the work is finished.` : ""} If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n\nYour job: ${customerLink(fresh)}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
         await notify(
@@ -884,7 +884,7 @@ export async function holdSlot(
           repo,
           fresh.customerEmail,
           `Your time is held for ${holdHours} hours`,
-          `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. ${howToPay}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due after the work is done and you approve it.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+          `Hi ${fresh.customerName}, we're holding ${when} for ${fresh.scope}. Invoice #${fresh.invoiceNumber}. The total is ${usd(fresh.total)}. ${howToPay}\n${fresh.balanceDue > 0 ? `The ${usd(fresh.balanceDue)} balance is due when the work is finished.` : ""}\n${LOCKED_PRICE}${emailFooter(settings)}`,
           fresh.id,
         );
         if (fresh.ownerPriced && !fresh.docSentAt && fresh.customerEmail.trim()) {
@@ -988,7 +988,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(dueNow)} paid. Pick a time when you're ready`,
-        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}. Your price is locked at ${usd(saved.total)}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}Pick a time whenever suits you, or we'll set one together: ${customerLink(saved)}\n\nIf you cancel before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
+        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}. Your price is locked at ${usd(saved.total)}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due when the work is finished. ` : "You're paid in full. "}Pick a time whenever suits you, or we'll set one together: ${customerLink(saved)}\n\nIf you cancel before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
         saved.id,
       );
       await notify(
@@ -996,7 +996,7 @@ export async function payJob(
         settings,
         "pay",
         `Payment received: ${usd(dueNow)} ${saved.balanceDue > 0 ? "50% deposit" : "full payment"}, needs a time`,
-        `${saved.scope}; ${method}. No time picked yet: pick one on the job page or let the customer choose.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} balance due after completion and customer approval.` : ""}${extra}`,
+        `${saved.scope}; ${method}. No time picked yet: pick one on the job page or let the customer choose.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} balance due when the work is finished.` : ""}${extra}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1028,7 +1028,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(dueNow)} paid, you're booked`,
-        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}${saved.scheduledDate ? ` on ${formatDateRange(jobDates(saved))} at ${formatMinutes(saved.startMin || 0).replace(/\.$/, "")}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due after the work is done and you approve it. ` : "You're paid in full. "}If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
+        `Hi ${saved.customerName}, we received ${usd(dueNow)} by ${paidWith(method)} for ${saved.scope}${saved.scheduledDate ? ` on ${formatDateRange(jobDates(saved))} at ${formatMinutes(saved.startMin || 0).replace(/\.$/, "")}` : ""}. ${saved.balanceDue > 0 ? `The ${usd(saved.balanceDue)} balance is due when the work is finished. ` : "You're paid in full. "}If you cancel or reschedule before work starts, we keep ${usd(settings.cancelFee)} and refund the rest.\n${LOCKED_PRICE}${emailFooter(settings)}`,
         saved.id,
       );
       await notify(
@@ -1036,7 +1036,7 @@ export async function payJob(
         settings,
         "pay",
         `Payment received: ${usd(dueNow)} ${saved.balanceDue > 0 ? "50% deposit" : "full payment"}`,
-        `${saved.scope}; ${method}. ${saved.balanceDue > 0 ? `${usd(saved.balanceDue)} balance due after completion and customer approval.` : "Paid in full."}${extra}`,
+        `${saved.scope}; ${method}. ${saved.balanceDue > 0 ? `${usd(saved.balanceDue)} balance due when the work is finished.` : "Paid in full."}${extra}`,
         saved.id,
       );
       return { ok: true, data: saved };
@@ -1061,7 +1061,7 @@ export async function payJob(
         repo,
         saved.customerEmail,
         `Receipt for invoice #${saved.invoiceNumber}: ${usd(due)} received`,
-        `Hi ${saved.customerName}, we received ${usd(due)} by ${paidWith(method)} for the new price on ${saved.scope}. The total is ${usd(saved.total)}.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} is still due after the work is done and you approve it.` : " Nothing else is due right now."}\n${LOCKED_PRICE}${emailFooter(settings)}`,
+        `Hi ${saved.customerName}, we received ${usd(due)} by ${paidWith(method)} for the new price on ${saved.scope}. The total is ${usd(saved.total)}.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} is still due when the work is finished.` : " Nothing else is due right now."}\n${LOCKED_PRICE}${emailFooter(settings)}`,
         saved.id,
       );
       await notify(repo, settings, "pay", `Payment received: ${usd(due)} after a price change`, `${saved.scope}; ${method}.${extra}`, saved.id);
@@ -1149,23 +1149,25 @@ export async function completeWork(
     const denied = await requireWorkerOrOwner(repo, actor, job);
     if (denied) return fail(denied);
     if (job.status !== "in_progress") return fail("Start the job before marking it complete.");
-    job.status = "awaiting_approval";
+    // Finished means finished: any balance is due now. The customer can confirm the work
+    // or report a problem afterward, but payment doesn't wait on either.
+    job.status = job.balanceDue > 0 ? "balance_due" : "completed";
     job.completionNote = note.trim();
     const saved = await repo.saveJob(job, { skipOverlap: true });
     const settings = await repo.getSettings();
     await mail(
       repo,
       saved.customerEmail,
-      `Invoice #${saved.invoiceNumber}: the job is done, please take a look`,
-      `Hi ${saved.customerName}, the crew finished ${saved.scope}. Please look it over and approve it.${saved.balanceDue > 0 ? ` After you approve, the ${usd(saved.balanceDue)} balance is due.` : ""} If something isn't right, tell us on the job page: ${jobUrl(saved.id)}${emailFooter(settings)}`,
+      saved.balanceDue > 0 ? `Invoice #${saved.invoiceNumber}: the job is done, ${usd(saved.balanceDue)} is due` : `Invoice #${saved.invoiceNumber}: the job is done`,
+      `Hi ${saved.customerName}, we finished ${saved.scope}.${saved.balanceDue > 0 ? ` The ${usd(saved.balanceDue)} balance is due now. Pay here: ${customerLink(saved)}` : " It's paid in full, thank you."}\n\nPlease look the work over. If anything isn't right, tell us on the job page and we'll come back and make it right: ${jobUrl(saved.id)}${emailFooter(settings)}`,
       saved.id,
     );
     await notify(
       repo,
       settings,
       "done",
-      "Work complete: awaiting customer approval",
-      `${saved.scope}. The crew marked the job complete; the customer hasn't approved it yet.${saved.balanceDue > 0 ? ` ${usd(saved.balanceDue)} balance is due once they approve.` : ""}`,
+      saved.balanceDue > 0 ? `Work complete: ${usd(saved.balanceDue)} balance now due` : "Work complete: paid in full",
+      `${saved.scope}. The crew marked the job finished.${saved.balanceDue > 0 ? ` The customer was asked to pay the ${usd(saved.balanceDue)} balance.` : " Nothing more is owed."}`,
       saved.id,
     );
     return { ok: true, data: saved };
@@ -1176,9 +1178,14 @@ export async function approveWork(repo: Repository, actor: Actor, jobId: string)
   return repo.run(async () => {
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
-    if (actor.role !== "owner" && job.customerId !== actor.id) return fail("Only the customer can approve the work.");
-    if (job.status !== "awaiting_approval") return fail("This job isn't waiting for your approval.");
-    job.status = job.balanceDue > 0 ? "balance_due" : "completed";
+    if (actor.role !== "owner" && job.customerId !== actor.id) return fail("Only the customer can confirm the work.");
+    if (!["awaiting_approval", "balance_due", "completed", "reviewed"].includes(job.status)) return fail("The work isn't finished yet.");
+    // Jobs finished before payment stopped waiting on approval may still sit here; move them along.
+    if (job.status === "awaiting_approval") job.status = job.balanceDue > 0 ? "balance_due" : "completed";
+    const already = (job.signOffs ?? []).some((entry) => entry.via === "job_page");
+    if (actor.role === "customer" && !already) {
+      job.signOffs = [...(job.signOffs ?? []), { name: job.customerName, via: "job_page", at: new Date().toISOString(), note: "" }];
+    }
     return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }) };
   });
 }
@@ -1188,7 +1195,7 @@ export async function reportProblem(repo: Repository, actor: Actor, jobId: strin
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (job.customerId !== actor.id && actor.role !== "owner") return fail("You can't report a problem on this job.");
-    if (!["awaiting_approval", "balance_due", "in_progress"].includes(job.status)) return fail("You can report a problem once the work is underway or finished.");
+    if (!["awaiting_approval", "balance_due", "in_progress", "completed", "reviewed"].includes(job.status)) return fail("You can report a problem once the work is underway or finished.");
     job.priorStatus = job.status;
     job.status = "disputed";
     job.problemNote = note.trim();
@@ -1204,7 +1211,7 @@ export async function resumeAfterProblem(repo: Repository, actor: Actor, jobId: 
     if (actor.role !== "owner") return fail("Only the owner can clear a problem report.");
     const job = await repo.getJob(jobId);
     if (!job || job.status !== "disputed") return fail("This job doesn't have an open problem.");
-    job.status = job.priorStatus && job.priorStatus !== "disputed" && job.priorStatus !== "cancel_requested" ? job.priorStatus : "awaiting_approval";
+    job.status = job.priorStatus && job.priorStatus !== "disputed" && job.priorStatus !== "cancel_requested" ? job.priorStatus : job.balanceDue > 0 ? "balance_due" : "completed";
     job.priorStatus = null;
     return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }) };
   });
@@ -1450,7 +1457,7 @@ export async function proposePriceChange(
       preview.refund > 0
         ? `If you approve, we'll refund ${usd(preview.refund)}.`
         : preview.amountDueNow > 0
-          ? `If you approve, you'll pay ${usd(preview.amountDueNow)} now${preview.balanceDue > 0 ? ` and ${usd(preview.balanceDue)} after you approve the finished work` : ""}.`
+          ? `If you approve, you'll pay ${usd(preview.amountDueNow)} now${preview.balanceDue > 0 ? ` and ${usd(preview.balanceDue)} when the work is finished` : ""}.`
           : "If you approve, nothing more is due right now.";
     await mail(
       repo,
@@ -1506,7 +1513,7 @@ export async function decidePriceChange(
       revised.refund > 0
         ? `${usd(revised.refund)} will be refunded. The crew can start.`
         : revised.amountDueNow > 0
-          ? `Pay ${usd(revised.amountDueNow)} now${revised.balanceDue > 0 ? `. ${usd(revised.balanceDue)} is due after you approve the finished work` : ""}. The crew starts after that payment. Pay here: ${customerLink(saved)}`
+          ? `Pay ${usd(revised.amountDueNow)} now${revised.balanceDue > 0 ? `. ${usd(revised.balanceDue)} is due when the work is finished` : ""}. The crew starts after that payment. Pay here: ${customerLink(saved)}`
           : "Nothing more is due right now. The crew can start.";
     await mail(
       repo,

@@ -22,6 +22,7 @@ import {
   prepaid,
   proposePriceChange,
   reassignCrew,
+  reportProblem,
   requestCancel,
   resolveCancel,
   startWork,
@@ -271,12 +272,19 @@ describe("booking flow", () => {
     if (!started.ok) throw new Error(started.error);
     const done = await completeWork(store, owner, created.data.id, "Finished and swept up.");
     if (!done.ok) throw new Error(done.error);
-    expect(done.data.status).toBe("awaiting_approval");
+    // Paid in full up front, so finishing the work finishes the job. Nothing waits on approval.
+    expect(done.data.status).toBe("completed");
     const notes = await store.listNotifications();
-    expect(notes.some((note) => note.title.includes("awaiting customer approval"))).toBe(true);
+    expect(notes.some((note) => note.title === "Work complete: paid in full")).toBe(true);
+    // Confirming the work is optional and only adds a record.
     const approved = await approveWork(store, customer, created.data.id);
     if (!approved.ok) throw new Error(approved.error);
     expect(approved.data.status).toBe("completed");
+    expect(approved.data.signOffs?.[0]?.via).toBe("job_page");
+    // A problem can still be reported after the job is finished.
+    const problem = await reportProblem(store, customer, created.data.id, "The TV sits a little crooked.");
+    if (!problem.ok) throw new Error(problem.error);
+    expect(problem.data.status).toBe("disputed");
   });
 
   it("does not attach TV-mount notes to a painting quote", async () => {

@@ -4,7 +4,8 @@ import { SubmitButton } from "@/components/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { accepted, agreementTerms, canSign, invoiceOnly, invoiceSummary, invoiceTerms, longDate } from "@/lib/domain/agreement";
+import { accepted, canSign, invoiceOnly, invoiceSummary, longDate } from "@/lib/domain/agreement";
+import { documentTerms } from "@/lib/domain/contract-versions";
 import type { Settings } from "@/lib/domain/types";
 import { contractUrl, formatMinutes, jobUrl, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
@@ -57,7 +58,8 @@ export function AgreementDocument({
   // Finished work written up after the fact: an invoice to pay, with no schedule and nothing to sign.
   const invoice = invoiceOnly(job);
   const summary = invoiceSummary(job, payments);
-  const terms = invoice ? invoiceTerms(job, settings) : agreementTerms(job, settings);
+  // A customer who already accepted keeps the wording they accepted.
+  const terms = documentTerms(job, payments, settings);
   const contact = [settings.businessPhone, settings.businessEmail].filter(Boolean);
   const paidPayments = payments.filter((payment) => !payment.closed && (payment.kind === "refund" || payment.status === "paid"));
   const firstPaid = paidPayments.find((payment) => payment.kind !== "refund");

@@ -43,11 +43,11 @@ describe("deposit split", () => {
     const exact = splitPayment(1500, 1500);
     expect(exact.now).toBe(750);
     expect(exact.later).toBe(750);
-    expect(exact.rule).toBe("A $1,500 job requires half down to book. The rest is due after you approve the work.");
+    expect(exact.rule).toBe("A $1,500 job requires half down to book. The rest is due when the work is finished.");
     const over = splitPayment(2400, 1500);
     expect(over.now).toBe(1200);
     expect(over.later).toBe(1200);
-    expect(over.rule).toBe("Jobs of $1,500 or more require half down to book. The rest is due after you approve the work.");
+    expect(over.rule).toBe("Jobs of $1,500 or more require half down to book. The rest is due when the work is finished.");
   });
 
   it("puts the leftover cent on the balance", () => {

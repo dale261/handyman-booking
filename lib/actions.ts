@@ -398,12 +398,12 @@ export async function startWorkAction(form: FormData) {
 export async function completeWorkAction(form: FormData) {
   const jobId = field(form, "jobId");
   const note = field(form, "note");
-  await mutate(jobId, "Marked complete. The customer was asked to approve it.", (repo, actor) => completeWork(repo, actor, jobId, note));
+  await mutate(jobId, "Marked complete. The customer was told, and any balance is now due.", (repo, actor) => completeWork(repo, actor, jobId, note));
 }
 
 export async function approveWorkAction(form: FormData) {
   const jobId = field(form, "jobId");
-  await mutate(jobId, "Thanks. The work is approved.", (repo, actor) => approveWork(repo, actor, jobId));
+  await mutate(jobId, "Thanks for confirming the work looks right.", (repo, actor) => approveWork(repo, actor, jobId));
 }
 
 export async function reportProblemAction(form: FormData) {

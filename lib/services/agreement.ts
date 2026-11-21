@@ -178,7 +178,7 @@ export async function sendAgreement(repo: Repository, actor: Actor, jobId: strin
       summary.paid > 0
         ? `You've paid ${usd(summary.paid)}. ${summary.dueLabel}`
         : split.later > 0
-          ? `${usd(split.now)} is due to book (half down) and ${usd(split.later)} after you approve the finished work.`
+          ? `${usd(split.now)} is due to book (half down) and ${usd(split.later)} when the work is finished.`
           : `${usd(split.now)} is due to book.`;
     // What the link lets them do next. No sign-in: the link itself is their key.
     const nextStep =

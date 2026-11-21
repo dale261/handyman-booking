@@ -203,11 +203,11 @@ export default async function JobPage({
                   <p className="text-sm">
                     Paid <strong>{usd(paid)}</strong>.
                     {job.amountDueNow > 0 ? ` Still due now: ${usd(job.amountDueNow)}.` : ""}
-                    {job.balanceDue > 0 ? ` ${usd(job.balanceDue)} is due after you approve the finished work.` : job.amountDueNow === 0 ? " Nothing else is due right now." : ""}
+                    {job.balanceDue > 0 ? ` ${usd(job.balanceDue)} is due when the work is finished.` : job.amountDueNow === 0 ? " Nothing else is due right now." : ""}
                   </p>
                 ) : (
                   <p className="text-sm">
-                    Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} after you approve the finished work.` : "(paid in full)."}
+                    Due to book: <strong>{usd(job.amountDueNow)}</strong> {job.balanceDue > 0 ? `(half down). Balance ${usd(job.balanceDue)} when the work is finished.` : "(paid in full)."}
                     {canSchedule && canPay ? " Pay now and pick a time later, or pick a time first; either way the price is locked once it's paid." : ""}
                   </p>
                 )}
@@ -523,7 +523,7 @@ export default async function JobPage({
                 ) : revisionPreview.amountDueNow > 0 ? (
                   <p>
                     If you approve, you pay {usd(revisionPreview.amountDueNow)} now
-                    {revisionPreview.balanceDue > 0 ? ` and ${usd(revisionPreview.balanceDue)} after you approve the finished work` : ""}. The crew starts after that payment.
+                    {revisionPreview.balanceDue > 0 ? ` and ${usd(revisionPreview.balanceDue)} when the work is finished` : ""}. The crew starts after that payment.
                   </p>
                 ) : (
                   <p>If you approve, nothing more is due right now and the crew can start.</p>
@@ -589,16 +589,27 @@ export default async function JobPage({
             </form>
           )}
 
-          {job.status === "awaiting_approval" && (actor.role === "customer" || actor.role === "owner") && (
+          {["awaiting_approval", "balance_due", "completed", "reviewed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
             <Card>
               <CardHeader>
-                <CardTitle>Approve the work</CardTitle>
+                <CardTitle>The finished work</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <form action={approveWorkAction}>
-                  <input type="hidden" name="jobId" value={job.id} />
-                  <SubmitButton>The work looks right</SubmitButton>
-                </form>
+              <CardContent className="space-y-3 text-sm">
+                {(job.signOffs ?? []).map((entry) => (
+                  <p key={entry.at} className="rounded-md border border-pine/30 bg-pine/5 px-3 py-2">
+                    {entry.name} confirmed the work looks right on{" "}
+                    {new Date(entry.at).toLocaleDateString("en-US", { timeZone: "America/Detroit", dateStyle: "medium" })}.
+                  </p>
+                ))}
+                {(job.signOffs ?? []).length === 0 && actor.role === "owner" && job.status !== "awaiting_approval" && (
+                  <p className="text-muted">The customer hasn&apos;t confirmed the work. That&apos;s optional, and payment doesn&apos;t wait on it.</p>
+                )}
+                {!(job.signOffs ?? []).some((entry) => entry.via === "job_page") && (actor.role === "customer" || job.status === "awaiting_approval") && (
+                  <form action={approveWorkAction}>
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <SubmitButton>The work looks right</SubmitButton>
+                  </form>
+                )}
                 <form action={reportProblemAction} className="space-y-2">
                   <input type="hidden" name="jobId" value={job.id} />
                   <Textarea name="note" required placeholder="What needs another look" />

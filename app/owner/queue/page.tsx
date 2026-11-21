@@ -32,7 +32,8 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
       <Section title="Address review" jobs={jobs.filter((job) => job.status === "pending_area")} empty="No addresses are waiting on you." />
       <Section title="Cancellation requests" jobs={jobs.filter((job) => job.status === "cancel_requested")} empty="No cancellation is waiting on you." />
       <Section title="Problems" jobs={jobs.filter((job) => job.status === "disputed")} empty="No open problems." />
-      <Section title="Finished, not approved yet" jobs={jobs.filter((job) => job.status === "awaiting_approval")} empty="Every finished job has been approved, or none are waiting." />
+      <Section title="Finished, balance due" jobs={jobs.filter((job) => job.status === "balance_due")} empty="No finished job has a balance waiting." />
+      <Section title="Finished earlier, still waiting on approval" jobs={jobs.filter((job) => job.status === "awaiting_approval")} empty="None. New jobs no longer wait on approval." />
 
       <Card>
         <CardHeader>

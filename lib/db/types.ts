@@ -107,6 +107,15 @@ export type Discount = {
   at: string;
 };
 
+/** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
+export type WorkSignOff = {
+  name: string;
+  /** Where it was given: the customer's own job page, the crew's phone on site, or a link we sent. */
+  via: "job_page" | "crew_phone" | "link";
+  at: string;
+  note: string;
+};
+
 export type JobRecord = {
   id: string;
   customerId: string;
@@ -197,6 +206,8 @@ export type JobRecord = {
    * means a normal job, where work photos may be posted.
    */
   whiteLabel?: { by: "customer" | "owner"; at: string } | null;
+  /** People who confirmed the finished work looks right. Empty or missing when nobody has. */
+  signOffs?: WorkSignOff[];
   createdAt: string;
   updatedAt: string;
 };

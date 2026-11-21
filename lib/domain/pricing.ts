@@ -31,8 +31,8 @@ export function splitPayment(total: number, threshold: number): PaymentSplit {
   const later = laterCents / 100;
   const rule =
     safe === line
-      ? `A $${line.toLocaleString("en-US")} job requires half down to book. The rest is due after you approve the work.`
-      : `Jobs of $${line.toLocaleString("en-US")} or more require half down to book. The rest is due after you approve the work.`;
+      ? `A $${line.toLocaleString("en-US")} job requires half down to book. The rest is due when the work is finished.`
+      : `Jobs of $${line.toLocaleString("en-US")} or more require half down to book. The rest is due when the work is finished.`;
   return { now, later, rule };
 }
 

@@ -328,7 +328,7 @@ export function PublicQuote({
                 </div>
                 <p>
                   Due to book: <strong>{usd(estimate.dueNow)}</strong>{" "}
-                  {estimate.balance > 0 ? `(half down). The ${usd(estimate.balance)} balance is due after you approve the finished work.` : "(paid in full)."}
+                  {estimate.balance > 0 ? `(half down). The ${usd(estimate.balance)} balance is due when the work is finished.` : "(paid in full)."}
                 </p>
                 {estimate.payRule && <p className="text-muted">{estimate.payRule}</p>}
                 {estimate.assumptions.length > 0 && (

@@ -110,7 +110,7 @@ export function LinkPayCard({ job, token, due }: { job: JobRecord; token: string
       <CardContent className="space-y-3 text-sm">
         {heldUntil ? (
           <p>
-            Your time is held until <span className="font-semibold">{heldUntil}</span>. Pay {usd(due)} {why}{job.balanceDue > 0 ? ` (half down; the other ${usd(job.balanceDue)} is due after you approve the finished work)` : ""}.
+            Your time is held until <span className="font-semibold">{heldUntil}</span>. Pay {usd(due)} {why}{job.balanceDue > 0 ? ` (half down; the other ${usd(job.balanceDue)} is due when the work is finished)` : ""}.
           </p>
         ) : (
           <p>

@@ -186,7 +186,7 @@ describe("agreement wording", () => {
   it("explains half down on a bigger job and leaves optional clauses out when blank", () => {
     const terms = agreementTerms(job({ total: 2000, amountDueNow: 1000, balanceDue: 1000, travelFee: 0, lines: ownerPriceLines({ scope: "Deck boards", total: 2000, travel: 0 }) }), DEFAULT_SETTINGS);
     const text = terms.map((section) => section.body.join(" ")).join("\n");
-    expect(text).toContain("half down to book: $1,000.00 to book and $1,000.00 after you approve the finished work");
+    expect(text).toContain("half down to book: $1,000.00 to book and $1,000.00 when the work is finished");
     expect(text).toContain("refund everything you paid.");
     expect(terms.some((section) => section.title === "Our workmanship promise")).toBe(false);
     expect(terms.some((section) => section.title === "Other terms")).toBe(false);

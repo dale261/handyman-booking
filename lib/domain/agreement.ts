@@ -81,13 +81,13 @@ export function invoiceSummary(
     dueNow = roundCents(Math.max(0, job.balanceDue));
     dueLabel = invoiceOnly({ workDoneOn: job.workDoneOn ?? null, scheduledDate: job.scheduledDate ?? null })
       ? `${usd(dueNow)} is due now for the finished work.`
-      : `${usd(dueNow)} balance is due now. The work is done and approved.`;
+      : `${usd(dueNow)} balance is due now. The work is finished.`;
   } else if (job.status === "quoted" || job.status === "released") {
     if (job.amountDueNow > 0) {
       dueNow = roundCents(Math.max(0, job.amountDueNow));
       dueLabel = `${usd(dueNow)} is due to book. Pay now and pick a time later, or pick a time first.`;
     } else if (paid > 0) {
-      dueLabel = balance > 0 ? `Paid ${usd(paid)}. Pick a time when you're ready; ${usd(balance)} is due after the work is done and you approve it.` : "Paid in full. Pick a time when you're ready.";
+      dueLabel = balance > 0 ? `Paid ${usd(paid)}. Pick a time when you're ready; ${usd(balance)} is due when the work is finished.` : "Paid in full. Pick a time when you're ready.";
     } else {
       dueLabel = "Nothing is due until a time is booked.";
     }
@@ -96,7 +96,7 @@ export function invoiceSummary(
   } else if (balance === 0 && total > 0) {
     dueLabel = "Paid in full. Thank you.";
   } else if (balance > 0) {
-    dueLabel = `${usd(balance)} is still due after the work is done and you approve it.`;
+    dueLabel = `${usd(balance)} is still due when the work is finished.`;
   }
   return { total, paid, refunded: roundCents(refunded), balance, dueNow, dueLabel };
 }
@@ -213,7 +213,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
   const split = splitPayment(job.total, settings.depositThreshold);
   const payLines =
     split.later > 0
-      ? [`This job is half down to book: ${usd(split.now)} to book and ${usd(split.later)} after you approve the finished work.`]
+      ? [`This job is half down to book: ${usd(split.now)} to book and ${usd(split.later)} when the work is finished.`]
       : [`This job is paid in full to book: ${usd(split.now)}.`];
   const sections: TermSection[] = [
     {
@@ -250,8 +250,8 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
     {
       title: "Finishing the job",
       body: [
-        "When we're done, you look the work over. Approve it on your job page, or report a problem and we'll come back and make it right.",
-        "Any balance is due once you approve.",
+        "When we're done, look the work over. If anything isn't right, tell us from your job page and we'll come back and make it right.",
+        "Any balance is due when the work is finished.",
         ...(isWhiteLabel(job) ? [] : [PHOTO_LINE]),
       ],
     },
