@@ -5,6 +5,7 @@ import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { formatDate, formatDateRange, formatMinutes, todayDetroit } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
+import { addDays, entriesFor, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 
 export default async function WorkerPage() {
@@ -15,7 +16,8 @@ export default async function WorkerPage() {
   const repo = getRepository();
   const workers = await repo.listWorkers();
   const me = workers.find((worker) => worker.id === actor.workerId);
-  const jobs = (await repo.listJobs())
+  const allJobs = await repo.listJobs();
+  const jobs = allJobs
     .filter((job) => {
       if (actor.role === "owner") return blocksSchedule(job.status) && job.scheduledDate;
       if (!me) return false;
@@ -23,11 +25,41 @@ export default async function WorkerPage() {
     })
     .sort((a, b) => `${a.scheduledDate} ${a.startMin}`.localeCompare(`${b.scheduledDate} ${b.startMin}`));
   const today = todayDetroit();
+  // The crew member's own hours: this week and last, Monday through Sunday.
+  const thisWeek = weekStart(today);
+  const lastWeek = addDays(thisWeek, -7);
+  const mine = me ? entriesFor(allJobs, me.id, thisWeek, addDays(thisWeek, 6)) : [];
+  const mineLastWeek = me ? entriesFor(allJobs, me.id, lastWeek, addDays(lastWeek, 6)) : [];
 
   return (
     <div className="space-y-4">
       <h1 className="font-display text-3xl font-semibold text-ink">{me ? me.fullName : "Crew work"}</h1>
-      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Open a job to start it or mark it done.</p>
+      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Open a job to start it, mark it done, or add your hours.</p>
+      {me && (
+        <Card>
+          <CardContent className="space-y-2 text-sm">
+            <p className="font-display text-xl font-semibold">My hours</p>
+            <p>
+              This week: <span className="font-semibold">{hoursLabel(totalHours(mine))}</span> · Last week: <span className="font-semibold">{hoursLabel(totalHours(mineLastWeek))}</span>
+            </p>
+            {mine.length === 0 ? (
+              <p className="text-muted">Nothing logged this week yet. Open a job and use &quot;Add hours&quot;.</p>
+            ) : (
+              <ul className="space-y-1">
+                {mine.map((entry) => (
+                  <li key={entry.id}>
+                    {formatDate(entry.date)}: {hoursLabel(entry.hours)} ·{" "}
+                    <Link className="font-semibold text-pine underline" href={`/jobs/${entry.jobId}`}>
+                      {entry.scope}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-muted">A week runs Monday through Sunday.</p>
+          </CardContent>
+        </Card>
+      )}
       {jobs.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted">Nothing is on your crew right now.</CardContent>

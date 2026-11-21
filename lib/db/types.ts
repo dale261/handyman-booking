@@ -107,6 +107,20 @@ export type Discount = {
   at: string;
 };
 
+/** Hours one crew member logged against a job on one day. */
+export type HoursEntry = {
+  id: string;
+  workerId: string;
+  /** Kept on the entry so the record still reads right if the crew list changes later. */
+  workerName: string;
+  /** The day worked, YYYY-MM-DD. */
+  date: string;
+  hours: number;
+  note: string;
+  /** When it was logged. */
+  at: string;
+};
+
 /** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
 export type WorkSignOff = {
   name: string;
@@ -210,6 +224,8 @@ export type JobRecord = {
   whiteLabel?: { by: "customer" | "owner"; at: string } | null;
   /** The owner's call that Michigan's $600 builder-license rule doesn't reach this job (a store or commercial job, or work outside the licensed building trades). */
   notBuilderWork?: boolean;
+  /** Hours the crew logged on this job. Crew and owner only; customers never see them. */
+  hours?: HoursEntry[];
   /** People who confirmed the finished work looks right. Empty or missing when nobody has. */
   signOffs?: WorkSignOff[];
   createdAt: string;

@@ -7,6 +7,7 @@ import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
+import { addHours, removeHours } from "@/lib/services/hours";
 import { builderRuleApplies } from "@/lib/domain/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
@@ -401,6 +402,20 @@ export async function completeWorkAction(form: FormData) {
   const jobId = field(form, "jobId");
   const note = field(form, "note");
   await mutate(jobId, "Marked complete. The customer was told, and any balance is now due.", (repo, actor) => completeWork(repo, actor, jobId, note));
+}
+
+/** A crew member logs hours on a job, or the owner logs them for someone. */
+export async function addHoursAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const hours = Number(field(form, "hours"));
+  await mutate(jobId, "Hours added.", (repo, actor) =>
+    addHours(repo, actor, jobId, { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") }),
+  );
+}
+
+export async function removeHoursAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  await mutate(jobId, "Hours removed.", (repo, actor) => removeHours(repo, actor, jobId, field(form, "entryId")));
 }
 
 /** The crew's phone, handed to whoever is on site: record their sign-off. */

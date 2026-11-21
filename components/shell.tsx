@@ -38,6 +38,7 @@ export function Shell({
                 <Nav href="/owner/queue">Queue</Nav>
                 <Nav href="/owner/leads">Leads</Nav>
                 <Nav href="/owner/jobs">Jobs</Nav>
+                <Nav href="/owner/hours">Hours</Nav>
                 <Nav href="/owner/settings">Rates</Nav>
                 <Nav href="/owner/library">Library</Nav>
                 <Nav href="/owner/area">ZIP map</Nav>

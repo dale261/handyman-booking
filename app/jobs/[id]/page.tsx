@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  addHoursAction,
   approveWorkAction,
   builderWorkAction,
   cancelAction,
@@ -17,6 +18,7 @@ import {
   manualPayAction,
   markRefundAction,
   reassignAction,
+  removeHoursAction,
   referOutAction,
   releaseHoldAction,
   releaseLicenseAction,
@@ -43,10 +45,11 @@ import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { builderRuleApplies, invoiceOnly } from "@/lib/domain/agreement";
+import { hoursLabel, HOURS_LIMITS, HOURS_STATUSES, totalHours } from "@/lib/domain/hours";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
 import { grossTotal } from "@/lib/domain/discount";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
-import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
+import { formatDate, formatDateRange, formatMinutes, todayDetroit, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
@@ -614,6 +617,9 @@ export default async function JobPage({
               </CardContent>
             </Card>
           )}
+          {(actor.role === "worker" || actor.role === "owner") && HOURS_STATUSES.includes(job.status) && (
+            <HoursCard job={job} owner={actor.role === "owner"} myWorkerId={actor.workerId} workers={workers.filter((worker) => worker.active)} />
+          )}
 
           {["awaiting_approval", "balance_due", "completed", "reviewed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
             <Card>
@@ -708,6 +714,92 @@ function methodLabel(method: PaymentRecord["method"]): string {
   if (method === "paypal") return "PayPal";
   if (method === "check") return "Check";
   return "Cash";
+}
+
+/**
+ * Hours on this job. A crew member sees and adds their own. The owner sees everyone's
+ * and can add for anyone. Customers never see this card.
+ */
+function HoursCard({
+  job,
+  owner,
+  myWorkerId,
+  workers,
+}: {
+  job: JobRecord;
+  owner: boolean;
+  myWorkerId: string | null;
+  workers: { id: string; fullName: string }[];
+}) {
+  const entries = (job.hours ?? [])
+    .filter((entry) => owner || entry.workerId === myWorkerId)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.at.localeCompare(a.at));
+  const today = todayDetroit();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{owner ? "Crew hours" : "My hours"}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {entries.length === 0 ? (
+          <p className="text-muted">{owner ? "Nobody has logged hours on this job yet." : "You haven't logged hours on this job yet."}</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {entries.map((entry) => (
+              <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line px-3 py-2">
+                <span>
+                  <span className="font-semibold">{hoursLabel(entry.hours)}</span> · {formatDate(entry.date)}
+                  {owner ? ` · ${entry.workerName}` : ""}
+                  {entry.note ? <span className="block text-muted">{entry.note}</span> : null}
+                </span>
+                <form action={removeHoursAction}>
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <input type="hidden" name="entryId" value={entry.id} />
+                  <SubmitButton size="sm" variant="ghost">Remove</SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        {entries.length > 0 && <p className="font-semibold">Total: {hoursLabel(totalHours(entries))}</p>}
+        <form action={addHoursAction} className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+          <input type="hidden" name="jobId" value={job.id} />
+          {owner && (
+            <label className="grid gap-1 font-semibold sm:col-span-2">
+              Who worked
+              <select name="workerId" required defaultValue="" className="h-10 rounded-md border border-line bg-card px-3 font-normal">
+                <option value="" disabled>
+                  Pick a crew member
+                </option>
+                {workers.map((worker) => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.fullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="grid gap-1 font-semibold">
+            Day worked
+            <Input name="date" type="date" required defaultValue={today} max={today} />
+          </label>
+          <label className="grid gap-1 font-semibold">
+            Hours
+            <Input name="hours" type="number" inputMode="decimal" required min={HOURS_LIMITS.min} max={HOURS_LIMITS.max} step={HOURS_LIMITS.step} placeholder="3.5" />
+          </label>
+          <label className="grid gap-1 font-semibold sm:col-span-2">
+            <span>
+              Note <span className="font-normal text-muted">(optional)</span>
+            </span>
+            <Input name="note" maxLength={HOURS_LIMITS.noteMax} placeholder="What you worked on" />
+          </label>
+          <div className="sm:col-span-2">
+            <SubmitButton pendingLabel="Saving…">Add hours</SubmitButton>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
 }
 
 function Callout({ children }: { children: React.ReactNode }) {
