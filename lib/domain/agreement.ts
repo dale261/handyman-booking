@@ -140,8 +140,10 @@ export function licensingStatement(
       : "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
   if (settings.licenseNumber) return [`${rule} ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`, trades];
   if (total < settings.builderThreshold) return [`${rule} This job is under that amount, so no builder license is required for it.`, trades];
+  // Owner's call (Nov 21, 2026): a larger drain clearing job says nothing about a builder license. It's irrelevant to clearing a clog.
+  if (service === "drain") return [trades];
   // Some jobs are over the amount and still fine to do: the rule only reaches builder work.
-  if (!builderWork || service === "drain") return [`${rule} That rule does not apply to this kind of work, so no builder license is required for it.`, trades];
+  if (!builderWork) return [`${rule} That rule does not apply to this kind of work, so no builder license is required for it.`, trades];
   return [
     `${rule} This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
     trades,

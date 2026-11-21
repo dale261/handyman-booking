@@ -163,7 +163,9 @@ describe("agreement wording", () => {
     expect(drain).not.toContain("Electrical, plumbing, and heating or cooling work must be done");
     const bigDrain = licensingStatement({ ...base, licenseNumber: "" }, 600, false, "drain").join(" ");
     expect(bigDrain).not.toContain("a licensed contractor does the licensed part");
-    expect(bigDrain).toContain("That rule does not apply to this kind of work");
+    // A larger drain job says nothing about a builder license at all.
+    expect(bigDrain).not.toContain("That rule does not apply to this kind of work");
+    expect(bigDrain).not.toContain("residential builder");
     const bigPaint = licensingStatement({ ...base, licenseNumber: "" }, 900, false, "paint", false).join(" ");
     expect(bigPaint).toContain("That rule does not apply to this kind of work, so no builder license is required for it.");
     expect(bigPaint).not.toContain("a licensed contractor does the licensed part");
