@@ -111,10 +111,14 @@ export function licensingStatement(
   total: number,
   /** The work is already done, so the "before work starts" wording doesn't fit. */
   done = false,
+  /** Drain clearing gets its own trades sentence: clearing a clog is the job, plumbing repairs are not. */
+  service?: string,
 ): string[] {
   const threshold = `$${Math.round(settings.builderThreshold).toLocaleString("en-US")}`;
   const trades =
-    "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
+    service === "drain"
+      ? "This job is drain clearing: we clear the clog with a drain snake and make no changes to the plumbing. Plumbing repairs or changes, electrical, and heating or cooling work must be done by contractors licensed for those trades and are not part of this agreement."
+      : "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
   if (settings.licenseNumber) {
     return [
       `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`,
@@ -160,7 +164,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
     },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Paying this invoice",
@@ -234,7 +238,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
     },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Agreeing to this",

@@ -158,6 +158,10 @@ describe("agreement wording", () => {
     expect(licensingStatement({ ...base, licenseNumber: "" }, 450).join(" ")).toContain("no builder license is required");
     expect(licensingStatement({ ...base, licenseNumber: "" }, 600).join(" ")).toContain("a licensed contractor does the licensed part");
     expect(licensingStatement({ ...base, licenseNumber: "" }, 600).join(" ")).not.toContain("no builder license is required");
+    const drain = licensingStatement({ ...base, licenseNumber: "" }, 250, false, "drain").join(" ");
+    expect(drain).toContain("make no changes to the plumbing");
+    expect(drain).not.toContain("Electrical, plumbing, and heating or cooling work must be done");
+    expect(licensingStatement({ ...base, licenseNumber: "" }, 250, false, "tv").join(" ")).toContain("Electrical, plumbing, and heating or cooling work must be done");
   });
 
   it("builds terms from the real rules and the owner's own clauses", () => {
