@@ -1,5 +1,5 @@
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { agreementTerms, invoiceOnly, invoiceTerms, isWhiteLabel, licensingStatement, longDate, whiteLabelTerms, type TermSection } from "@/lib/domain/agreement";
+import { agreementTerms, invoiceOnly, invoiceTerms, isWhiteLabel, longDate, whiteLabelTerms, type TermSection } from "@/lib/domain/agreement";
 import { LOCKED_PRICE } from "@/lib/domain/copy";
 import { splitPayment } from "@/lib/domain/pricing";
 import type { Settings } from "@/lib/domain/types";
@@ -69,7 +69,7 @@ function invoiceTermsBefore(job: JobRecord, settings: Settings): TermSection[] {
     },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatementBefore(settings, job.total, true, job.service) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Paying this invoice",
@@ -142,7 +142,7 @@ function agreementTermsBefore(job: JobRecord, settings: Settings): TermSection[]
     },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatementBefore(settings, job.total, false, job.service) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Agreeing to this",
@@ -152,4 +152,38 @@ function agreementTermsBefore(job: JobRecord, settings: Settings): TermSection[]
     ],
   });
   return sections;
+}
+
+/** The licensing statement as it read until NEW_TERMS_FROM. */
+function licensingStatementBefore(
+  settings: Pick<Settings, "licenseNumber" | "businessName" | "builderThreshold">,
+  total: number,
+  /** The work is already done, so the "before work starts" wording doesn't fit. */
+  done = false,
+  /** Drain clearing gets its own trades sentence: clearing a clog is the job, plumbing repairs are not. */
+  service?: string,
+): string[] {
+  const threshold = `$${Math.round(settings.builderThreshold).toLocaleString("en-US")}`;
+  const trades =
+    service === "drain"
+      ? "This job is drain clearing: we clear the clog with a drain snake and make no changes to the plumbing. Plumbing repairs or changes, electrical, and heating or cooling work must be done by contractors licensed for those trades and are not part of this agreement."
+      : "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
+  if (settings.licenseNumber) {
+    return [
+      `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`,
+      trades,
+    ];
+  }
+  if (total < settings.builderThreshold) {
+    return [
+      `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is under that amount, so no builder license is required for it.`,
+      trades,
+    ];
+  }
+  // Owner's call (Nov 21, 2026): a drain clearing job of the threshold or more leaves the builder sentence out.
+  if (service === "drain") return [trades];
+  return [
+    `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
+    trades,
+  ];
 }

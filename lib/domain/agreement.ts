@@ -1,4 +1,5 @@
 import type { JobRecord, JobStatus, PaymentRecord } from "@/lib/db/types";
+import { isLibraryQuote } from "@/lib/domain/library";
 import { roundCents } from "@/lib/domain/money";
 import { splitPayment } from "@/lib/domain/pricing";
 import type { QuoteLine, Settings } from "@/lib/domain/types";
@@ -102,6 +103,22 @@ export function invoiceSummary(
 }
 
 /**
+ * Whether Michigan's $600 builder-license rule reaches this job. The listed services
+ * (painting, cleaning, mounting, assembly, yard work, drain clearing, a helper) are not
+ * builder work at any price. Unlisted work is builder work when the cost library says so.
+ * When the app can't tell, it stays cautious and says yes, unless the owner marked the
+ * job as not builder work (a store or commercial job, say).
+ */
+export function builderRuleApplies(job: Pick<JobRecord, "service" | "quoteMeta" | "licenseTrade" | "notBuilderWork">): boolean {
+  if (job.notBuilderWork) return false;
+  if (job.licenseTrade.startsWith("Residential")) return true;
+  if (isLibraryQuote(job.quoteMeta)) {
+    return job.quoteMeta.kind === "hourly_fallback" || job.quoteMeta.items.length === 0 || job.quoteMeta.items.some((item) => item.group === "build");
+  }
+  return job.service === "other";
+}
+
+/**
  * Michigan's licensing statement, worded for the license we actually hold.
  * Not legal advice: the owner should have a lawyer look at the whole agreement once.
  */
@@ -112,28 +129,21 @@ export function licensingStatement(
   done = false,
   /** Drain clearing gets its own trades sentence: clearing a clog is the job, plumbing repairs are not. */
   service?: string,
+  /** False when the builder rule doesn't reach this kind of work. Left out, the statement stays cautious. */
+  builderWork = true,
 ): string[] {
   const threshold = `$${Math.round(settings.builderThreshold).toLocaleString("en-US")}`;
+  const rule = `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included.`;
   const trades =
     service === "drain"
       ? "This job is drain clearing: we clear the clog with a drain snake and make no changes to the plumbing. Plumbing repairs or changes, electrical, and heating or cooling work must be done by contractors licensed for those trades and are not part of this agreement."
       : "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
-  if (settings.licenseNumber) {
-    return [
-      `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`,
-      trades,
-    ];
-  }
-  if (total < settings.builderThreshold) {
-    return [
-      `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is under that amount, so no builder license is required for it.`,
-      trades,
-    ];
-  }
-  // Owner's call (Nov 21, 2026): a drain clearing job of the threshold or more leaves the builder sentence out.
-  if (service === "drain") return [trades];
+  if (settings.licenseNumber) return [`${rule} ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`, trades];
+  if (total < settings.builderThreshold) return [`${rule} This job is under that amount, so no builder license is required for it.`, trades];
+  // Some jobs are over the amount and still fine to do: the rule only reaches builder work.
+  if (!builderWork || service === "drain") return [`${rule} That rule does not apply to this kind of work, so no builder license is required for it.`, trades];
   return [
-    `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
+    `${rule} This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
     trades,
   ];
 }
@@ -193,7 +203,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
         },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service, builderRuleApplies(job)) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Paying this invoice",
@@ -266,7 +276,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
   // A white-label job says so right after the price, where a store customer will look for it.
   if (isWhiteLabel(job)) sections.splice(1, 0, whiteLabelTerms());
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service, builderRuleApplies(job)) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Agreeing to this",

@@ -206,6 +206,8 @@ export type JobRecord = {
    * means a normal job, where work photos may be posted.
    */
   whiteLabel?: { by: "customer" | "owner"; at: string } | null;
+  /** The owner's call that Michigan's $600 builder-license rule doesn't reach this job (a store or commercial job, or work outside the licensed building trades). */
+  notBuilderWork?: boolean;
   /** People who confirmed the finished work looks right. Empty or missing when nobody has. */
   signOffs?: WorkSignOff[];
   createdAt: string;

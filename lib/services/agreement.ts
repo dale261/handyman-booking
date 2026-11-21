@@ -95,6 +95,17 @@ export async function signAgreement(
   });
 }
 
+/** Owner only: record that Michigan's builder-license rule does or doesn't reach this job. */
+export async function setNotBuilderWork(repo: Repository, actor: Actor, jobId: string, notBuilderWork: boolean): Promise<Ok<JobRecord> | Err> {
+  return repo.run(async () => {
+    if (actor.role !== "owner") return fail("Only the owner can change this.");
+    const job = await repo.getJob(jobId);
+    if (!job) return fail("Job not found.");
+    job.notBuilderWork = notBuilderWork;
+    return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }) };
+  });
+}
+
 /**
  * Turn white-label on or off for one job. The owner, the signed-in customer on the job, or
  * someone holding the job's link can do it. The owner can't undo a choice the customer made,

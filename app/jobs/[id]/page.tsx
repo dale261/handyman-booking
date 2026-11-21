@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   approveWorkAction,
+  builderWorkAction,
   cancelAction,
   cancelOnSiteAction,
   completeWorkAction,
@@ -41,7 +42,7 @@ import { requireActor } from "@/lib/auth";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { invoiceOnly } from "@/lib/domain/agreement";
+import { builderRuleApplies, invoiceOnly } from "@/lib/domain/agreement";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
 import { grossTotal } from "@/lib/domain/discount";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
@@ -654,7 +655,15 @@ export default async function JobPage({
           )}
 
           {actor.role === "owner" && (
-            <OwnerTools job={job} crews={crews.filter((crew) => crew.active)} canDiscount={canDiscount} canEdit={canEdit} canVoid={canVoid} billingZip={customerAccount?.billingZip ?? ""} />
+            <OwnerTools
+              job={job}
+              crews={crews.filter((crew) => crew.active)}
+              canDiscount={canDiscount}
+              canEdit={canEdit}
+              canVoid={canVoid}
+              billingZip={customerAccount?.billingZip ?? ""}
+              builderRule={!settings.licenseNumber && job.total >= settings.builderThreshold && (Boolean(job.notBuilderWork) || builderRuleApplies(job))}
+            />
           )}
         </div>
       </div>
@@ -705,12 +714,15 @@ function OwnerTools({
   canEdit,
   canVoid,
   billingZip,
+  builderRule,
 }: {
   job: JobRecord;
   crews: { id: string; name: string }[];
   canDiscount: boolean;
   canEdit: boolean;
   canVoid: boolean;
+  /** Show the builder-license choice: the job is over the amount and no license number is saved. */
+  builderRule: boolean;
   billingZip: string;
 }) {
   const invoice = invoiceOnly(job);
@@ -826,6 +838,19 @@ function OwnerTools({
           </label>
           <SubmitButton size="sm" variant="outline">Save contact details</SubmitButton>
         </form>
+        {builderRule && (
+          <form action={builderWorkAction} className="space-y-2 border-b border-line pb-4">
+            <input type="hidden" name="jobId" value={job.id} />
+            <input type="hidden" name="notBuilderWork" value={job.notBuilderWork ? "0" : "1"} />
+            <p className="font-semibold">Builder license</p>
+            <p className="text-muted">
+              {job.notBuilderWork
+                ? "You marked this as not builder work, so the contract says the builder rule doesn't apply."
+                : "This job is over the builder amount and the app can't tell it isn't builder work, so the contract says a licensed contractor does the licensed part."}
+            </p>
+            <SubmitButton size="sm" variant="outline">{job.notBuilderWork ? "It is builder work" : "It's not builder work"}</SubmitButton>
+          </form>
+        )}
         {canVoid && (
           <form action={voidInvoiceAction} className="space-y-2 border-b border-line pb-4">
             <input type="hidden" name="jobId" value={job.id} />

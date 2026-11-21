@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
-import { jobForLink, sendAgreement, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
+import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
+import { builderRuleApplies } from "@/lib/domain/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
@@ -749,6 +750,7 @@ export async function createOwnerJobAction(form: FormData) {
     travel,
     doneOn,
     whiteLabel: form.get("whiteLabel") === "on",
+    notBuilderWork: form.get("notBuilderWork") === "on",
   });
   if (!created.ok) newJobBack(created.error);
   const job = created.data;
@@ -770,8 +772,8 @@ export async function createOwnerJobAction(form: FormData) {
   }
   if (noEmail) notes.push("No email on file, so nothing is sent automatically: copy the link and text it to them.");
   const settings = await repo.getSettings();
-  if (!settings.licenseNumber && job.total >= settings.builderThreshold) {
-    notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part.`);
+  if (!settings.licenseNumber && job.total >= settings.builderThreshold && builderRuleApplies(job)) {
+    notes.push(`Heads up: this is $${Math.round(settings.builderThreshold)} or more and no license number is saved under Rates, so the agreement says a licensed contractor does the licensed part. If it isn't builder work, say so under Owner tools on the job page.`);
   }
   if (doneOn) {
     // Nothing to schedule: straight to the invoice, where the owner emails it or copies the link.
@@ -828,6 +830,17 @@ export async function signAgreementAction(form: FormData) {
   await settle(repo);
   if (!result.ok) back("error", result.error);
   back("notice", "Thanks, your signature is recorded. Print or save this page for your records.");
+}
+
+/** Owner: say whether Michigan's builder-license rule reaches this job. Changes one sentence in the contract. */
+export async function builderWorkAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const notBuilderWork = field(form, "notBuilderWork") === "1";
+  await mutate(
+    jobId,
+    notBuilderWork ? "Marked as not builder work. The contract now says the builder rule doesn't apply." : "Back to builder work. The contract says a licensed contractor does the licensed part.",
+    (repo, actor) => setNotBuilderWork(repo, actor, jobId, notBuilderWork),
+  );
 }
 
 /** Turn white-label on or off for a job: the owner, the signed-in customer, or whoever holds the job's link. */

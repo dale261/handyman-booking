@@ -163,6 +163,12 @@ describe("agreement wording", () => {
     expect(drain).not.toContain("Electrical, plumbing, and heating or cooling work must be done");
     const bigDrain = licensingStatement({ ...base, licenseNumber: "" }, 600, false, "drain").join(" ");
     expect(bigDrain).not.toContain("a licensed contractor does the licensed part");
+    expect(bigDrain).toContain("That rule does not apply to this kind of work");
+    const bigPaint = licensingStatement({ ...base, licenseNumber: "" }, 900, false, "paint", false).join(" ");
+    expect(bigPaint).toContain("That rule does not apply to this kind of work, so no builder license is required for it.");
+    expect(bigPaint).not.toContain("a licensed contractor does the licensed part");
+    // Under the amount, the plain sentence stays, whatever kind of work it is.
+    expect(licensingStatement({ ...base, licenseNumber: "" }, 450, false, "paint", false).join(" ")).toContain("This job is under that amount");
     expect(bigDrain).toContain("make no changes to the plumbing");
     expect(licensingStatement({ ...base, licenseNumber: "2101234567" }, 600, false, "drain").join(" ")).toContain("license number 2101234567");
     expect(licensingStatement({ ...base, licenseNumber: "" }, 250, false, "tv").join(" ")).toContain("Electrical, plumbing, and heating or cooling work must be done");

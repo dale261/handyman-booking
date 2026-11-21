@@ -189,11 +189,20 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               {!settings.licenseNumber && (
                 <>
                   {" "}
-                  No license number is saved under Rates, so a job of ${Math.round(settings.builderThreshold)} or more prints Michigan&apos;s licensing statement with a licensed
-                  contractor doing the licensed part.
+                  No license number is saved under Rates. A listed service, like painting or drain clearing, is fine at any price. A job under
+                  &quot;Something else&quot; of ${Math.round(settings.builderThreshold)} or more prints that a licensed contractor does the licensed part, unless you tick the box below.
                 </>
               )}
             </p>
+            {!settings.licenseNumber && (
+              <label className="flex items-start gap-2 text-sm sm:col-span-2">
+                <input type="checkbox" name="notBuilderWork" className="mt-1" />
+                <span>
+                  <span className="font-semibold">Not builder work</span>
+                  <span className="block font-normal text-muted">Tick for a store or commercial job, or work outside the licensed building trades. The contract then says the ${Math.round(settings.builderThreshold)} builder rule doesn&apos;t apply.</span>
+                </span>
+              </label>
+            )}
           </CardContent>
         </Card>
 

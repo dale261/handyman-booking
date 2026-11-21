@@ -105,3 +105,38 @@ describe("a customer keeps the wording they accepted", () => {
     expect(current.some((section) => section.title === "Photos")).toBe(true);
   });
 });
+
+describe("the $600 builder rule only reaches builder work", () => {
+  const licensing = (job: JobRecord) =>
+    documentTerms(job, [], DEFAULT_SETTINGS)
+      .find((section) => section.title === "Michigan licensing statement")
+      ?.body.join(" ") ?? "";
+
+  it("says the rule doesn't apply to a listed service over the amount", async () => {
+    const job = { ...(await quotedJob()), service: "paint" as const, total: 900 };
+    expect(licensing(job)).toContain("That rule does not apply to this kind of work, so no builder license is required for it.");
+    expect(licensing(job)).not.toContain("a licensed contractor does the licensed part");
+  });
+
+  it("stays cautious on unlisted work over the amount, until the owner says it isn't builder work", async () => {
+    const job = { ...(await quotedJob()), service: "other" as const, total: 900, licenseTrade: "" };
+    expect(licensing(job)).toContain("a licensed contractor does the licensed part");
+    expect(licensing({ ...job, notBuilderWork: true })).toContain("That rule does not apply to this kind of work");
+  });
+
+  it("keeps the licensed-contractor sentence when the license screen found builder work", async () => {
+    const job = { ...(await quotedJob()), total: 900, licenseTrade: "Residential builder / maintenance & alteration (e.g., carpentry, roofing)" };
+    expect(licensing(job)).toContain("a licensed contractor does the licensed part");
+  });
+
+  it("leaves a job under the amount alone", async () => {
+    const job = await quotedJob();
+    expect(job.total).toBeLessThan(DEFAULT_SETTINGS.builderThreshold);
+    expect(licensing(job)).toContain("This job is under that amount, so no builder license is required for it.");
+  });
+
+  it("does not touch the wording of a job accepted before the change", async () => {
+    const job = signed({ ...(await quotedJob()), service: "paint" as const, total: 900 }, BEFORE);
+    expect(licensing(job)).toContain("a licensed contractor does the licensed part");
+  });
+});

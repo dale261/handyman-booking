@@ -45,6 +45,8 @@ export type OwnerJobInput = {
   doneOn?: string | null;
   /** The customer wants the crew to work as their own technician, with no photos posted. */
   whiteLabel?: boolean;
+  /** The owner's call that Michigan's builder-license rule doesn't reach this job. */
+  notBuilderWork?: boolean;
 };
 
 export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000, maxDoneDaysAgo: 365 };
@@ -198,6 +200,7 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       docSentAt: null,
       workDoneOn: doneOn,
       whiteLabel: input.whiteLabel ? { by: "owner", at: now } : null,
+      notBuilderWork: Boolean(input.notBuilderWork),
       createdAt: now,
       updatedAt: now,
     };
