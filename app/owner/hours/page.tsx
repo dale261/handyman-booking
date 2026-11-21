@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { CrewLogSetupNote, ShopTimeForm } from "@/components/crew-log";
+import { CrewLogSetupNote } from "@/components/crew-log";
 import { Flash } from "@/components/flash";
+import { HoursForm } from "@/components/hours-form";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { removeCrewEntryAction } from "@/lib/actions";
 import type { ShopHoursEntry } from "@/lib/db/types";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { addDays, HOURS_LIMITS, hoursLabel, isDate, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
-import { formatDate, todayDetroit } from "@/lib/format";
+import { addDays, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, isDate, offListLabel, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
+import { jobDates } from "@/lib/domain/scheduling";
+import { formatDate, formatDateRange, todayDetroit } from "@/lib/format";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -30,6 +32,12 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
   const shopThisWeek = shop.filter((entry) => entry.date >= start && entry.date <= days[6]);
   const workers = (await repo.listWorkers()).filter((worker) => worker.active).map((worker) => ({ id: worker.id, fullName: worker.fullName }));
   const people = weekTotals(jobs, start, shop);
+  // Jobs hours can be added to from here: booked, underway and finished work, newest first.
+  const pickJobs = jobs
+    .filter((job) => HOURS_STATUSES.includes(job.status))
+    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
+    .slice(0, 40)
+    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
   const everyone = roundHours(people.reduce((sum, person) => sum + person.total, 0));
   const isThisWeek = start === weekStart(today);
 
@@ -61,7 +69,7 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
       {people.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted">
-            No hours were logged this week. The crew adds job hours from each job page and shop time from their crew page. You can add either for anyone.
+            No hours were logged this week. The crew adds hours from their crew page. You can add hours for anyone at the bottom of this page.
           </CardContent>
         </Card>
       ) : (
@@ -87,7 +95,7 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
                   </div>
                   <ul className="space-y-1">
                     {person.byJob.map((item) => (
-                      <li key={item.jobId || "shop"} className="flex flex-wrap justify-between gap-2">
+                      <li key={item.jobId || item.scope} className="flex flex-wrap justify-between gap-2">
                         {item.jobId ? (
                           <Link className="font-semibold text-pine underline" href={`/jobs/${item.jobId}`}>
                             {item.scope}
@@ -108,17 +116,18 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
       <Card>
         <CardContent className="space-y-3 text-sm">
           <div>
-            <p className="font-display text-xl font-semibold">Shop time</p>
-            <p className="text-muted">Hours that weren&apos;t on a job: loading up, cleaning tools, a supply run. They count in the totals above.</p>
+            <p className="font-display text-xl font-semibold">Shop time and unlisted jobs</p>
+            <p className="text-muted">Hours that aren&apos;t on a job in the app: shop time, and jobs a crew member typed in because they weren&apos;t on their list. They count in the totals above.</p>
           </div>
           {shopThisWeek.length === 0 ? (
-            <p className="text-muted">No shop time this week.</p>
+            <p className="text-muted">None this week.</p>
           ) : (
             <ul className="space-y-1.5">
               {shopThisWeek.map((entry) => (
                 <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line px-3 py-2">
                   <span>
                     <span className="font-semibold">{hoursLabel(entry.hours)}</span> · {formatDate(entry.date)} · {entry.workerName}
+                    <span className="block">{offListLabel(entry)}</span>
                     {entry.note ? <span className="block text-muted">{entry.note}</span> : null}
                   </span>
                   <form action={removeCrewEntryAction}>
@@ -134,9 +143,9 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
             </ul>
           )}
           <div className="space-y-3 border-t border-line pt-3">
-            <p className="font-semibold">Add shop time for someone</p>
+            <p className="font-semibold">Add hours for someone</p>
             {logReady ? (
-              <ShopTimeForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/owner/hours" week={start} workers={workers} />
+              <HoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/owner/hours" week={start} workers={workers} jobs={pickJobs} />
             ) : (
               <CrewLogSetupNote owner />
             )}

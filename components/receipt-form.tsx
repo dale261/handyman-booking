@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addExpenseAction } from "@/lib/actions";
+import { jobLine, type PickJob } from "@/lib/domain/job-pick";
 
 /** A receipt reads fine at this size, and it keeps a phone photo small enough to send. */
 const MAX_SIDE = 1600;
@@ -34,15 +35,6 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
-export type ReceiptJob = { id: string; scope: string; where: string; when: string };
-
-/** The line shown in the job list: the work, then the street, short enough for a phone. */
-function jobLine(job: ReceiptJob): string {
-  const work = job.scope.length > 44 ? `${job.scope.slice(0, 43)}…` : job.scope;
-  const street = job.where.split(",")[0].trim();
-  return street ? `${work} · ${street}` : work;
-}
-
 function Save({ busy }: { busy: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -69,7 +61,7 @@ export function ReceiptForm({
   /** Given on the owner's page, where the owner says who paid. */
   workers?: { id: string; fullName: string }[];
   /** Jobs the receipt can be tied to, with where and when, so the right one is easy to tell. */
-  jobs: ReceiptJob[];
+  jobs: PickJob[];
 }) {
   const [jobId, setJobId] = useState("");
   const picked = jobs.find((job) => job.id === jobId);

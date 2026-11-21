@@ -72,6 +72,14 @@ type JobHours = Pick<JobRecord, "id" | "scope" | "hours">;
 /** How shop time is named wherever hours are listed. It has no job, so its job id is blank. */
 export const SHOP_LABEL = "Shop time";
 
+/** How long a crew member's own description of an unlisted job can be. */
+export const UNLISTED_JOB = { min: 3, max: 120 };
+
+/** What an entry with no job record is called: shop time, or the unlisted job in the crew member's words. */
+export function offListLabel(entry: Pick<ShopHoursEntry, "unlistedJob">): string {
+  return entry.unlistedJob ? `Job not listed: ${entry.unlistedJob}` : SHOP_LABEL;
+}
+
 export type WorkerWeek = {
   workerId: string;
   workerName: string;
@@ -109,9 +117,11 @@ export function weekTotals(jobs: JobHours[], start: string, shop: ShopHoursEntry
     }
     person.total = roundHours(person.total + entry.hours);
     person.byDay[entry.date] = roundHours((person.byDay[entry.date] ?? 0) + entry.hours);
-    const line = person.byJob.find((item) => item.jobId === "");
+    // Shop time is one line. Each unlisted job is its own line, matched on what was typed.
+    const label = offListLabel(entry);
+    const line = person.byJob.find((item) => item.jobId === "" && item.scope.toLowerCase() === label.toLowerCase());
     if (line) line.hours = roundHours(line.hours + entry.hours);
-    else person.byJob.push({ jobId: "", scope: SHOP_LABEL, hours: roundHours(entry.hours) });
+    else person.byJob.push({ jobId: "", scope: label, hours: roundHours(entry.hours) });
   }
   return [...people.values()].sort((a, b) => b.total - a.total || a.workerName.localeCompare(b.workerName));
 }
@@ -129,7 +139,7 @@ export function entriesFor(jobs: JobHours[], workerId: string, from: string, to:
   }
   for (const entry of shop) {
     if (entry.workerId !== workerId || entry.date < from || entry.date > to) continue;
-    lines.push({ id: entry.id, workerId: entry.workerId, workerName: entry.workerName, date: entry.date, hours: entry.hours, note: entry.note, at: entry.at, jobId: "", scope: SHOP_LABEL });
+    lines.push({ id: entry.id, workerId: entry.workerId, workerName: entry.workerName, date: entry.date, hours: entry.hours, note: entry.note, at: entry.at, jobId: "", scope: offListLabel(entry) });
   }
   return lines.sort((a, b) => b.date.localeCompare(a.date) || b.at.localeCompare(a.at));
 }

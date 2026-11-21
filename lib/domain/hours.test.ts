@@ -93,6 +93,19 @@ describe("adding up a week", () => {
     const mine = entriesFor(jobs, "w1", "2026-11-16", "2026-11-22", shop);
     expect(mine[0]).toMatchObject({ date: "2026-11-18", jobId: "", scope: "Shop time", hours: 1.5, note: "Loaded the truck" });
     expect(totalHours(mine)).toBe(18);
+    // A job that isn't listed gets its own line, named the way the crew member typed it.
+    const offList = [
+      ...shop,
+      { id: "u1", kind: "shop_hours" as const, workerId: "w1", workerName: "Alex", unlistedJob: "412 Oak St", date: "2026-11-19", hours: 6, note: "", at: "2026-11-19T22:00:00.000Z" },
+      { id: "u2", kind: "shop_hours" as const, workerId: "w1", workerName: "Alex", unlistedJob: "412 oak st", date: "2026-11-20", hours: 2, note: "", at: "2026-11-20T22:00:00.000Z" },
+    ];
+    const withOffList = weekTotals(jobs, "2026-11-16", offList);
+    expect(withOffList[0].total).toBe(26);
+    expect(withOffList[0].byJob.slice(2)).toEqual([
+      { jobId: "", scope: "Shop time", hours: 2 },
+      { jobId: "", scope: "Job not listed: 412 Oak St", hours: 8 },
+    ]);
+    expect(entriesFor(jobs, "w1", "2026-11-16", "2026-11-22", offList)[0]).toMatchObject({ date: "2026-11-20", jobId: "", scope: "Job not listed: 412 oak st" });
     // Leaving shop time out changes nothing about the job totals.
     expect(weekTotals(jobs, "2026-11-16")[0].total).toBe(16);
   });

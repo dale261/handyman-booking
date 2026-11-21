@@ -121,12 +121,18 @@ export type HoursEntry = {
   at: string;
 };
 
-/** Time a crew member worked that wasn't on a job: loading the truck, cleaning tools, a supply run. */
+/**
+ * Time a crew member worked that isn't on a job record. Usually shop time: loading the
+ * truck, cleaning tools, a supply run. When `unlistedJob` is filled it was time on a real
+ * job that isn't in the app (or isn't on that person's list), named in their own words.
+ */
 export type ShopHoursEntry = {
   id: string;
   kind: "shop_hours";
   workerId: string;
   workerName: string;
+  /** The job in the crew member's words (an address, a customer), when it was a job that isn't listed. */
+  unlistedJob?: string;
   /** The day worked, YYYY-MM-DD. */
   date: string;
   hours: number;

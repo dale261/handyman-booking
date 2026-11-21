@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CrewLogSetupNote, ReceiptRow, ShopTimeForm } from "@/components/crew-log";
+import { CrewLogSetupNote, ReceiptRow } from "@/components/crew-log";
 import { Flash } from "@/components/flash";
+import { HoursForm } from "@/components/hours-form";
 import { ReceiptForm } from "@/components/receipt-form";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { removeCrewEntryAction } from "@/lib/actions";
 import type { ExpenseEntry, ShopHoursEntry } from "@/lib/db/types";
 import { EXPENSE_LIMITS, totalOwed } from "@/lib/domain/expenses";
-import { addDays, entriesFor, HOURS_LIMITS, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
+import { addDays, entriesFor, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 
 export default async function WorkerPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
@@ -49,23 +50,28 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
     .filter((job) => !job.scheduledDate || job.scheduledDate >= addDays(today, -EXPENSE_LIMITS.daysBack))
     .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
     .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
+  // Jobs hours can be logged on: the same list, limited to booked, underway and finished work in the window hours can be entered for.
+  const hoursJobs = receiptJobs.filter((item) => {
+    const job = jobs.find((other) => other.id === item.id);
+    return Boolean(job && HOURS_STATUSES.includes(job.status) && (!job.scheduledDate || job.scheduledDate >= addDays(today, -HOURS_LIMITS.daysBack - 14)));
+  });
   const mine = me ? entriesFor(allJobs, me.id, thisWeek, addDays(thisWeek, 6), shop) : [];
   const mineLastWeek = me ? entriesFor(allJobs, me.id, lastWeek, addDays(lastWeek, 6), shop) : [];
 
   return (
     <div className="space-y-4">
       <h1 className="font-display text-3xl font-semibold text-ink">{me ? me.fullName : "Crew work"}</h1>
-      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Open a job to start it, mark it done, or add your hours.</p>
+      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Add your hours here. Open a job to start it or mark it done.</p>
       <Flash notice={query.notice} error={query.error} />
       {me && (
         <Card>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-3 text-sm">
             <p className="font-display text-xl font-semibold">My hours</p>
             <p>
               This week: <span className="font-semibold">{hoursLabel(totalHours(mine))}</span> · Last week: <span className="font-semibold">{hoursLabel(totalHours(mineLastWeek))}</span>
             </p>
             {mine.length === 0 ? (
-              <p className="text-muted">Nothing logged this week yet. For time on a job, open the job and use &quot;Add hours&quot;. For time that wasn&apos;t on a job, use shop time below.</p>
+              <p className="text-muted">Nothing logged this week yet.</p>
             ) : (
               <ul className="space-y-1">
                 {mine.map((entry) => (
@@ -99,13 +105,39 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
             <p className="text-muted">A week runs Monday through Sunday.</p>
             <div className="space-y-3 border-t border-line pt-3">
               <div>
-                <p className="font-semibold">Add shop time</p>
-                <p className="text-muted">For hours that weren&apos;t on a job: loading up, cleaning tools, a supply run.</p>
+                <p className="font-semibold">Add hours</p>
+                <p className="text-muted">Pick the job. If it isn&apos;t in the list, choose &quot;A job that isn&apos;t listed&quot; and say which one. Use shop time for loading up, cleaning tools or a supply run.</p>
               </div>
-              {logReady ? <ShopTimeForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" /> : <CrewLogSetupNote owner={false} />}
+              {logReady ? <HoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" jobs={hoursJobs} /> : <CrewLogSetupNote owner={false} />}
             </div>
           </CardContent>
         </Card>
+      )}
+      <p className="font-display text-xl font-semibold">{actor.role === "owner" ? "Scheduled jobs" : "My jobs"}</p>
+      {jobs.length === 0 ? (
+        <Card>
+          <CardContent className="text-sm text-muted">
+            {actor.role === "owner" ? "Nothing is scheduled right now." : "No jobs are scheduled for your crew right now. You can still add hours above for a job that isn't listed."}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3">
+          {jobs.map((job) => (
+            <Link key={job.id} href={`/jobs/${job.id}`}>
+              <Card>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{job.scope}</p>
+                    <p className="text-sm text-muted">
+                      {job.scheduledDate ? formatDateRange(jobDates(job)) : "Unscheduled"} {job.startMin != null ? `at ${formatMinutes(job.startMin)}` : ""} · {job.jobSiteAddress}
+                    </p>
+                  </div>
+                  <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       )}
       {me && (
         <Card>
@@ -129,41 +161,13 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
             <div className="space-y-3 border-t border-line pt-3">
               <p className="font-semibold">Add a receipt</p>
               {logReady ? (
-                <ReceiptForm
-                  today={today}
-                  minDate={addDays(today, -EXPENSE_LIMITS.daysBack)}
-                  back="/worker"
-                  jobs={receiptJobs}
-                />
+                <ReceiptForm today={today} minDate={addDays(today, -EXPENSE_LIMITS.daysBack)} back="/worker" jobs={receiptJobs} />
               ) : (
                 <CrewLogSetupNote owner={false} />
               )}
             </div>
           </CardContent>
         </Card>
-      )}
-      {jobs.length === 0 ? (
-        <Card>
-          <CardContent className="text-sm text-muted">Nothing is on your crew right now.</CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-3">
-          {jobs.map((job) => (
-            <Link key={job.id} href={`/jobs/${job.id}`}>
-              <Card>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{job.scope}</p>
-                    <p className="text-sm text-muted">
-                      {job.scheduledDate ? formatDateRange(jobDates(job)) : "Unscheduled"} {job.startMin != null ? `at ${formatMinutes(job.startMin)}` : ""} · {job.jobSiteAddress}
-                    </p>
-                  </div>
-                  <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
       )}
     </div>
   );

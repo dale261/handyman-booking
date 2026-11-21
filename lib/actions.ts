@@ -440,12 +440,23 @@ async function crewLog(form: FormData, notice: string, work: (repo: Repository, 
   redirect(`${page}?notice=${encodeURIComponent(notice)}${extra}`);
 }
 
-/** Hours that weren't on a job: loading up, cleaning tools, a supply run. */
-export async function addShopHoursAction(form: FormData) {
+/**
+ * The crew page's one "Add hours" form. What the hours were for decides where they go:
+ * a job on the list (kept on that job), a job that isn't listed (kept in the crew log
+ * with the crew member's own description), or shop time.
+ */
+export async function addCrewHoursAction(form: FormData) {
   const hours = Number(field(form, "hours"));
-  await crewLog(form, "Shop time added.", (repo, actor) =>
-    addShopHours(repo, actor, { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") }),
-  );
+  const target = field(form, "target");
+  const entry = { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") };
+  if (target === "shop") return crewLog(form, "Shop time added.", (repo, actor) => addShopHours(repo, actor, entry));
+  if (target === "other") {
+    return crewLog(form, "Hours added.", (repo, actor) => addShopHours(repo, actor, { ...entry, unlistedJob: field(form, "unlistedJob") }));
+  }
+  await crewLog(form, "Hours added.", async (repo, actor) => {
+    if (!/^[0-9a-f-]{36}$/i.test(target)) return { ok: false, error: "Pick what the hours were for." };
+    return addHours(repo, actor, target, entry);
+  });
 }
 
 /** A receipt for something a crew member paid for and should be paid back. */
