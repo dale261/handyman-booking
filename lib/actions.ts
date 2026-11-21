@@ -442,19 +442,16 @@ async function crewLog(form: FormData, notice: string, work: (repo: Repository, 
 
 /**
  * The crew page's one "Add hours" form. What the hours were for decides where they go:
- * a job on the list (kept on that job), a job that isn't listed (kept in the crew log
- * with the crew member's own description), or shop time.
+ * a job on the list (kept on that job) or shop time. The owner's rule: no hours on a job
+ * that isn't in the app.
  */
 export async function addCrewHoursAction(form: FormData) {
   const hours = Number(field(form, "hours"));
   const target = field(form, "target");
   const entry = { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") };
   if (target === "shop") return crewLog(form, "Shop time added.", (repo, actor) => addShopHours(repo, actor, entry));
-  if (target === "other") {
-    return crewLog(form, "Hours added.", (repo, actor) => addShopHours(repo, actor, { ...entry, unlistedJob: field(form, "unlistedJob") }));
-  }
   await crewLog(form, "Hours added.", async (repo, actor) => {
-    if (!/^[0-9a-f-]{36}$/i.test(target)) return { ok: false, error: "Pick what the hours were for." };
+    if (!/^[0-9a-f-]{36}$/i.test(target)) return { ok: false, error: "Pick the job the hours were for, or shop time." };
     return addHours(repo, actor, target, entry);
   });
 }

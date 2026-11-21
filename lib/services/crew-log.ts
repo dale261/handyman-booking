@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewEntry, ExpenseEntry, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
 import { checkExpense } from "@/lib/domain/expenses";
-import { checkHours, UNLISTED_JOB } from "@/lib/domain/hours";
+import { checkHours } from "@/lib/domain/hours";
 import { todayDetroit, usd } from "@/lib/format";
 import { notify, visibleTo } from "@/lib/services/booking";
 
@@ -33,32 +33,25 @@ async function whoFor(repo: Repository, actor: Actor, workerId: string | undefin
   return worker;
 }
 
-/**
- * Time worked that isn't on a job record. Shop time (loading up, cleaning tools, a supply
- * run), or, when `unlistedJob` is given, time on a job that isn't in the app or isn't on
- * this person's list: they say which job in a few words so the owner can place it.
- */
+/** Time worked that wasn't on a job: loading up, cleaning tools, a supply run. */
 export async function addShopHours(
   repo: Repository,
   actor: Actor,
-  input: { workerId?: string; date: string; hours: number; note: string; unlistedJob?: string },
+  input: { workerId?: string; date: string; hours: number; note: string },
 ): Promise<Ok<ShopHoursEntry> | Err> {
   const worker = await whoFor(repo, actor, input.workerId);
   if ("ok" in worker) return worker;
-  const unlistedJob = input.unlistedJob === undefined ? undefined : input.unlistedJob.replace(/\s+/g, " ").trim().slice(0, UNLISTED_JOB.max);
-  if (unlistedJob !== undefined && unlistedJob.length < UNLISTED_JOB.min) return fail("Say which job it was: the address or the customer's name.");
   const checked = checkHours({ date: input.date, hours: input.hours, note: input.note }, todayDetroit());
   if (!checked.ok) return fail(checked.error);
   const sameDay = (await repo.listCrewEntries())
     .filter((entry): entry is ShopHoursEntry => entry.kind === "shop_hours" && entry.workerId === worker.id && entry.date === checked.date)
     .reduce((sum, entry) => sum + entry.hours, 0);
-  if (sameDay + checked.hours > 24) return fail("That would put more than 24 hours on one day. Check the day and the number.");
+  if (sameDay + checked.hours > 24) return fail("That would put more than 24 hours of shop time on one day. Check the day and the number.");
   const entry: ShopHoursEntry = {
     id: randomUUID(),
     kind: "shop_hours",
     workerId: worker.id,
     workerName: worker.fullName,
-    ...(unlistedJob ? { unlistedJob } : {}),
     date: checked.date,
     hours: checked.hours,
     note: checked.note,

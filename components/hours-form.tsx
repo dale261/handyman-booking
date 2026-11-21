@@ -4,14 +4,13 @@ import { useState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { addCrewHoursAction } from "@/lib/actions";
-import { HOURS_LIMITS, UNLISTED_JOB } from "@/lib/domain/hours";
+import { HOURS_LIMITS } from "@/lib/domain/hours";
 import { jobLine, type PickJob } from "@/lib/domain/job-pick";
 
 /**
  * The one "Add hours" form on the crew page (and the owner's Hours page).
- * The crew member says what the hours were for: a job on their list, a job that
- * isn't listed (they type which one), or shop time. They can always log their day,
- * even when the job isn't in the app yet.
+ * The crew member says what the hours were for: a job on their list, or shop time.
+ * The owner's rule: hours go on a job that is in the app, or they are shop time.
  */
 export function HoursForm({
   today,
@@ -63,7 +62,6 @@ export function HoursForm({
               {jobLine(job)}
             </option>
           ))}
-          <option value="other">A job that isn&apos;t listed</option>
           <option value="shop">Shop time (not on a job)</option>
         </select>
       </label>
@@ -74,12 +72,6 @@ export function HoursForm({
           {picked.where && <p>{picked.where}</p>}
           <p>{picked.when}</p>
         </div>
-      )}
-      {target === "other" && (
-        <label className="grid gap-1 font-semibold sm:col-span-2">
-          Which job?
-          <Input name="unlistedJob" required minLength={UNLISTED_JOB.min} maxLength={UNLISTED_JOB.max} placeholder="The address or the customer's name" />
-        </label>
       )}
       <label className="grid gap-1 font-semibold">
         Day worked

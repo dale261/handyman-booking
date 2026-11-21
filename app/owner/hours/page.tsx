@@ -8,7 +8,7 @@ import { removeCrewEntryAction } from "@/lib/actions";
 import type { ShopHoursEntry } from "@/lib/db/types";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
-import { addDays, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, isDate, offListLabel, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
+import { addDays, HOURS_LIMITS, HOURS_STATUSES, hoursLabel, isDate, roundHours, weekDays, weekStart, weekTotals } from "@/lib/domain/hours";
 import { jobDates } from "@/lib/domain/scheduling";
 import { formatDate, formatDateRange, todayDetroit } from "@/lib/format";
 
@@ -95,7 +95,7 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
                   </div>
                   <ul className="space-y-1">
                     {person.byJob.map((item) => (
-                      <li key={item.jobId || item.scope} className="flex flex-wrap justify-between gap-2">
+                      <li key={item.jobId || "shop"} className="flex flex-wrap justify-between gap-2">
                         {item.jobId ? (
                           <Link className="font-semibold text-pine underline" href={`/jobs/${item.jobId}`}>
                             {item.scope}
@@ -116,18 +116,17 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
       <Card>
         <CardContent className="space-y-3 text-sm">
           <div>
-            <p className="font-display text-xl font-semibold">Shop time and unlisted jobs</p>
-            <p className="text-muted">Hours that aren&apos;t on a job in the app: shop time, and jobs a crew member typed in because they weren&apos;t on their list. They count in the totals above.</p>
+            <p className="font-display text-xl font-semibold">Shop time</p>
+            <p className="text-muted">Hours that weren&apos;t on a job: loading up, cleaning tools, a supply run. They count in the totals above.</p>
           </div>
           {shopThisWeek.length === 0 ? (
-            <p className="text-muted">None this week.</p>
+            <p className="text-muted">No shop time this week.</p>
           ) : (
             <ul className="space-y-1.5">
               {shopThisWeek.map((entry) => (
                 <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line px-3 py-2">
                   <span>
                     <span className="font-semibold">{hoursLabel(entry.hours)}</span> · {formatDate(entry.date)} · {entry.workerName}
-                    <span className="block">{offListLabel(entry)}</span>
                     {entry.note ? <span className="block text-muted">{entry.note}</span> : null}
                   </span>
                   <form action={removeCrewEntryAction}>

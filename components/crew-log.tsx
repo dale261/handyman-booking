@@ -9,7 +9,7 @@ export function CrewLogSetupNote({ owner }: { owner: boolean }) {
   return (
     <p role="status" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
       {owner
-        ? "One setup step left: shop time, unlisted jobs and receipts can't be saved until the crew_log SQL file has been run in Supabase."
+        ? "One setup step left: shop time and receipts can't be saved until the crew_log SQL file has been run in Supabase."
         : "Part of this page isn't switched on yet. The owner has one setup step to finish."}
     </p>
   );

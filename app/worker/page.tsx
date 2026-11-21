@@ -106,7 +106,7 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
             <div className="space-y-3 border-t border-line pt-3">
               <div>
                 <p className="font-semibold">Add hours</p>
-                <p className="text-muted">Pick the job. If it isn&apos;t in the list, choose &quot;A job that isn&apos;t listed&quot; and say which one. Use shop time for loading up, cleaning tools or a supply run.</p>
+                <p className="text-muted">Pick the job you worked on. Use shop time for loading up, cleaning tools or a supply run. If your job isn&apos;t in the list, ask the owner to add it.</p>
               </div>
               {logReady ? <HoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" jobs={hoursJobs} /> : <CrewLogSetupNote owner={false} />}
             </div>
@@ -117,7 +117,7 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
       {jobs.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted">
-            {actor.role === "owner" ? "Nothing is scheduled right now." : "No jobs are scheduled for your crew right now. You can still add hours above for a job that isn't listed."}
+            {actor.role === "owner" ? "Nothing is scheduled right now." : "No jobs are listed for you right now. If you worked a job that isn't here, ask the owner to add it."}
           </CardContent>
         </Card>
       ) : (

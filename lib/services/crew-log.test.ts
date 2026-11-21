@@ -44,21 +44,6 @@ describe("shop time", () => {
     expect(await store.listCrewEntries()).toHaveLength(1);
   });
 
-  it("takes hours for a job that isn't listed, as long as it says which job", async () => {
-    const store = repo();
-    const worker = await actor(store, DEMO_USERS.worker);
-    expect((await addShopHours(store, worker, { date: today, hours: 6, note: "", unlistedJob: "  " })).ok).toBe(false);
-    expect((await addShopHours(store, worker, { date: today, hours: 6, note: "", unlistedJob: "ab" })).ok).toBe(false);
-    const added = await addShopHours(store, worker, { date: today, hours: 6, note: "Second coat", unlistedJob: "  412 Oak St,   the Millers " });
-    if (!added.ok) throw new Error(added.error);
-    expect(added.data.unlistedJob).toBe("412 Oak St, the Millers");
-    expect(added.data.kind).toBe("shop_hours");
-    // Plain shop time carries no job description at all.
-    const shop = await addShopHours(store, worker, { date: today, hours: 1, note: "Loaded the truck" });
-    if (!shop.ok) throw new Error(shop.error);
-    expect("unlistedJob" in shop.data).toBe(false);
-  });
-
   it("makes the owner say who it was, and refuses a customer", async () => {
     const store = repo();
     const owner = await actor(store, DEMO_USERS.owner);
