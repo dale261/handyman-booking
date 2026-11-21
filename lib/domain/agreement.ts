@@ -131,6 +131,8 @@ export function licensingStatement(
       trades,
     ];
   }
+  // Owner's call (Nov 21, 2026): a drain clearing job of the threshold or more leaves the builder sentence out.
+  if (service === "drain") return [trades];
   return [
     `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included. This job is at or over that amount, so a licensed contractor does the licensed part of the work.${done ? " We name that contractor and their license number on request." : " We confirm that contractor and their license number with you before work starts."}`,
     trades,
