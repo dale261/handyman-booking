@@ -8,6 +8,8 @@ import { clearLocalSession, createSupabaseServer, currentActor, homeFor, require
 import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { addHours, removeHours } from "@/lib/services/hours";
+import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
+import { isDate } from "@/lib/domain/hours";
 import { builderRuleApplies } from "@/lib/domain/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
@@ -416,6 +418,57 @@ export async function addHoursAction(form: FormData) {
 export async function removeHoursAction(form: FormData) {
   const jobId = field(form, "jobId");
   await mutate(jobId, "Hours removed.", (repo, actor) => removeHours(repo, actor, jobId, field(form, "entryId")));
+}
+
+/** Pages the crew-log forms may send people back to. Anything else falls back by role. */
+const CREW_LOG_PAGES = ["/worker", "/owner/hours", "/owner/receipts"];
+
+/** Shop time and receipts aren't on a job page, so they go back to the page the form was on. */
+async function crewLog(form: FormData, notice: string, work: (repo: Repository, actor: Actor) => Promise<{ ok: true } | { ok: false; error: string }>) {
+  const actor = await requireActor();
+  const asked = field(form, "back");
+  const fallback = actor.role === "owner" ? "/owner/hours" : "/worker";
+  const page = CREW_LOG_PAGES.includes(asked) && (actor.role === "owner" || asked === "/worker") ? asked : fallback;
+  const week = field(form, "week");
+  const extra = page === "/owner/hours" && isDate(week) ? `&week=${week}` : "";
+  const repo = getRepository();
+  const result = await work(repo, actor);
+  await settle(repo);
+  if (!result.ok) redirect(`${page}?error=${encodeURIComponent(result.error)}${extra}`);
+  redirect(`${page}?notice=${encodeURIComponent(notice)}${extra}`);
+}
+
+/** Hours that weren't on a job: loading up, cleaning tools, a supply run. */
+export async function addShopHoursAction(form: FormData) {
+  const hours = Number(field(form, "hours"));
+  await crewLog(form, "Shop time added.", (repo, actor) =>
+    addShopHours(repo, actor, { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") }),
+  );
+}
+
+/** A receipt for something a crew member paid for and should be paid back. */
+export async function addExpenseAction(form: FormData) {
+  const amount = Number(field(form, "amount").replace(/[$,\s]/g, ""));
+  await crewLog(form, "Receipt saved.", (repo, actor) =>
+    addExpense(repo, actor, {
+      workerId: field(form, "workerId") || undefined,
+      date: field(form, "date"),
+      amount,
+      what: field(form, "what"),
+      jobId: field(form, "jobId") || undefined,
+      photoId: field(form, "photoId") || undefined,
+    }),
+  );
+}
+
+export async function removeCrewEntryAction(form: FormData) {
+  await crewLog(form, "Removed.", (repo, actor) => removeCrewEntry(repo, actor, field(form, "entryId")));
+}
+
+/** Owner: mark a receipt paid back, or undo it. */
+export async function reimburseAction(form: FormData) {
+  const done = field(form, "done") === "1";
+  await crewLog(form, done ? "Marked paid back." : "Marked not paid back yet.", (repo, actor) => setReimbursed(repo, actor, field(form, "entryId"), done));
 }
 
 /** The crew's phone, handed to whoever is on site: record their sign-off. */

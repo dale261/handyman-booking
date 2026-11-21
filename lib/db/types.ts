@@ -121,6 +121,43 @@ export type HoursEntry = {
   at: string;
 };
 
+/** Time a crew member worked that wasn't on a job: loading the truck, cleaning tools, a supply run. */
+export type ShopHoursEntry = {
+  id: string;
+  kind: "shop_hours";
+  workerId: string;
+  workerName: string;
+  /** The day worked, YYYY-MM-DD. */
+  date: string;
+  hours: number;
+  note: string;
+  at: string;
+};
+
+/** Something a crew member paid for out of pocket that the owner should pay back. */
+export type ExpenseEntry = {
+  id: string;
+  kind: "expense";
+  workerId: string;
+  workerName: string;
+  /** The day it was bought, YYYY-MM-DD. */
+  date: string;
+  amount: number;
+  /** What it was, in the crew member's words. */
+  what: string;
+  /** The job it was for, when there is one. The title is kept so the record reads right later. */
+  jobId: string | null;
+  jobScope: string;
+  /** A photo of the receipt in the private photo store, if one was attached. */
+  photoId: string | null;
+  /** When the owner paid it back. Null while it's still owed. */
+  reimbursedAt: string | null;
+  at: string;
+};
+
+/** The crew log: shop time and receipts. Kept apart from jobs because neither belongs to one job's record. */
+export type CrewEntry = ShopHoursEntry | ExpenseEntry;
+
 /** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
 export type WorkSignOff = {
   name: string;

@@ -1,4 +1,4 @@
-import type { HoursEntry, JobRecord, JobStatus } from "@/lib/db/types";
+import type { HoursEntry, JobRecord, JobStatus, ShopHoursEntry } from "@/lib/db/types";
 
 /**
  * Hours a crew member logs against a job. They live on the job record, so there is
@@ -69,6 +69,9 @@ export function checkHours(input: { date: string; hours: number; note: string },
 
 type JobHours = Pick<JobRecord, "id" | "scope" | "hours">;
 
+/** How shop time is named wherever hours are listed. It has no job, so its job id is blank. */
+export const SHOP_LABEL = "Shop time";
+
 export type WorkerWeek = {
   workerId: string;
   workerName: string;
@@ -78,8 +81,8 @@ export type WorkerWeek = {
   byJob: { jobId: string; scope: string; hours: number }[];
 };
 
-/** Everyone's hours for the week starting on `start`, busiest first. */
-export function weekTotals(jobs: JobHours[], start: string): WorkerWeek[] {
+/** Everyone's hours for the week starting on `start`, busiest first. Shop time counts with job time. */
+export function weekTotals(jobs: JobHours[], start: string, shop: ShopHoursEntry[] = []): WorkerWeek[] {
   const end = addDays(start, 6);
   const people = new Map<string, WorkerWeek>();
   for (const job of jobs) {
@@ -97,19 +100,36 @@ export function weekTotals(jobs: JobHours[], start: string): WorkerWeek[] {
       else person.byJob.push({ jobId: job.id, scope: job.scope || "Job", hours: roundHours(entry.hours) });
     }
   }
+  for (const entry of shop) {
+    if (entry.date < start || entry.date > end) continue;
+    let person = people.get(entry.workerId);
+    if (!person) {
+      person = { workerId: entry.workerId, workerName: entry.workerName, total: 0, byDay: {}, byJob: [] };
+      people.set(entry.workerId, person);
+    }
+    person.total = roundHours(person.total + entry.hours);
+    person.byDay[entry.date] = roundHours((person.byDay[entry.date] ?? 0) + entry.hours);
+    const line = person.byJob.find((item) => item.jobId === "");
+    if (line) line.hours = roundHours(line.hours + entry.hours);
+    else person.byJob.push({ jobId: "", scope: SHOP_LABEL, hours: roundHours(entry.hours) });
+  }
   return [...people.values()].sort((a, b) => b.total - a.total || a.workerName.localeCompare(b.workerName));
 }
 
 export type HoursLine = HoursEntry & { jobId: string; scope: string };
 
-/** One person's entries in a date range, newest day first, each tagged with its job. */
-export function entriesFor(jobs: JobHours[], workerId: string, from: string, to: string): HoursLine[] {
+/** One person's entries in a date range, newest day first, each tagged with its job. Shop time has a blank job id. */
+export function entriesFor(jobs: JobHours[], workerId: string, from: string, to: string, shop: ShopHoursEntry[] = []): HoursLine[] {
   const lines: HoursLine[] = [];
   for (const job of jobs) {
     for (const entry of job.hours ?? []) {
       if (entry.workerId !== workerId || entry.date < from || entry.date > to) continue;
       lines.push({ ...entry, jobId: job.id, scope: job.scope || "Job" });
     }
+  }
+  for (const entry of shop) {
+    if (entry.workerId !== workerId || entry.date < from || entry.date > to) continue;
+    lines.push({ id: entry.id, workerId: entry.workerId, workerName: entry.workerName, date: entry.date, hours: entry.hours, note: entry.note, at: entry.at, jobId: "", scope: SHOP_LABEL });
   }
   return lines.sort((a, b) => b.date.localeCompare(a.date) || b.at.localeCompare(a.at));
 }

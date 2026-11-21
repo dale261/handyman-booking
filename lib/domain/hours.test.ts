@@ -77,6 +77,26 @@ describe("adding up a week", () => {
     expect(totalHours(mine)).toBe(16);
   });
 
+  it("counts shop time with job time, on its own line with no job", () => {
+    const shop = [
+      { id: "s1", kind: "shop_hours" as const, workerId: "w1", workerName: "Alex", date: "2026-11-18", hours: 1.5, note: "Loaded the truck", at: "2026-11-18T22:00:00.000Z" },
+      { id: "s2", kind: "shop_hours" as const, workerId: "w1", workerName: "Alex", date: "2026-11-17", hours: 0.5, note: "", at: "2026-11-17T22:00:00.000Z" },
+      // Someone with no job hours at all this week still shows up.
+      { id: "s3", kind: "shop_hours" as const, workerId: "w3", workerName: "Jo", date: "2026-11-20", hours: 2, note: "Cleaned sprayers", at: "2026-11-20T22:00:00.000Z" },
+      // Outside the week: left out.
+      { id: "s4", kind: "shop_hours" as const, workerId: "w3", workerName: "Jo", date: "2026-11-09", hours: 6, note: "", at: "2026-11-09T22:00:00.000Z" },
+    ];
+    const week = weekTotals(jobs, "2026-11-16", shop);
+    expect(week.map((person) => `${person.workerName} ${person.total}`)).toEqual(["Alex 18", "Sam 4", "Jo 2"]);
+    expect(week[0].byDay["2026-11-17"]).toBe(8.5);
+    expect(week[0].byJob[2]).toEqual({ jobId: "", scope: "Shop time", hours: 2 });
+    const mine = entriesFor(jobs, "w1", "2026-11-16", "2026-11-22", shop);
+    expect(mine[0]).toMatchObject({ date: "2026-11-18", jobId: "", scope: "Shop time", hours: 1.5, note: "Loaded the truck" });
+    expect(totalHours(mine)).toBe(18);
+    // Leaving shop time out changes nothing about the job totals.
+    expect(weekTotals(jobs, "2026-11-16")[0].total).toBe(16);
+  });
+
   it("labels hours plainly", () => {
     expect(hoursLabel(1)).toBe("1 hr");
     expect(hoursLabel(7.5)).toBe("7.5 hrs");

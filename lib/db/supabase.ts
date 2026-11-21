@@ -4,6 +4,7 @@ import { LIBRARY_SEED, type LibraryEntry } from "@/lib/domain/library-data";
 import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
+  CrewEntry,
   CrewRecord,
   EmailRecord,
   JobRecord,
@@ -27,6 +28,15 @@ type ProfileRow = {
   billing_address: string;
   billing_zip: string;
 };
+
+/** Shown when the crew log table hasn't been created in Supabase yet. */
+export const CREW_LOG_SETUP = "Shop time and receipts need one setup step first: the owner has to run the crew_log SQL file in Supabase.";
+
+/** True when Supabase is saying the crew_entries table isn't there. */
+function crewLogMissing(error: { message: string; code?: string }): boolean {
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  return /crew_entries/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
+}
 
 export class SupabaseRepository implements Repository {
   readonly mode = "supabase" as const;
@@ -326,6 +336,44 @@ export class SupabaseRepository implements Repository {
     if (user.workerId) {
       await this.must(this.db().from("workers").update({ profile_id: user.id }).eq("id", user.workerId));
     }
+  }
+
+  // The crew log: shop time and receipts. One JSON payload per row, the way jobs are stored.
+  // Until the owner has run the crew_log SQL file the table doesn't exist: reads come back
+  // empty so pages still load, and writes say plainly what is missing.
+  async crewLogReady() {
+    const { error } = await this.db().from("crew_entries").select("id").limit(1);
+    if (!error) return true;
+    if (crewLogMissing(error)) return false;
+    throw new Error(error.message);
+  }
+
+  async listCrewEntries() {
+    const { data, error } = await this.db().from("crew_entries").select("payload").order("day", { ascending: false }).order("created_at", { ascending: false });
+    if (error) {
+      if (crewLogMissing(error)) return [];
+      throw new Error(error.message);
+    }
+    return ((data ?? []) as { payload: CrewEntry }[]).map((row) => row.payload);
+  }
+
+  async getCrewEntry(id: string) {
+    const { data, error } = await this.db().from("crew_entries").select("payload").eq("id", id).maybeSingle();
+    if (error) {
+      if (crewLogMissing(error)) return null;
+      throw new Error(error.message);
+    }
+    return (data?.payload as CrewEntry | undefined) ?? null;
+  }
+
+  async saveCrewEntry(entry: CrewEntry) {
+    const { error } = await this.db().from("crew_entries").upsert({ id: entry.id, kind: entry.kind, worker_id: entry.workerId, day: entry.date, payload: entry });
+    if (error) throw new Error(crewLogMissing(error) ? CREW_LOG_SETUP : error.message);
+  }
+
+  async deleteCrewEntry(id: string) {
+    const { error } = await this.db().from("crew_entries").delete().eq("id", id);
+    if (error) throw new Error(crewLogMissing(error) ? CREW_LOG_SETUP : error.message);
   }
 
   async listLeads() {

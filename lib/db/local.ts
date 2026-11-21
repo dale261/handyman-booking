@@ -7,6 +7,7 @@ import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
+  CrewEntry,
   CrewRecord,
   EmailRecord,
   JobRecord,
@@ -36,6 +37,8 @@ type FileShape = {
   notifications: NotificationRecord[];
   emails: EmailRecord[];
   leads: LeadRecord[];
+  /** Shop time and receipts. Missing in files saved before the crew log existed. */
+  crewLog?: CrewEntry[];
   reviews: ReviewRecord[];
   library: LibraryEntry[];
   geo: Record<string, { lat: number; lng: number }>;
@@ -460,6 +463,37 @@ export class LocalRepository implements Repository {
       const at = leads.findIndex((item) => item.id === lead.id);
       if (at === -1) leads.unshift(this.clone(lead));
       else leads[at] = this.clone(lead);
+    });
+  }
+  private crewLog(): CrewEntry[] {
+    const db = this.db();
+    if (!db.crewLog) db.crewLog = [];
+    return db.crewLog;
+  }
+  async crewLogReady() {
+    return true;
+  }
+  async listCrewEntries() {
+    return this.run(async () => this.clone(this.crewLog()).sort((a, b) => b.date.localeCompare(a.date) || b.at.localeCompare(a.at)));
+  }
+  async getCrewEntry(id: string) {
+    return this.run(async () => {
+      const entry = this.crewLog().find((item) => item.id === id);
+      return entry ? this.clone(entry) : null;
+    });
+  }
+  async saveCrewEntry(entry: CrewEntry) {
+    await this.run(async () => {
+      const log = this.crewLog();
+      const at = log.findIndex((item) => item.id === entry.id);
+      if (at === -1) log.unshift(this.clone(entry));
+      else log[at] = this.clone(entry);
+    });
+  }
+  async deleteCrewEntry(id: string) {
+    await this.run(async () => {
+      const db = this.db();
+      db.crewLog = this.crewLog().filter((item) => item.id !== id);
     });
   }
   async listReviews() {

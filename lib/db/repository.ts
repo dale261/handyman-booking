@@ -1,6 +1,7 @@
 import type { LibraryEntry } from "@/lib/domain/library-data";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
+  CrewEntry,
   CrewRecord,
   EmailRecord,
   JobRecord,
@@ -49,6 +50,13 @@ export interface Repository {
   listLeads(): Promise<LeadRecord[]>;
   getLead(id: string): Promise<LeadRecord | null>;
   saveLead(lead: LeadRecord): Promise<void>;
+  /** False until the crew log's table exists. Lets the owner's pages say the setup step is still to do. */
+  crewLogReady(): Promise<boolean>;
+  /** The crew log: shop time and receipts to reimburse. Newest day first. */
+  listCrewEntries(): Promise<CrewEntry[]>;
+  getCrewEntry(id: string): Promise<CrewEntry | null>;
+  saveCrewEntry(entry: CrewEntry): Promise<void>;
+  deleteCrewEntry(id: string): Promise<void>;
   listReviews(): Promise<ReviewRecord[]>;
   getReview(jobId: string): Promise<ReviewRecord | null>;
   saveReview(review: ReviewRecord): Promise<void>;
