@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
 import { Shell } from "@/components/shell";
+import { VisitCounter } from "@/components/visit-counter";
 import { currentActor } from "@/lib/auth";
 import { databaseReady } from "@/lib/db/index";
 import { keyStatus } from "@/lib/keys";
@@ -56,6 +57,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </section>
           )}
         </Shell>
+        {actor?.role !== "owner" && actor?.role !== "worker" && <VisitCounter />}
       </body>
     </html>
   );

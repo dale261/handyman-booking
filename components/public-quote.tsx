@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { countStep } from "@/components/visit-counter";
 import { useState, useTransition } from "react";
 import { publicEstimateAction, startBookingAction } from "@/lib/actions";
 import { LOCKED_PRICE } from "@/lib/domain/copy";
@@ -89,6 +90,7 @@ export function PublicQuote({
     setDescription("");
     setEstimate(null);
     setError("");
+    countStep(`picked-${id}`);
   }
 
   return (
@@ -103,6 +105,7 @@ export function PublicQuote({
             if (result.ok) {
               setLeadId(result.leadId);
               setEstimate(result.estimate);
+              countStep("price-shown");
             } else {
               setError(result.error);
             }
