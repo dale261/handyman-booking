@@ -258,6 +258,18 @@ export function AgreementDocument({
         )}
       </section>
 
+      {(job.signOffs ?? []).length > 0 && (
+        <section className="space-y-2 text-sm print:break-inside-avoid">
+          <h2 className="font-display text-lg font-semibold">Work sign-off</h2>
+          {(job.signOffs ?? []).map((entry) => (
+            <p key={entry.at}>
+              {entry.via === "crew_phone" ? "Signed off on site by" : "Confirmed by"} <span className="font-semibold">{entry.name}</span>
+              {entry.title ? `, ${entry.title},` : ""} on {stamp(entry.at)}.{entry.note ? ` “${entry.note}”` : ""}
+            </p>
+          ))}
+        </section>
+      )}
+
       <section className="space-y-4 text-sm">
         <h2 className="font-display text-lg font-semibold">Terms</h2>
         <ol className="space-y-3 pl-5">

@@ -110,6 +110,8 @@ export type Discount = {
 /** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
 export type WorkSignOff = {
   name: string;
+  /** What they do there, such as "Store manager". Optional. */
+  title?: string;
   /** Where it was given: the customer's own job page, the crew's phone on site, or a link we sent. */
   via: "job_page" | "crew_phone" | "link";
   at: string;

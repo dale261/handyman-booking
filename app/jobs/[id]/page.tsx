@@ -50,7 +50,7 @@ import { formatDate, formatDateRange, formatMinutes, usd } from "@/lib/format";
 import { daysOf, jobDates } from "@/lib/domain/scheduling";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
 import { paypalConfigured } from "@/lib/paypal";
-import { amountPaid, amountPayable, listOpenSlots, prepaid, visibleTo, type SlotOption } from "@/lib/services/booking";
+import { amountPaid, amountPayable, listOpenSlots, prepaid, visibleTo, type SlotOption, SIGN_OFF_STATUSES } from "@/lib/services/booking";
 
 export default async function JobPage({
   params,
@@ -589,6 +589,31 @@ export default async function JobPage({
               <SubmitButton>Mark the job done</SubmitButton>
             </form>
           )}
+          {(actor.role === "worker" || actor.role === "owner") && SIGN_OFF_STATUSES.includes(job.status) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>On-site sign-off</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="text-muted">
+                  Hand this phone to the manager or customer on site so they can confirm the work. The screen shows the work and the address only: no price, and no eX Construction name.
+                </p>
+                {(job.signOffs ?? [])
+                  .filter((entry) => entry.via === "crew_phone")
+                  .map((entry) => (
+                    <p key={entry.at} className="rounded-md border border-pine/30 bg-pine/5 px-3 py-2">
+                      Signed off by {entry.name}
+                      {entry.title ? `, ${entry.title},` : ""} on{" "}
+                      {new Date(entry.at).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" })}.
+                      {entry.note ? ` “${entry.note}”` : ""}
+                    </p>
+                  ))}
+                <Link className="inline-block rounded-md bg-pine px-4 py-2 font-semibold text-white" href={`/jobs/${job.id}/signoff`}>
+                  Get a sign-off
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           {["awaiting_approval", "balance_due", "completed", "reviewed"].includes(job.status) && (actor.role === "customer" || actor.role === "owner") && (
             <Card>
@@ -598,7 +623,8 @@ export default async function JobPage({
               <CardContent className="space-y-3 text-sm">
                 {(job.signOffs ?? []).map((entry) => (
                   <p key={entry.at} className="rounded-md border border-pine/30 bg-pine/5 px-3 py-2">
-                    {entry.name} confirmed the work looks right on{" "}
+                    {entry.name}
+                    {entry.title ? `, ${entry.title},` : ""} {entry.via === "crew_phone" ? "signed off on site" : "confirmed the work looks right"} on{" "}
                     {new Date(entry.at).toLocaleDateString("en-US", { timeZone: "America/Detroit", dateStyle: "medium" })}.
                   </p>
                 ))}

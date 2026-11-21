@@ -1174,6 +1174,60 @@ export async function completeWork(
   });
 }
 
+/** Where a sign-off can be taken: once the work is underway, and any time after it's finished. */
+export const SIGN_OFF_STATUSES: JobStatus[] = ["in_progress", "awaiting_approval", "balance_due", "completed", "reviewed"];
+
+/**
+ * On-site sign-off. A crew member hands their phone to whoever is at the job, often a store
+ * manager on a maintenance job, who types their name and confirms the work was completed
+ * properly to their knowledge. It never changes what is owed; it's a record that goes on the
+ * invoice, and the customer is told when someone other than them signed.
+ */
+export async function recordSignOff(
+  repo: Repository,
+  actor: Actor,
+  jobId: string,
+  input: { name: string; title: string; note: string },
+): Promise<Ok<JobRecord> | Err> {
+  return repo.run(async () => {
+    const job = await repo.getJob(jobId);
+    if (!job) return fail("Job not found.");
+    const denied = await requireWorkerOrOwner(repo, actor, job);
+    if (denied) return fail(denied);
+    if (!SIGN_OFF_STATUSES.includes(job.status)) return fail("A sign-off comes once the work is underway or finished.");
+    if ((job.signOffs ?? []).length >= 10) return fail("This job already has plenty of sign-offs.");
+    const name = input.name.replace(/\s+/g, " ").trim();
+    if (name.length < 2) return fail("Enter the name of the person signing off.");
+    if (name.length > 80) return fail("That name is too long.");
+    const title = input.title.replace(/\s+/g, " ").trim().slice(0, 60);
+    const note = input.note.trim().slice(0, 500);
+    job.signOffs = [...(job.signOffs ?? []), { name, title, via: "crew_phone", at: new Date().toISOString(), note }];
+    const saved = await repo.saveJob(job, { skipOverlap: true });
+    const settings = await repo.getSettings();
+    const who = title ? `${name}, ${title}` : name;
+    const what = saved.scope || "the work";
+    await notify(
+      repo,
+      settings,
+      "done",
+      `Signed off on site: ${saved.scope || "job"}`,
+      `${who} confirmed that ${what} at ${saved.jobSiteAddress} was completed properly.${note ? ` Their note: ${note}` : ""}`,
+      saved.id,
+    );
+    // A maintenance company wants to know their site signed off. A homeowner who signed themselves doesn't need telling.
+    if (name.toLowerCase() !== saved.customerName.trim().toLowerCase()) {
+      await mail(
+        repo,
+        saved.customerEmail,
+        `${saved.invoiceNumber ? `Invoice #${saved.invoiceNumber}: ` : ""}work signed off on site`,
+        `Hi ${saved.customerName}, ${who} signed off on site that ${what} at ${saved.jobSiteAddress} was completed properly.${note ? `\n\nTheir note: ${note}` : ""}\n\nYour copy, with the sign-off on it: ${customerLink(saved)}${emailFooter(settings)}`,
+        saved.id,
+      );
+    }
+    return { ok: true, data: saved };
+  });
+}
+
 export async function approveWork(repo: Repository, actor: Actor, jobId: string): Promise<Ok<JobRecord> | Err> {
   return repo.run(async () => {
     const job = await repo.getJob(jobId);

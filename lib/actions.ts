@@ -48,6 +48,7 @@ import {
   payJob,
   proposePriceChange,
   reassignCrew,
+  recordSignOff,
   referOut,
   releaseHold,
   releaseLicense,
@@ -400,6 +401,20 @@ export async function completeWorkAction(form: FormData) {
   const jobId = field(form, "jobId");
   const note = field(form, "note");
   await mutate(jobId, "Marked complete. The customer was told, and any balance is now due.", (repo, actor) => completeWork(repo, actor, jobId, note));
+}
+
+/** The crew's phone, handed to whoever is on site: record their sign-off. */
+export async function signOffAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  if (!jobId) redirect("/");
+  const back = (query: string): never => redirect(`/jobs/${jobId}/signoff?${query}`);
+  if (form.get("agree") !== "on") back(`error=${encodeURIComponent("Tick the box to confirm the work was completed properly.")}`);
+  const actor = await requireActor();
+  const repo = getRepository();
+  const result = await recordSignOff(repo, actor, jobId, { name: field(form, "name"), title: field(form, "title"), note: field(form, "note") });
+  await settle(repo);
+  if (!result.ok) back(`error=${encodeURIComponent(result.error)}`);
+  back("done=1");
 }
 
 export async function approveWorkAction(form: FormData) {

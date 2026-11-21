@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signOut } from "@/lib/actions";
 import type { Actor } from "@/lib/db/types";
 import type { KeyStatus } from "@/lib/keys";
+import { HideOnSignOff } from "@/components/hide-on-signoff";
 import { Button } from "@/components/ui/button";
 
 export function Shell({
@@ -18,6 +19,7 @@ export function Shell({
 }) {
   return (
     <div className="min-h-screen">
+      <HideOnSignOff>
       <header className="bg-charcoal text-white print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5">
           <Link href="/" className="flex shrink-0 items-center gap-2">
@@ -56,6 +58,7 @@ export function Shell({
           </nav>
         </div>
       </header>
+      </HideOnSignOff>
       {ready && keys?.localDemo && (
         <div className="border-b border-copper/30 bg-copper/10 print:hidden">
           <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-ink">
@@ -68,12 +71,14 @@ export function Shell({
         </div>
       )}
       <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">{children}</main>
+      <HideOnSignOff>
       <footer className="border-t border-line py-8 text-center text-sm text-muted print:hidden">
         eX Construction · 1339 N Mitchell St, Cadillac, MI · Handyman work across the 231 area code ·{" "}
         <a className="underline" href="https://exconstructionlc.com">
           exconstructionlc.com
         </a>
       </footer>
+      </HideOnSignOff>
     </div>
   );
 }
