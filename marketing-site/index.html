@@ -70,7 +70,13 @@
   .small-jobs .card { padding:18px 20px; border-top-width:4px; }
   .small-jobs h4 { margin:0 0 4px; font-size:1.1rem; }
   .small-jobs p { margin:0; font-size:.95rem; }
-  .area { background:var(--light); text-align:center; }
+  .commercial { background:var(--light); text-align:center; }
+  .commercial .lead { font-size:1.2rem; font-weight:600; max-width:640px; margin:0 auto 8px; }
+  .commercial .wrap > p { max-width:640px; margin:0 auto 22px; }
+  .commercial .small-jobs { text-align:left; margin-bottom:26px; }
+  .commercial .card { background:#fff; }
+  .btn-dark { border:2px solid var(--dark); color:var(--dark); }
+  .area { background:#fff; text-align:center; }
   .area p { max-width:640px; margin:0 auto; font-size:1.1rem; }
   .cta { background:var(--dark); color:#fff; text-align:center; }
   .cta p { max-width:600px; margin:0 auto 24px; font-size:1.1rem; }
@@ -108,7 +114,7 @@
 <section class="hero">
   <div class="wrap">
     <h1>Handyman Services in Cadillac &amp; Northern Michigan</h1>
-    <p>eX Construction is based in Cadillac and helps homeowners across the 231 area code with the jobs on their to-do list. One firm price, a confirmed time, and finished work you can see.</p>
+    <p>eX Construction is based in Cadillac and helps homeowners and businesses across the 231 area code with the jobs on their to-do list. One firm price, a confirmed time, and finished work you can see.</p>
     <div class="btns">
       <a class="btn btn-primary" data-goatcounter-click="tap-instant-price-top" data-goatcounter-title="Tapped Get an instant price (top)" href="https://project-3u2ad.vercel.app/book" target="_blank" rel="noopener">Get an instant price</a>
       <a class="btn btn-outline js-only js-phone" data-goatcounter-click="tap-call-top" data-goatcounter-title="Tapped Call for a Free Quote" data-kind="tel" data-text="Call for a Free Quote" href="#quote-form">Call for a Free Quote</a>
@@ -130,6 +136,24 @@
         <div class="card"><h4>Household Cleaning</h4><p>Routine or deep cleaning.</p></div>
         <div class="card"><h4>Hire a Helper</h4><p>An extra set of hands for moving, carrying, and heavy lifting.</p></div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="commercial" id="commercial">
+  <div class="wrap">
+    <h2>Store &amp; Property Maintenance</h2>
+    <p class="lead">Managing a location in the Cadillac area from somewhere else? We're your local crew.</p>
+    <p>We handle quick repairs and maintenance for stores, offices, and rentals across the 231 area code. Call or text with the job, and we'll give you one firm price and a time.</p>
+    <div class="small-jobs">
+      <div class="card"><h4>Fast scheduling</h4><p>Quick-turn jobs get on the calendar fast.</p></div>
+      <div class="card"><h4>Before and after photos</h4><p>Sent with every job, so you can see the work from anywhere.</p></div>
+      <div class="card"><h4>Same-day invoice</h4><p>Your invoice goes out the day we finish.</p></div>
+      <div class="card"><h4>One firm price</h4><p>You know the cost before we start.</p></div>
+    </div>
+    <div class="btns">
+      <a class="btn btn-primary js-only js-phone" data-goatcounter-click="tap-call-commercial" data-goatcounter-title="Tapped Call (store maintenance)" data-kind="tel" data-text="Call {n}" href="#quote-form">Call us</a>
+      <a class="btn btn-dark js-only js-phone" data-goatcounter-click="tap-text-commercial" data-goatcounter-title="Tapped Text Us (store maintenance)" data-kind="sms" data-text="Text Us" href="#quote-form">Text Us</a>
     </div>
   </div>
 </section>
@@ -189,6 +213,7 @@
             <option>Yard cleanup</option>
             <option>Household cleaning</option>
             <option>Hire a helper</option>
+            <option>Store or property maintenance</option>
             <option>Other</option>
           </select>
         </div>
