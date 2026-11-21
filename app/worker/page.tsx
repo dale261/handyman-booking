@@ -44,6 +44,11 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
   // Every receipt still owed, then the ones paid back in the last two months.
   const shownReceipts = receipts.filter((entry) => !entry.reimbursedAt || entry.date >= addDays(today, -EXPENSE_LIMITS.daysBack));
   const owed = totalOwed(receipts);
+  // Jobs a receipt can be tied to: this person's jobs from the last two months, newest first, each with where and when.
+  const receiptJobs = jobs
+    .filter((job) => !job.scheduledDate || job.scheduledDate >= addDays(today, -EXPENSE_LIMITS.daysBack))
+    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
+    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
   const mine = me ? entriesFor(allJobs, me.id, thisWeek, addDays(thisWeek, 6), shop) : [];
   const mineLastWeek = me ? entriesFor(allJobs, me.id, lastWeek, addDays(lastWeek, 6), shop) : [];
 
@@ -128,7 +133,7 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
                   today={today}
                   minDate={addDays(today, -EXPENSE_LIMITS.daysBack)}
                   back="/worker"
-                  jobs={jobs.map((job) => ({ id: job.id, scope: job.scope || "Job" }))}
+                  jobs={receiptJobs}
                 />
               ) : (
                 <CrewLogSetupNote owner={false} />

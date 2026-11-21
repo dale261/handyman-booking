@@ -34,6 +34,15 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
+export type ReceiptJob = { id: string; scope: string; where: string; when: string };
+
+/** The line shown in the job list: the work, then the street, short enough for a phone. */
+function jobLine(job: ReceiptJob): string {
+  const work = job.scope.length > 44 ? `${job.scope.slice(0, 43)}…` : job.scope;
+  const street = job.where.split(",")[0].trim();
+  return street ? `${work} · ${street}` : work;
+}
+
 function Save({ busy }: { busy: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -59,8 +68,11 @@ export function ReceiptForm({
   back: string;
   /** Given on the owner's page, where the owner says who paid. */
   workers?: { id: string; fullName: string }[];
-  jobs: { id: string; scope: string }[];
+  /** Jobs the receipt can be tied to, with where and when, so the right one is easy to tell. */
+  jobs: ReceiptJob[];
 }) {
+  const [jobId, setJobId] = useState("");
+  const picked = jobs.find((job) => job.id === jobId);
   const [photoId, setPhotoId] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -129,15 +141,23 @@ export function ReceiptForm({
         <span>
           Job it was for <span className="font-normal text-muted">(optional)</span>
         </span>
-        <select name="jobId" defaultValue="" className="h-10 rounded-md border border-line bg-card px-3 font-normal">
+        <select name="jobId" value={jobId} onChange={(event) => setJobId(event.target.value)} className="h-10 rounded-md border border-line bg-card px-3 font-normal">
           <option value="">Not for one job</option>
           {jobs.map((job) => (
             <option key={job.id} value={job.id}>
-              {job.scope}
+              {jobLine(job)}
             </option>
           ))}
         </select>
       </label>
+      {picked && (
+        <div className="rounded-md border border-line bg-paper px-3 py-2 sm:col-span-2">
+          <p className="text-muted">Check it&apos;s the right job:</p>
+          <p className="font-semibold">{picked.scope}</p>
+          {picked.where && <p>{picked.where}</p>}
+          <p>{picked.when}</p>
+        </div>
+      )}
       <div className="grid gap-1 sm:col-span-2">
         <span className="font-semibold">
           Photo of the receipt <span className="font-normal text-muted">(optional)</span>
