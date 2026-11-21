@@ -90,6 +90,18 @@ On the saved-file demo there is no mailer, so the reset link prints in the termi
 
 Photos use a private bucket named `job-photos`. The first SQL file creates it. If that step prints a notice instead, open **Storage** and create a private bucket with that exact name.
 
+### Crew invites
+
+On the Rates page, **Invite a crew member** takes just a phone number or an email, plus the crew. The person opens the link and fills in their own name, email and password (`/join`), then lands on their crew page.
+
+- An email invite is sent through Resend. A phone invite comes back as a link with a **Text it** button: the site sends no texts, the owner's own phone does.
+- Nothing is stored for an invite. The link is signed (`lib/invites.ts`, keyed from `SUPABASE_SERVICE_ROLE_KEY`), runs out after 3 days, and works once because the new crew member takes the invite's id. There is no list of pending invites and no cancel button; to re-send, make a new invite.
+- The join form never changes the password of an email that already has an account. That person signs in first and joins with the account they have (`lib/services/crew-join.ts`).
+- The owner gets a notice for every join, with a reminder to remove anyone they don't know.
+- No database change.
+
+Shop time and receipts (crew page, owner's Hours and Receipts pages) need `supabase/migrations/20261121120000_crew_log.sql`.
+
 ## Turn on email (Resend, free tier)
 
 Until this is set, every email is printed in the terminal and saved in the owner queue under **Email log**.

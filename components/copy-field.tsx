@@ -17,7 +17,20 @@ function smsNumber(phone: string | undefined): string {
  * another job's link) on the clipboard. So the copy is tried two ways and a failure is shown,
  * and "Text it" opens the phone's messages with this job's link already typed in.
  */
-export function CopyField({ value, label, phone, textBody }: { value: string; label: string; phone?: string; textBody?: string }) {
+export function CopyField({
+  value,
+  label,
+  phone,
+  textBody,
+  what = "this job's link",
+}: {
+  value: string;
+  label: string;
+  phone?: string;
+  textBody?: string;
+  /** What the link is, for the "Copied" note. Job links are the usual case. */
+  what?: string;
+}) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const input = useRef<HTMLInputElement>(null);
 
@@ -69,7 +82,7 @@ export function CopyField({ value, label, phone, textBody }: { value: string; la
         )}
       </div>
       <span aria-live="polite" className={state === "failed" ? "font-semibold text-red-700" : "text-muted"}>
-        {state === "copied" && "Copied this job's link. Paste it into your text."}
+        {state === "copied" && `Copied ${what}. Paste it into your text.`}
         {state === "failed" && "Your phone didn't copy it, so what you paste would be the last thing you copied. Press and hold the link above and choose Copy, or use Text it."}
       </span>
     </div>

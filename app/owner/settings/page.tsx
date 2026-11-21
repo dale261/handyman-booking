@@ -2,11 +2,13 @@ import {
   addTimeOffAction,
   deleteCrewAction,
   deleteWorkerAction,
+  inviteWorkerAction,
   removeTimeOffAction,
   saveCrewAction,
   saveWorkerAction,
 } from "@/lib/actions";
 import Link from "next/link";
+import { CopyField } from "@/components/copy-field";
 import { Flash } from "@/components/flash";
 import { SettingsForm } from "@/components/settings-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -15,10 +17,12 @@ import { Input } from "@/components/ui/input";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { formatDate, formatMinutes, todayDetroit } from "@/lib/format";
+import { INVITE_DAYS, INVITE_TEXT, inviteLink, prettyPhone, readInvite } from "@/lib/invites";
+import { resetOrigin } from "@/lib/reset-email";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string; invite?: string; sent?: string }> }) {
   await requireRole("owner");
   const query = await searchParams;
   const repo = getRepository();
@@ -32,6 +36,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     repo.listUsers(),
   ]);
   const aiCalls = usage.reduce((sum, row) => sum + row.calls, 0);
+  // An invite the owner just made. It lives only in this page's address, never in the database.
+  const invite = readInvite(query.invite);
+  const inviteUrl = invite && query.invite ? inviteLink(query.invite, resetOrigin()) : "";
+  const inviteCrew = invite?.crewId ? crews.find((crew) => crew.id === invite.crewId) : undefined;
   const usageRows = usage.slice().sort((a, b) => b.calls - a.calls || a.customerId.localeCompare(b.customerId));
 
   return (
@@ -44,6 +52,60 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </p>
       </div>
       <Flash notice={query.notice} error={query.error} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Invite a crew member</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <p className="text-muted">Type their phone number or their email. They get a link and fill in their own name, email and password.</p>
+          {invite && (
+            <div className="space-y-3 rounded-md border border-pine/20 bg-pine/10 p-3">
+              {invite.email ? (
+                query.sent === "1" ? (
+                  <p>
+                    <span className="font-semibold">Invite emailed to {invite.email}.</span> Nothing more to do. You can also share the link yourself.
+                  </p>
+                ) : (
+                  <p>
+                    <span className="font-semibold">The email to {invite.email} didn&apos;t send.</span> Share the link yourself instead.
+                  </p>
+                )
+              ) : (
+                <p>
+                  <span className="font-semibold">Invite ready for {prettyPhone(invite.phone)}.</span> Tap &quot;Text it&quot; and send the text from your phone.
+                </p>
+              )}
+              <CopyField label="Invite link" value={inviteUrl} phone={invite.phone ? prettyPhone(invite.phone) : undefined} textBody={INVITE_TEXT} what="the invite link" />
+              <p className="text-muted">
+                Good for {INVITE_DAYS} days, and it works once. {inviteCrew ? `They'll be on ${inviteCrew.name}.` : "No crew picked: set their crew under Workers after they join."} You get a notice when they join.
+              </p>
+            </div>
+          )}
+          <form action={inviteWorkerAction} className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 font-semibold">
+              Phone number or email
+              <Input name="contact" required autoComplete="off" placeholder="231-555-0123 or name@email.com" />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Crew
+              <select name="crewId" defaultValue="" className="h-10 rounded-md border border-line bg-card px-3 font-normal">
+                <option value="">No crew yet</option>
+                {crews
+                  .filter((crew) => crew.active)
+                  .map((crew) => (
+                    <option key={crew.id} value={crew.id}>
+                      {crew.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <div className="sm:col-span-2">
+              <SubmitButton pendingLabel="Making the invite…">Invite</SubmitButton>
+            </div>
+          </form>
+          <p className="text-muted">An email invite is sent for you. For a phone number you get a &quot;Text it&quot; button, and the text goes from your own phone.</p>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>AI quotes today</CardTitle>

@@ -9,6 +9,8 @@ import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { addHours, removeHours } from "@/lib/services/hours";
 import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
+import { joinCrew } from "@/lib/services/crew-join";
+import { INVITE_DAYS, INVITE_EMAIL_SUBJECT, inviteEmailBody, inviteLink, parseInviteContact, readInvite, signInvite, type CrewInvite } from "@/lib/invites";
 import { isDate } from "@/lib/domain/hours";
 import { builderRuleApplies } from "@/lib/domain/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
@@ -20,7 +22,7 @@ import { getRepository, supabaseConfigured } from "@/lib/db/index";
 import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
-import { actorFromUser, type Actor, type CrewRecord, type Role, type WorkerRecord } from "@/lib/db/types";
+import { actorFromUser, type Actor, type CrewRecord, type Role, type UserRecord, type WorkerRecord } from "@/lib/db/types";
 import { clearDraftCookie, writeDraftCookie } from "@/lib/draft-cookie";
 import { finishDraft } from "@/lib/draft-finish";
 import { jobSiteAddress, parseDraft } from "@/lib/domain/draft";
@@ -29,10 +31,10 @@ import type { LibraryGroup } from "@/lib/domain/library-data";
 import { normalizeSettings, SETTING_FIELDS } from "@/lib/domain/settings";
 import type { QuoteParams, ServiceId, Settings } from "@/lib/domain/types";
 import { DEFAULT_PARAMS, SERVICE_LABELS } from "@/lib/domain/types";
-import { flushEmails, resendConfigured } from "@/lib/email";
+import { flushEmails, resendConfigured, sendEmailNow } from "@/lib/email";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { consumeLocalResetToken, issueLocalResetToken } from "@/lib/password-reset";
-import { sendResetEmail } from "@/lib/reset-email";
+import { resetOrigin, sendResetEmail } from "@/lib/reset-email";
 import { createPayPalOrder, paypalConfigured } from "@/lib/paypal";
 import { appUrl, formatDate, formatDateRange, formatMinutes, todayDetroit } from "@/lib/format";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
@@ -731,6 +733,102 @@ async function ensureWorkerLogin(repo: Repository, worker: WorkerRecord, passwor
     workerId: worker.id,
   };
   await repo.saveUser(user);
+}
+
+/**
+ * The owner types a phone number or an email and the person sets up their own sign-in.
+ * An email invite is sent from here. A phone invite comes back as a link with a
+ * "Text it" button, because the site doesn't send texts: the owner's own phone does.
+ * Nothing is saved until the person joins.
+ */
+export async function inviteWorkerAction(form: FormData) {
+  await requireRole("owner");
+  const stop = (message: string): never => redirect("/owner/settings?error=" + encodeURIComponent(message));
+  const contact = parseInviteContact(field(form, "contact"));
+  if (!contact.ok) return stop(contact.error);
+  const repo = getRepository();
+  const crewId = field(form, "crewId");
+  const crew = crewId ? (await repo.listCrews()).find((item) => item.id === crewId && item.active) : undefined;
+  if (crewId && !crew) stop("Pick a crew from the list.");
+  if (contact.email && (await repo.listWorkers()).some((worker) => worker.email.toLowerCase() === contact.email)) {
+    stop("That email is already on your crew list.");
+  }
+  const invite: CrewInvite = {
+    id: randomUUID(),
+    crewId: crew?.id ?? null,
+    email: contact.email,
+    phone: contact.phone,
+    expires: Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000,
+  };
+  const token = signInvite(invite);
+  let sent = "";
+  if (contact.email) {
+    const ok = await sendEmailNow({ to: contact.email, subject: INVITE_EMAIL_SUBJECT, body: inviteEmailBody(inviteLink(token, resetOrigin())) });
+    sent = ok ? "&sent=1" : "&sent=0";
+  }
+  redirect(`/owner/settings?invite=${encodeURIComponent(token)}${sent}`);
+}
+
+/** The sign-in for someone joining from an invite. Never used for an email that already has an account. */
+async function makeCrewLogin(repo: Repository, worker: WorkerRecord, password: string, phone: string): Promise<UserRecord> {
+  const base = { role: "worker" as Role, email: worker.email, fullName: worker.fullName, phone, billingAddress: "", billingZip: "", workerId: worker.id };
+  if (supabaseConfigured()) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || "", process.env.SUPABASE_SERVICE_ROLE_KEY || "", {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await admin.auth.admin.createUser({
+      email: worker.email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: worker.fullName, phone },
+    });
+    if (error || !data.user) throw new Error(error?.message || "Could not create the crew login.");
+    const user: UserRecord = { ...base, id: data.user.id, passwordHash: null };
+    try {
+      await repo.saveUser(user);
+    } catch (problem) {
+      // Don't leave a login behind that isn't tied to a crew member.
+      await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
+      throw problem;
+    }
+    return user;
+  }
+  const user: UserRecord = { ...base, id: randomUUID(), passwordHash: hashPassword(password) };
+  await repo.saveUser(user);
+  return user;
+}
+
+/** Someone opened their invite link and filled in their own name, email and password. */
+export async function joinCrewAction(form: FormData) {
+  const token = field(form, "k");
+  const back = (message: string): never => redirect(`/join?k=${encodeURIComponent(token)}&error=${encodeURIComponent(message)}`);
+  if (!(await allowRequest(ANON_LIMIT))) back("Too many attempts from this network. Wait a few minutes and try again.");
+  const invite = readInvite(token);
+  // The page explains an expired or incomplete link.
+  if (!invite) return redirect("/join");
+  const actor = await currentActor();
+  const repo = getRepository();
+  const password = String(form.get("password") ?? "");
+  const result = await joinCrew(
+    repo,
+    invite,
+    { fullName: field(form, "fullName"), email: field(form, "email"), password },
+    actor,
+    (worker, chosen, phone) => makeCrewLogin(repo, worker, chosen, phone),
+  );
+  await settle(repo);
+  if (!result.ok) return back(result.error);
+  if (result.newLogin) {
+    if (supabaseConfigured()) {
+      const supabase = await createSupabaseServer();
+      const { error } = await supabase.auth.signInWithPassword({ email: result.user.email, password });
+      if (error) redirect("/login?notice=" + encodeURIComponent("Your sign-in is set up. Sign in with the email and password you just chose."));
+    } else {
+      await setLocalSession(result.user.id);
+    }
+  }
+  redirect("/worker?notice=" + encodeURIComponent("You're on the crew. This is your page: your jobs, your hours, shop time and receipts."));
 }
 
 export async function deleteWorkerAction(form: FormData) {
