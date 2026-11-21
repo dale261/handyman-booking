@@ -139,6 +139,28 @@ export function licensingStatement(
   ];
 }
 
+/** White-label job: the crew works under the customer's name and photos are never posted. */
+export function isWhiteLabel(job: Pick<JobRecord, "whiteLabel">): boolean {
+  return Boolean(job.whiteLabel);
+}
+
+/** The line a normal agreement carries about photos. A white-label job gets its own section instead. */
+export const PHOTO_LINE =
+  "We take photos of the work before, during, and after. We may post them on our website and social media, never showing faces, addresses, or your name. If you don't want yours posted, tell us before the job starts.";
+
+/** The white-label section of an agreement, or of an invoice for work already done. */
+export function whiteLabelTerms(done = false): TermSection {
+  return {
+    title: "White-label service",
+    body: [
+      done
+        ? "This was a white-label job. On site, we worked as your company's technician, without our own name or branding."
+        : "This is a white-label job. On site, we work as your company's technician, without our own name or branding.",
+      "Photos of the work are for our records and your reports only. We never post them.",
+    ],
+  };
+}
+
 /**
  * The terms for an invoice on finished work: no scheduling, holds, or cancellation rules,
  * because none of that applies once the work is done. Paying is the acceptance.
@@ -164,6 +186,12 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
       title: "If something isn't right",
       body: ["If anything about the work isn't right, tell us and we come back to make it right."],
     },
+    isWhiteLabel(job)
+      ? whiteLabelTerms(true)
+      : {
+          title: "Photos",
+          body: ["We may post photos of this work on our website and social media, never showing faces, addresses, or your name. If you'd rather we didn't, tell us."],
+        },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
   sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service) });
@@ -228,7 +256,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
       body: [
         "When the crew is done, we mark the job finished and you look it over. Approve it on your job page, or report a problem and we come back to make it right before you approve.",
         "Any balance is due after you approve the finished work.",
-        "We may take before-and-after photos of the work for our records. We only show them publicly if you say so when you leave a review.",
+        ...(isWhiteLabel(job) ? [] : [PHOTO_LINE]),
       ],
     },
     {
@@ -239,6 +267,8 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
       ],
     },
   ];
+  // A white-label job says so right after the price, where a store customer will look for it.
+  if (isWhiteLabel(job)) sections.splice(1, 0, whiteLabelTerms());
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
   sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });

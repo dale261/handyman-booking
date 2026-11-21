@@ -191,6 +191,12 @@ export type JobRecord = {
    * reserves a crew: it starts at "balance due" and goes out as an invoice, not an agreement.
    */
   workDoneOn?: string | null;
+  /**
+   * White-label job: on site the crew works as the customer's own technician, and no photos
+   * from the job are ever posted. The customer or the owner can turn it on. Missing or null
+   * means a normal job, where work photos may be posted.
+   */
+  whiteLabel?: { by: "customer" | "owner"; at: string } | null;
   createdAt: string;
   updatedAt: string;
 };

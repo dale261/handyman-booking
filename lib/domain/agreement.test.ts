@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
-import { accepted, agreementTerms, canSign, invoiceSummary, licensingStatement, ownerPriceLines } from "@/lib/domain/agreement";
+import { accepted, agreementTerms, canSign, invoiceSummary, invoiceTerms, licensingStatement, ownerPriceLines } from "@/lib/domain/agreement";
 import { DEFAULT_SETTINGS } from "@/lib/domain/settings";
 import { DEFAULT_PARAMS } from "@/lib/domain/types";
 
@@ -190,5 +190,35 @@ describe("agreement wording", () => {
     expect(text).toContain("refund everything you paid.");
     expect(terms.some((section) => section.title === "Our workmanship promise")).toBe(false);
     expect(terms.some((section) => section.title === "Other terms")).toBe(false);
+  });
+});
+
+describe("white-label jobs", () => {
+  const wl = { by: "customer" as const, at: "2026-11-21T12:00:00.000Z" };
+
+  it("says photos may be posted on a normal agreement, and not on a white-label one", () => {
+    const normal = agreementTerms(job(), DEFAULT_SETTINGS);
+    const normalText = normal.flatMap((section) => section.body).join(" ");
+    expect(normalText).toContain("We may post them on our website and social media");
+    expect(normal.some((section) => section.title === "White-label service")).toBe(false);
+
+    const marked = agreementTerms(job({ whiteLabel: wl }), DEFAULT_SETTINGS);
+    const markedText = marked.flatMap((section) => section.body).join(" ");
+    expect(marked[1].title).toBe("White-label service");
+    expect(markedText).toContain("we work as your company's technician");
+    expect(markedText).toContain("We never post them.");
+    expect(markedText).not.toContain("We may post them");
+  });
+
+  it("carries the same choice onto an invoice for finished work", () => {
+    const done = { workDoneOn: "2026-11-19", status: "balance_due" as const };
+    const normal = invoiceTerms(job(done), DEFAULT_SETTINGS);
+    expect(normal.find((section) => section.title === "Photos")?.body.join(" ")).toContain("We may post photos of this work");
+
+    const marked = invoiceTerms(job({ ...done, whiteLabel: wl }), DEFAULT_SETTINGS);
+    expect(marked.some((section) => section.title === "Photos")).toBe(false);
+    const text = marked.find((section) => section.title === "White-label service")?.body.join(" ") ?? "";
+    expect(text).toContain("we worked as your company's technician");
+    expect(text).toContain("We never post them.");
   });
 });

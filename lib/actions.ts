@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
-import { jobForLink, sendAgreement, signAgreement } from "@/lib/services/agreement";
+import { jobForLink, sendAgreement, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { checkDoneOn, createOwnerJob, OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 import { clearDiscount, editOwnerJob, setDiscount, voidInvoice } from "@/lib/services/adjust";
 import { areaCheck } from "@/lib/domain/area";
@@ -748,6 +748,7 @@ export async function createOwnerJobAction(form: FormData) {
     total,
     travel,
     doneOn,
+    whiteLabel: form.get("whiteLabel") === "on",
   });
   if (!created.ok) newJobBack(created.error);
   const job = created.data;
@@ -827,6 +828,31 @@ export async function signAgreementAction(form: FormData) {
   await settle(repo);
   if (!result.ok) back("error", result.error);
   back("notice", "Thanks, your signature is recorded. Print or save this page for your records.");
+}
+
+/** Turn white-label on or off for a job: the owner, the signed-in customer, or whoever holds the job's link. */
+export async function whiteLabelAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const token = field(form, "token") || null;
+  const on = field(form, "on") === "1";
+  if (!jobId) redirect("/");
+  const back = (kind: "notice" | "error", message: string): never => (token ? contractBack(jobId, token, kind, message) : jobBack(jobId, kind, message));
+  if (token && !(await allowRequest(ANON_LIMIT))) back("error", "Too many attempts from this network. Wait a few minutes and try again.");
+  const actor = await currentActor();
+  if (!actor && !token) redirect("/login");
+  const repo = getRepository();
+  const result = await setWhiteLabel(repo, { jobId, actor, token, on });
+  await settle(repo);
+  if (!result.ok) back("error", result.error);
+  const ownerDidIt = actor?.role === "owner";
+  back(
+    "notice",
+    !on
+      ? "White-label is off for this job."
+      : ownerDidIt
+        ? "White-label is on for this job. The crew sees it on the job page, and no photos from it get posted."
+        : "White-label is on for this job. We'll work as your company's technician and won't post photos.",
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -123,6 +123,13 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               <Input name="doneOn" type="date" max={today} defaultValue={today} />
               <span className="font-normal text-muted">Only used when the work is already done. It prints on the invoice.</span>
             </label>
+            <label className="flex items-start gap-2 text-sm sm:col-span-2">
+              <input type="checkbox" name="whiteLabel" className="mt-1" />
+              <span>
+                <span className="font-semibold">White-label job</span>
+                <span className="block font-normal text-muted">The crew works as the customer&apos;s own technician, the contract says so, and no photos from this job get posted.</span>
+              </span>
+            </label>
             <label className={fieldClass}>
               Service
               <select name="service" defaultValue={lead?.service ?? "other"} className={selectClass}>

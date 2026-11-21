@@ -43,6 +43,8 @@ export type OwnerJobInput = {
    * goes out as an invoice. Blank or null means normal work to schedule.
    */
   doneOn?: string | null;
+  /** The customer wants the crew to work as their own technician, with no photos posted. */
+  whiteLabel?: boolean;
 };
 
 export const OWNER_JOB_LIMITS = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000, maxDoneDaysAgo: 365 };
@@ -195,6 +197,7 @@ export async function createOwnerJob(repo: Repository, actor: Actor, input: Owne
       agreement: null,
       docSentAt: null,
       workDoneOn: doneOn,
+      whiteLabel: input.whiteLabel ? { by: "owner", at: now } : null,
       createdAt: now,
       updatedAt: now,
     };

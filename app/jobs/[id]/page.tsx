@@ -34,6 +34,7 @@ import { Flash } from "@/components/flash";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WhiteLabelCard } from "@/components/white-label-card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { requireActor } from "@/lib/auth";
@@ -133,10 +134,16 @@ export default async function JobPage({
         <span className="flex flex-wrap gap-1">
           <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
           {paidNoTime && <Badge tone="ok">Paid</Badge>}
+          {job.whiteLabel && <Badge tone="wait">White-label</Badge>}
         </span>
       </div>
       <Flash notice={query.notice} error={query.error} />
 
+      {job.whiteLabel && actor.role !== "customer" && (
+        <Callout>
+          White-label job: on site, work as the customer&apos;s technician. No eX Construction name or branding, and don&apos;t post any photos from this job.
+        </Callout>
+      )}
       {job.status === "scope_review" && actor.role === "customer" && <Callout>{REVIEW_WAIT}</Callout>}
       {job.status === "price_change" && <Callout>Waiting on your OK for a price change. Work stays parked until you approve or decline.</Callout>}
       {job.status === "referred" && actor.role === "customer" && (
@@ -601,6 +608,8 @@ export default async function JobPage({
             </Card>
           )}
 
+          {(actor.role === "customer" || actor.role === "owner") && !hidePrice && <WhiteLabelCard job={job} viewer={actor.role === "owner" ? "owner" : "customer"} />}
+
           {(job.status === "completed" || job.status === "reviewed") && actor.role === "customer" && (
             <Card>
               <CardHeader>
@@ -621,9 +630,11 @@ export default async function JobPage({
                       </select>
                     </label>
                     <Textarea name="comment" placeholder="How did the job go?" />
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="publishPhotos" /> eX Construction can show my photos with this review
-                    </label>
+                    {!job.whiteLabel && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="publishPhotos" defaultChecked /> eX Construction can show photos of this job with my review
+                      </label>
+                    )}
                     <SubmitButton>Save review</SubmitButton>
                   </form>
                 )}

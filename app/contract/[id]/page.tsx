@@ -4,6 +4,7 @@ import { AgreementDocument } from "@/components/agreement-document";
 import { Flash } from "@/components/flash";
 import { LinkPayCard, LinkTimePicker } from "@/components/link-tools";
 import { PrintButton } from "@/components/print-button";
+import { WhiteLabelCard } from "@/components/white-label-card";
 import { currentActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { invoiceOnly } from "@/lib/domain/agreement";
@@ -72,6 +73,7 @@ export default async function PublicContractPage({
       </div>
       {due > 0 && <LinkPayCard job={job} token={token} due={due} />}
       {canSchedule && <LinkTimePicker job={job} token={token} slots={slots} slotError={slotError} selectedDate={selectedDate} paidUpFront={paidUpFront} />}
+      <WhiteLabelCard job={job} viewer={viewer === "owner" ? "owner" : "customer"} token={token} />
       <AgreementDocument job={job} payments={payments} settings={settings} viewer={viewer} token={token} />
     </div>
   );

@@ -56,6 +56,7 @@ export default async function OwnerJobsPage() {
                   <td className="px-3 py-2">
                     <Badge tone={statusTone(job.status)}>{STATUS_LABEL[job.status]}</Badge>
                     {paidNoTime.has(job.id) && <Badge tone="ok" className="ml-1">Paid, needs a time</Badge>}
+                    {job.whiteLabel && <Badge tone="wait" className="ml-1">White-label</Badge>}
                   </td>
                   <td className="px-3 py-2">
                     <Link className="font-semibold text-pine underline" href={`/jobs/${job.id}/contract`}>

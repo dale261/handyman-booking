@@ -95,6 +95,52 @@ export async function signAgreement(
   });
 }
 
+/**
+ * Turn white-label on or off for one job. The owner, the signed-in customer on the job, or
+ * someone holding the job's link can do it. The owner can't undo a choice the customer made,
+ * because the customer chose it so their photos stay private.
+ */
+export async function setWhiteLabel(
+  repo: Repository,
+  input: { jobId: string; actor: Actor | null; token: string | null; on: boolean },
+): Promise<Ok<JobRecord> | Err> {
+  return repo.run(async () => {
+    const job = await repo.getJob(input.jobId);
+    if (!job) return fail("Job not found.");
+    const owner = input.actor?.role === "owner";
+    const customer = (input.actor?.role === "customer" && input.actor.id === job.customerId) || tokenMatches(job, input.token);
+    if (!owner && !customer) return fail("This link doesn't match the job. Open it from the email we sent you.");
+    if (job.status === "cancelled") return fail("This job was cancelled.");
+    if (Boolean(job.whiteLabel) === input.on) return { ok: true, data: job };
+    const by = owner ? "owner" : "customer";
+    if (!input.on && by === "owner" && job.whiteLabel?.by === "customer") {
+      return fail("The customer chose white-label for this job, so only they can turn it off.");
+    }
+    job.whiteLabel = input.on ? { by, at: new Date().toISOString() } : null;
+    const saved = await repo.saveJob(job, { skipOverlap: true });
+    if (input.on) {
+      // A review left earlier may have allowed photos. White-label wins.
+      const review = await repo.getReview(saved.id);
+      if (review?.publishPhotos) await repo.saveReview({ ...review, publishPhotos: false });
+    }
+    if (by === "customer") {
+      const settings = await repo.getSettings();
+      const what = `${saved.scope || "job"}${saved.invoiceNumber ? ` (invoice #${saved.invoiceNumber})` : ""}`;
+      await notify(
+        repo,
+        settings,
+        "approval",
+        input.on ? `White-label turned on: ${what}` : `White-label turned off: ${what}`,
+        input.on
+          ? `${saved.customerName} chose white-label service for the job at ${saved.jobSiteAddress}. On site, work as their technician with no eX Construction name or branding, and don't post any photos from this job.`
+          : `${saved.customerName} turned white-label off for the job at ${saved.jobSiteAddress}. It's a normal job again.`,
+        saved.id,
+      );
+    }
+    return { ok: true, data: saved };
+  });
+}
+
 /** Owner only: email the customer their contract and invoice link. */
 export async function sendAgreement(repo: Repository, actor: Actor, jobId: string): Promise<Ok<JobRecord> | Err> {
   return repo.run(async () => {

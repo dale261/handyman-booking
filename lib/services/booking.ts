@@ -1811,7 +1811,7 @@ export async function saveReview(
       customerName: job.customerName,
       rating: stars,
       comment: comment.trim(),
-      publishPhotos,
+      publishPhotos: publishPhotos && !job.whiteLabel,
       createdAt: new Date().toISOString(),
     });
     job.status = "reviewed";
