@@ -36,6 +36,7 @@ const SERVICE_WORDS: [ServiceId, RegExp][] = [
   ["furniture", /furniture|assembl|ikea/i],
   ["paint", /paint/i],
   ["yard", /yard|leaves|leaf|rak(e|ing)|brush|lawn/i],
+  ["drain", /\bdrains?\b|clog|snak(e|ing)|cleanout|sewer/i],
   ["clean", /clean/i],
   ["helper", /helper|moving|lifting|\bmove\b/i],
 ];

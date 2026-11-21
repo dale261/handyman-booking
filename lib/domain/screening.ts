@@ -49,8 +49,14 @@ export function classify(
     };
   }
 
-  if (has(t, /(faucet|toilet|sink|drain|pipe|plumb|shower valve|garbage disposal|sump|water line)/)) {
-    if (has(t, /(re-?pipe|new line|move|relocat|add a|sewer|water line|shower valve)/)) {
+  // Drain clearing: snaking a clog changes nothing in the plumbing system, so plain drain words pass.
+  // It still goes to the owner or a plumber when the words point at repairs or changes.
+  const drainOnly =
+    id === "drain" &&
+    !has(t, /(re-?pipe|new line|\bmov(e|ing)\b|relocat|\badd a|water line|shower valve|faucet|garbage disposal|sump|leak|replac|install|burst|broken|crack|repair)/);
+
+  if (!drainOnly && has(t, /(faucet|toilet|sink|drain|pipe|plumb|shower valve|garbage disposal|sump|water line)/)) {
+    if (has(t, id === "drain" ? /(re-?pipe|new line|\bmov(e|ing)\b|relocat|\badd a|water line|shower valve)/ : /(re-?pipe|new line|move|relocat|add a|sewer|water line|shower valve)/)) {
       return {
         level: "refer",
         trade: "Plumbing",

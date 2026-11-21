@@ -12,6 +12,7 @@ const SERVICE_MARKERS: Record<ServiceId, RegExp | null> = {
   furniture: /\b(assembl\w*|ikea|flat[- ]pack)\b/i,
   yard: /\b(yard|lawn|leaf removal|mulch)\b/i,
   clean: /\b(deep clean|housekeep|vacuum|mop)\b/i,
+  drain: /\b(drains?|clog\w*|snak\w*|cleanout|sewer)\b/i,
   helper: /\b(hire a helper|helpers?)\b/i,
   other: null,
 };

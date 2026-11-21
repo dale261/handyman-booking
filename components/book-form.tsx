@@ -23,6 +23,7 @@ const PLACEHOLDERS: Record<ServiceId, string> = {
   furniture: "For example: assemble a desk and a bookcase",
   yard: "For example: spring cleanup of the front and back yard",
   clean: "For example: routine clean of the kitchen and two bathrooms",
+  drain: "For example: kitchen sink is backed up and drains slowly",
   helper: "For example: two helpers to move boxes into the garage",
   other: "For example: install 40 feet of baseboard in the hallway",
 };

@@ -148,6 +148,26 @@ export function quoteCalc(
     );
     if (id === "yard" && p.haul) lines.push(line("Haul-away", "Yard waste hauled away", r.haul, "service"));
     assumptions.push("The hours come from what you described. If the job is different on site, we'll talk with you before changing the price.");
+  } else if (id === "drain") {
+    if (p.drainKind === "main") {
+      scope = "Clear the main drain line from a cleanout, up to 100 feet";
+      lines.push(line("Main line", "Snaked from a cleanout, up to 100 feet", r.drainMain, "service"));
+    } else {
+      const n = Math.max(1, Math.round(num(p.drains, 1)));
+      const toilet = p.drainKind === "toilet";
+      const each = toilet ? r.drainToilet : r.drainTrap;
+      const what = toilet ? countNoun(n, "toilet", "toilets") : countNoun(n, "sink, tub, or shower drain", "sink, tub, or shower drains");
+      scope = `Clear ${n === 1 ? (toilet ? "a clogged toilet" : "a clogged sink, tub, or shower drain") : `${what}`}`;
+      lines.push(line(toilet ? "Toilet" : "Drain", what, n * each, "service"));
+    }
+    if (p.drainPull && p.drainKind !== "trap") {
+      lines.push(line("Remove and reset toilet", "Toilet pulled to reach the clog, then set back in place", r.drainToiletPull, "service"));
+    }
+    assumptions.push(
+      "We clear the clog with a drain snake and test that it drains",
+      p.drainKind === "main" ? "The main line is snaked from an existing cleanout, up to 100 feet" : "We snake lines up to 100 feet",
+      "This covers clearing the clog. Repairs or changes to the plumbing are not part of this job.",
+    );
   } else if (id === "helper") {
     const n = clamp(Math.round(num(p.helpers, 1)), 1, r.helperMax);
     const h = clamp(num(p.hours, 1), 1, r.helperMaxHours);
@@ -262,5 +282,10 @@ export function onsiteMinutes(id: ServiceId, p: QuoteParams, r: Settings): numbe
   }
   if (id === "yard") return Math.round(Math.max(r.onsiteYard, num(p.hours, 2) * 60));
   if (id === "clean") return Math.round(Math.max(r.onsiteClean, num(p.hours, 2) * 60));
+  if (id === "drain") {
+    const pull = p.drainPull && p.drainKind !== "trap" ? 30 : 0;
+    if (p.drainKind === "main") return Math.round(r.onsiteDrain * 2 + pull);
+    return Math.round(r.onsiteDrain + Math.max(0, num(p.drains, 1) - 1) * 30 + pull);
+  }
   return Math.round(Math.max(r.onsiteOther, num(p.hours, 2) * 60));
 }

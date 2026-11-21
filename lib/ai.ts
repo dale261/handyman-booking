@@ -205,7 +205,7 @@ export async function readJobDescription(
           {
             role: "system",
             content:
-              "You help eX Construction LC in Cadillac, Michigan understand a handyman request. Do not invent prices or dollar amounts. Describe only the service the customer selected. Do not mention a different service, such as TV mounting on a painting job. Return JSON with keys scope (string), assumptions (array of short strings), and licenseConcern (string or null). Set licenseConcern only if the work may need a licensed electrician, plumber, mechanical or HVAC contractor, asbestos abatement, or residential builder. Otherwise null.",
+              "You help eX Construction LC in Cadillac, Michigan understand a handyman request. Do not invent prices or dollar amounts. Describe only the service the customer selected. Do not mention a different service, such as TV mounting on a painting job. Return JSON with keys scope (string), assumptions (array of short strings), and licenseConcern (string or null). Set licenseConcern only if the work may need a licensed electrician, plumber, mechanical or HVAC contractor, asbestos abatement, or residential builder. Otherwise null. For the service drain, clearing a clog with a drain snake is not licensed work: set licenseConcern only if the description asks for repairs or changes to pipes or fixtures.",
           },
           { role: "user", content: `Service selected: ${service}\nDescription: ${description}` },
         ],

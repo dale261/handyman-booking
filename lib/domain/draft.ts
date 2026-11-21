@@ -54,6 +54,7 @@ const ENUMS = {
   conceal: ["none", "raceway", "lowvolt", "power"],
   itemKind: ["small", "medium", "large"],
   blindKind: ["blinds", "curtains"],
+  drainKind: ["trap", "toilet", "main"],
 } as const;
 
 const RANGES: Partial<Record<keyof QuoteParams, [number, number]>> = {
@@ -69,6 +70,7 @@ const RANGES: Partial<Record<keyof QuoteParams, [number, number]>> = {
   helpers: [1, 10],
   materials: [0, 100000],
   windows: [1, 100],
+  drains: [1, 20],
 };
 
 function pick<K extends keyof typeof ENUMS>(key: K, value: unknown): QuoteParams[K] {
@@ -110,6 +112,9 @@ export function sanitizeParams(input: unknown): QuoteParams {
     materials: numberAt("materials"),
     windows: numberAt("windows"),
     blindKind: pick("blindKind", src.blindKind),
+    drainKind: pick("drainKind", src.drainKind),
+    drains: numberAt("drains"),
+    drainPull: src.drainPull === true,
   };
 }
 

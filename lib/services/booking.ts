@@ -47,7 +47,7 @@ import { addDays, contractUrl, formatDate, formatDateRange, formatMinutes, jobUr
 import { geocodeAddress, measureLeg, type Point } from "@/lib/mileage";
 import { paypalConfigured, refundPayPalCapture } from "@/lib/paypal";
 
-const SERVICE_IDS: ServiceId[] = ["paint", "tv", "blinds", "furniture", "yard", "clean", "helper", "other"];
+const SERVICE_IDS: ServiceId[] = ["paint", "tv", "blinds", "furniture", "yard", "clean", "drain", "helper", "other"];
 
 export type SlotOption = {
   date: string;

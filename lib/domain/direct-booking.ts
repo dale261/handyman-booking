@@ -21,6 +21,7 @@ const CLAUSES: Clause[] = [
   { ids: ["yard"], text: "Yard cleanup" },
   { ids: ["tv", "blinds"], text: "TV mounting, blinds and curtains" },
   { ids: ["furniture"], text: "Furniture assembly" },
+  { ids: ["drain"], text: "Drain clearing" },
   { ids: ["helper"], text: "Hire a helper" },
 ];
 
@@ -32,6 +33,7 @@ const SOLO: Record<BookableId, string> = {
   tv: "TV mounting",
   blinds: "Blinds and curtains",
   furniture: "Furniture assembly",
+  drain: "Drain clearing",
   helper: "Hire a helper",
 };
 

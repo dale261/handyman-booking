@@ -14,7 +14,7 @@ import { SERVICE_LABELS, type ServiceId } from "@/lib/domain/types";
 import { todayDetroit } from "@/lib/format";
 import { OWNER_JOB_LIMITS } from "@/lib/services/owner-jobs";
 
-const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "helper"];
+const SERVICE_ORDER: ServiceId[] = ["other", "paint", "tv", "blinds", "furniture", "yard", "clean", "drain", "helper"];
 
 /** Phone and walk-in jobs: type the customer, the work, and your price once. */
 export default async function NewOwnerJobPage({ searchParams }: { searchParams: Promise<{ error?: string; customer?: string; lead?: string }> }) {

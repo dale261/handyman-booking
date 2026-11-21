@@ -5,6 +5,7 @@ export type ServiceId =
   | "furniture"
   | "yard"
   | "clean"
+  | "drain"
   | "helper"
   | "other";
 
@@ -15,6 +16,7 @@ export const SERVICE_LABELS: Record<ServiceId, string> = {
   furniture: "Furniture assembly",
   yard: "Yard cleanup",
   clean: "Household cleaning",
+  drain: "Drain clearing",
   helper: "Hire a helper",
   other: "Something else",
 };
@@ -27,6 +29,7 @@ export const PREAPPROVED: ServiceId[] = [
   "furniture",
   "yard",
   "clean",
+  "drain",
   "helper",
 ];
 
@@ -57,6 +60,12 @@ export type QuoteParams = {
   materials: number;
   windows: number;
   blindKind: "blinds" | "curtains";
+  /** What is clogged: a sink, tub or shower drain, a toilet, or the main line from a cleanout. */
+  drainKind: "trap" | "toilet" | "main";
+  /** How many drains or toilets. The main line is always one. */
+  drains: number;
+  /** A toilet has to be removed and reset to reach the clog. */
+  drainPull: boolean;
 };
 
 export const DEFAULT_PARAMS: QuoteParams = {
@@ -83,6 +92,9 @@ export const DEFAULT_PARAMS: QuoteParams = {
   materials: 0,
   windows: 1,
   blindKind: "blinds",
+  drainKind: "trap",
+  drains: 1,
+  drainPull: false,
 };
 
 export type LineKind =
@@ -170,6 +182,14 @@ export type Settings = {
   asmMedium: number;
   asmLarge: number;
   blindsEach: number;
+  /** Drain clearing: one sink, tub or shower drain. */
+  drainTrap: number;
+  /** Drain clearing: one toilet. */
+  drainToilet: number;
+  /** Drain clearing: main line from a cleanout, up to 100 feet. */
+  drainMain: number;
+  /** Added when a toilet is removed and reset. */
+  drainToiletPull: number;
   urgency: number;
   pickup: number;
   haul: number;
@@ -184,6 +204,7 @@ export type Settings = {
   onsiteFurniture: number;
   onsiteYard: number;
   onsiteClean: number;
+  onsiteDrain: number;
   onsiteOther: number;
   slotStartMin: number;
   slotEndMin: number;

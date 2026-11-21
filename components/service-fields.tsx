@@ -99,6 +99,29 @@ export function ServiceFields({
       )}
       {service === "yard" && <Toggle label="Haul away yard waste" checked={params.haul} onChange={(haul) => patch({ haul })} />}
       {service === "clean" && <Toggle label="Deep clean" checked={params.deep} onChange={(deep) => patch({ deep })} />}
+      {service === "drain" && (
+        <>
+          <Field label="What is clogged" hint="We snake lines up to 100 feet.">
+            <Select
+              value={params.drainKind}
+              onChange={(value) => patch({ drainKind: value as QuoteParams["drainKind"] })}
+              options={[
+                ["trap", "Sink, tub, or shower drain"],
+                ["toilet", "Toilet"],
+                ["main", "Main line, from a cleanout"],
+              ]}
+            />
+          </Field>
+          {params.drainKind !== "main" && (
+            <Field label="How many">
+              <Input type="number" min={1} value={params.drains} onChange={(e) => patch({ drains: Number(e.target.value) })} />
+            </Field>
+          )}
+          {params.drainKind !== "trap" && (
+            <Toggle label="A toilet has to be removed and reset" checked={params.drainPull} onChange={(drainPull) => patch({ drainPull })} />
+          )}
+        </>
+      )}
       {service === "other" && (
         <p className="text-sm text-muted sm:col-span-2">
           Tell us the work and the quantity, like 40 feet of baseboard. If we need more detail, or the job needs a license, we&apos;ll review it before you can book.
