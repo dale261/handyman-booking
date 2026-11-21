@@ -86,7 +86,9 @@ export async function publicEstimate(repo: Repository, draft: QuoteDraft): Promi
     const split = splitPayment(quote.total, settings.depositThreshold);
 
     const assumptions = [...quote.assumptions];
-    if (miles != null) {
+    // A job with no travel charge (drain clearing in Cadillac) has nothing to re-measure, so the travel note is left off.
+    const travelCharged = quote.lines.some((line) => line.kind === "travel" && line.amount > 0);
+    if (miles != null && travelCharged) {
       assumptions.push(
         "Travel is measured from our shop to this address. When you pick a time, the drive is measured from wherever the crew is coming from that day, and the total you see on that time is the one you pay.",
       );
