@@ -52,6 +52,7 @@ export default async function SignOffPage({
       <div>
         <h1 className="font-display text-3xl font-semibold text-ink">Work sign-off</h1>
         <p className="text-sm text-muted">{job.jobSiteAddress}</p>
+        <p className="mt-2 text-sm">This is optional. It&apos;s a quick record that someone on site saw the finished work.</p>
       </div>
       <Flash error={query.error} />
       <div className="rounded-md border border-line bg-card px-4 py-3 text-sm">
@@ -66,11 +67,15 @@ export default async function SignOffPage({
           <Input name="name" required minLength={2} maxLength={80} autoComplete="off" />
         </label>
         <label className="grid gap-1 font-semibold">
-          Your title <span className="font-normal text-muted">(optional)</span>
+          <span>
+            Your title <span className="font-normal text-muted">(optional)</span>
+          </span>
           <Input name="title" maxLength={60} autoComplete="off" placeholder="Store manager" />
         </label>
         <label className="grid gap-1 font-semibold">
-          Anything to add <span className="font-normal text-muted">(optional)</span>
+          <span>
+            Anything to add <span className="font-normal text-muted">(optional)</span>
+          </span>
           <Textarea name="note" maxLength={500} />
         </label>
         <label className="flex items-start gap-2">
