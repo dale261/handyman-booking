@@ -1159,7 +1159,7 @@ export async function completeWork(
       repo,
       saved.customerEmail,
       saved.balanceDue > 0 ? `Invoice #${saved.invoiceNumber}: the job is done, ${usd(saved.balanceDue)} is due` : `Invoice #${saved.invoiceNumber}: the job is done`,
-      `Hi ${saved.customerName}, we finished ${saved.scope}.${saved.balanceDue > 0 ? ` The ${usd(saved.balanceDue)} balance is due now. Pay here: ${customerLink(saved)}` : " It's paid in full, thank you."}\n\nPlease look the work over. If anything doesn't seem right, just let us know and we'll come back and make it right.\n\nYour job page: ${jobUrl(saved.id)}${emailFooter(settings)}`,
+      `Hi ${saved.customerName}, we finished ${saved.scope}.${saved.balanceDue > 0 ? ` The ${usd(saved.balanceDue)} balance is due now. Pay here: ${customerLink(saved)}` : " It's paid in full, thank you."}\n\nPlease look the work over. If anything doesn't seem right, just let us know and we'll come back until the job is done properly.\n\nYour job page: ${jobUrl(saved.id)}${emailFooter(settings)}`,
       saved.id,
     );
     await notify(

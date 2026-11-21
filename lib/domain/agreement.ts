@@ -195,7 +195,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
     },
     {
       title: "If something isn't right",
-      body: ["If anything about the work isn't right, tell us and we come back to make it right."],
+      body: ["If anything about the work doesn't seem right, just let us know and we'll come back until the job is done properly."],
     },
     isWhiteLabel(job)
       ? whiteLabelTerms(true)
@@ -262,7 +262,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
     {
       title: "Finishing the job",
       body: [
-        "When we're done, look the work over. If anything doesn't seem right, just let us know and we'll come back and make it right.",
+        "When we're done, look the work over. If anything doesn't seem right, just let us know and we'll come back until the job is done properly.",
         "Any balance is due when the work is finished.",
         ...(isWhiteLabel(job) ? [] : [PHOTO_LINE]),
       ],
