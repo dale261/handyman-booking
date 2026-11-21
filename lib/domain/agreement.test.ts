@@ -174,7 +174,7 @@ describe("agreement wording", () => {
     const text = terms.map((section) => `${section.title} ${section.body.join(" ")}`).join("\n");
     expect(text).toContain("$50.00");
     expect(text).toContain("24 hours");
-    expect(text).toContain("Travel is included in this price.");
+    expect(text).toContain("Travel is included.");
     expect(text).toContain("except $50.00 for travel");
     expect(text).toContain("Thirty days on our workmanship.");
     expect(terms.find((section) => section.title === "Other terms")?.body).toEqual(["Pets stay in another room.", "We park in the driveway."]);
@@ -186,7 +186,7 @@ describe("agreement wording", () => {
   it("explains half down on a bigger job and leaves optional clauses out when blank", () => {
     const terms = agreementTerms(job({ total: 2000, amountDueNow: 1000, balanceDue: 1000, travelFee: 0, lines: ownerPriceLines({ scope: "Deck boards", total: 2000, travel: 0 }) }), DEFAULT_SETTINGS);
     const text = terms.map((section) => section.body.join(" ")).join("\n");
-    expect(text).toContain("$1,000.00 to book and $1,000.00 after approval");
+    expect(text).toContain("half down to book: $1,000.00 to book and $1,000.00 after you approve the finished work");
     expect(text).toContain("refund everything you paid.");
     expect(terms.some((section) => section.title === "Our workmanship promise")).toBe(false);
     expect(terms.some((section) => section.title === "Other terms")).toBe(false);

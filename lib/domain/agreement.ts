@@ -1,5 +1,4 @@
 import type { JobRecord, JobStatus, PaymentRecord } from "@/lib/db/types";
-import { LOCKED_PRICE } from "@/lib/domain/copy";
 import { roundCents } from "@/lib/domain/money";
 import { splitPayment } from "@/lib/domain/pricing";
 import type { QuoteLine, Settings } from "@/lib/domain/types";
@@ -172,14 +171,14 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
       title: "The price",
       body: [
         `The price covers the work listed above, which was done${done}. Travel is included.`,
-        "Materials and anything else not listed are not included.",
+        "Anything not listed, including materials, is not included.",
       ],
     },
     {
       title: "Payment",
       body: [
         "The full amount is due now.",
-        `You can pay online from this page (PayPal), or by check payable to ${settings.businessName}, or cash. We mark checks and cash paid when we receive them, and this page shows the payment once it's recorded.`,
+        `Pay online from this page (PayPal), or by check payable to ${settings.businessName}, or cash. Checks and cash count once we receive them, and this page then shows the payment.`,
       ],
     },
     {
@@ -199,7 +198,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
   sections.push({
     title: "Paying this invoice",
     body: [
-      "Paying this invoice, online or by cash or check, confirms that the work listed above was done and accepts the price. We keep a record of when and how it was paid, and you can print or save a copy any time from this page.",
+      "Paying this invoice, online or by cash or check, confirms the work listed above was done and accepts the price. We record when and how it was paid, and you can print or save a copy from this page any time.",
     ],
   });
   return sections;
@@ -209,29 +208,26 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
 export function agreementTerms(job: JobRecord, settings: Settings): TermSection[] {
   const declineRefund =
     job.travelFee > 0
-      ? `If you decline the new price, we cancel the job and refund everything you paid except ${usd(job.travelFee)} for travel.`
-      : "If you decline the new price, we cancel the job and refund everything you paid.";
+      ? `If you decline, we cancel the job and refund everything you paid except ${usd(job.travelFee)} for travel.`
+      : "If you decline, we cancel the job and refund everything you paid.";
   const split = splitPayment(job.total, settings.depositThreshold);
   const payLines =
     split.later > 0
-      ? [
-          `Jobs of ${usd(settings.depositThreshold)} or more are half down to book. The rest is due after the work is done and you approve it.`,
-          `For this job that is ${usd(split.now)} to book and ${usd(split.later)} after approval.`,
-        ]
+      ? [`This job is half down to book: ${usd(split.now)} to book and ${usd(split.later)} after you approve the finished work.`]
       : [`This job is paid in full to book: ${usd(split.now)}.`];
   const sections: TermSection[] = [
     {
       title: "The price",
       body: [
-        LOCKED_PRICE,
-        "The price covers the work and the items listed above. Materials and anything else not listed are not included; we quote them separately before doing them.",
-        job.ownerPriced ? "Travel is included in this price." : "Travel is measured from where the crew is coming from and is shown as its own line.",
+        "This is your firm price for the work listed above.",
+        "Anything not listed, including materials, costs extra. We give you a price before doing it.",
+        job.ownerPriced ? "Travel is included." : "Travel is its own line, measured from where the crew is coming from.",
       ],
     },
     {
       title: "Changes on site",
       body: [
-        "If the job turns out different from what was described, we stop and propose a new price before doing any different work. You approve or decline it in writing on your job page; nothing changes without your OK.",
+        "If the job isn't what was described, we stop and give you a new price. You approve or decline it on your job page. Nothing different gets done without your OK.",
         declineRefund,
       ],
     },
@@ -239,31 +235,31 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
       title: "Booking and payment",
       body: [
         ...payLines,
-        `A time is held for ${settings.holdHours} hours while the payment to book comes in. The booking is confirmed when that payment is received. If it does not arrive, the time is released.`,
-        "You can pay online through your job page (PayPal) or by cash or check; we mark cash and checks paid when we receive them.",
+        `We hold your time for ${settings.holdHours} hours. Your payment confirms the booking. If it doesn't arrive in that time, we release the time.`,
+        "Pay online from your job page (PayPal), or by cash or check. Cash and checks count once we receive them.",
       ],
     },
     {
       title: "Cancelling or rescheduling",
       body: [
-        `Before work starts, you can cancel or reschedule from your job page. We keep ${usd(settings.cancelFee)} and refund the rest of what you paid. If you paid ${usd(settings.cancelFee)} or less, there is nothing to refund.`,
-        "After work has started, a cancellation needs our approval and we set the refund based on the work already done.",
-        "If we cannot do the job, or cannot find someone who can, you get a full refund.",
+        `Before work starts, you can cancel or reschedule from your job page. Either way, we keep ${usd(settings.cancelFee)} and refund the rest. If you paid ${usd(settings.cancelFee)} or less, there's no refund.`,
+        "After work starts, cancelling needs our OK, and the refund depends on the work already done.",
+        "If we can't do the job, or can't find someone who can, you get a full refund.",
       ],
     },
     {
       title: "Finishing the job",
       body: [
-        "When the crew is done, we mark the job finished and you look it over. Approve it on your job page, or report a problem and we come back to make it right before you approve.",
-        "Any balance is due after you approve the finished work.",
+        "When we're done, you look the work over. Approve it on your job page, or report a problem and we'll come back and make it right.",
+        "Any balance is due once you approve.",
         ...(isWhiteLabel(job) ? [] : [PHOTO_LINE]),
       ],
     },
     {
       title: "Your part",
       body: [
-        "Please have the work area reachable and cleared at the scheduled time, with pets secured and power and water on where the job needs them.",
-        "Tell us about anything unusual at the site (alarms, gates, parking, fragile items) before the crew arrives.",
+        "Have the work area clear and reachable at the scheduled time, with pets secured and power and water on if the job needs them.",
+        "Tell us before we arrive about anything unusual: alarms, gates, parking, fragile items.",
       ],
     },
   ];
@@ -275,7 +271,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
   sections.push({
     title: "Agreeing to this",
     body: [
-      "Typing your name on this page, or paying to book through our site, accepts this agreement. We keep a record of when and how it was accepted, and you can print or save a copy any time from this page.",
+      "Typing your name on this page, or paying to book through our site, accepts this agreement. We record when and how, and you can print or save a copy from this page any time.",
       "This agreement, the price above, and any price change you approve on your job page are the whole agreement for this job.",
     ],
   });
