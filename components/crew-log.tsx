@@ -28,7 +28,7 @@ export function JobHoursForm({ today, minDate, back, jobs }: { today: string; mi
     return <p className="text-muted">No jobs to pick from yet. A job shows up here as soon as the owner adds it or a customer books it.</p>;
   }
   return (
-    <form action={addJobHoursAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={addJobHoursAction} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <input type="hidden" name="back" value={back} />
       <JobPick jobs={jobs} label="Job" blank="Pick the job" required />
       <label className="grid gap-1 font-semibold">

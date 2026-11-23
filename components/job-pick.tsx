@@ -19,9 +19,10 @@ export function JobPick({ jobs, label, blank, required }: { jobs: JobChoice[]; l
   const picked = jobs.find((job) => job.id === jobId);
   return (
     <>
-      <label className="grid gap-1 font-semibold sm:col-span-2">
+      {/* A list box is as wide as its longest line. Without these limits a long job name pushes the whole page wider than a phone. */}
+      <label className="grid min-w-0 grid-cols-1 gap-1 font-semibold sm:col-span-2">
         {label}
-        <select name="jobId" value={jobId} required={required} onChange={(event) => setJobId(event.target.value)} className="h-10 rounded-md border border-line bg-card px-3 font-normal">
+        <select name="jobId" value={jobId} required={required} onChange={(event) => setJobId(event.target.value)} className="h-10 w-full min-w-0 rounded-md border border-line bg-card px-3 font-normal">
           <option value="" disabled={required}>
             {blank}
           </option>
@@ -33,7 +34,7 @@ export function JobPick({ jobs, label, blank, required }: { jobs: JobChoice[]; l
         </select>
       </label>
       {picked && (
-        <div className="rounded-md border border-line bg-paper px-3 py-2 sm:col-span-2">
+        <div className="min-w-0 rounded-md border border-line bg-paper px-3 py-2 break-words sm:col-span-2">
           <p className="text-muted">Check it&apos;s the right job:</p>
           <p className="font-semibold">{picked.scope}</p>
           {picked.where && <p>{picked.where}</p>}

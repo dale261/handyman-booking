@@ -98,7 +98,7 @@ export function ReceiptForm({
   }
 
   return (
-    <form action={addExpenseAction} className="grid gap-3 sm:grid-cols-2">
+    <form action={addExpenseAction} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <input type="hidden" name="back" value={back} />
       <input type="hidden" name="photoId" value={photoId} />
       {workers && (
