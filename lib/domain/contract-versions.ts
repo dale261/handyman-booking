@@ -21,11 +21,11 @@ import { usd } from "@/lib/format";
 export const NEW_TERMS_FROM = "2026-11-21T20:57:00.000Z";
 
 /**
- * Second change (Nov 23, 2026, Michigan time in the value below): a job the owner marked as
+ * Second change (Nov 23, 2026, about 11:14 am Michigan time): a job the owner marked as
  * "not builder work" says nothing about the builder rule. Until this moment it said the
  * rule "does not apply to this kind of work". A job accepted before this keeps that sentence.
  */
-export const NOT_BUILDER_QUIET_FROM = "2026-11-23T23:59:00.000Z";
+export const NOT_BUILDER_QUIET_FROM = "2026-11-23T16:14:00.000Z";
 
 /** When the customer agreed: their signature, or the first payment they made. Null if neither yet. */
 export function acceptedAt(job: Pick<JobRecord, "agreement">, payments: PaymentRecord[]): string | null {
