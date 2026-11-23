@@ -98,6 +98,65 @@ describe("logging hours on a job", () => {
     expect(added.data.hours?.[0].workerId).toBe(onJob.id);
   });
 
+  it("lets a crew member log hours on a job another crew is on", async () => {
+    const store = repo();
+    const { job } = await booked(store);
+    const fresh = await store.getJob(job.id);
+    const outsider = (await store.listWorkers()).find((worker) => !fresh?.workerIds.includes(worker.id) && worker.crewId !== fresh?.crewId);
+    if (!outsider) throw new Error("demo data needs a worker on another crew for this test");
+    const crew = { id: "crew-login", role: "worker" as const, email: outsider.email, fullName: outsider.fullName, phone: "", workerId: outsider.id };
+
+    const added = await addHours(store, crew, job.id, { date: today, hours: 2.5, note: "Helped carry" });
+    if (!added.ok) throw new Error(added.error);
+    expect(added.data.hours?.[0]).toMatchObject({ workerId: outsider.id, hours: 2.5 });
+    // Helping out doesn't put them on the job.
+    expect(added.data.workerIds).toEqual(fresh?.workerIds);
+    expect(added.data.crewId).toBe(fresh?.crewId);
+  });
+
+  it("takes hours on a job the owner added, with no time held and no crew on it", async () => {
+    const store = repo();
+    const { job } = await quoted(store);
+    const worker = await actor(store, DEMO_USERS.worker);
+    // Written up by the owner, nothing scheduled yet.
+    const typed = await store.saveJob({ ...job, ownerPriced: true }, { skipOverlap: true });
+    expect(typed.status).toBe("quoted");
+    expect(typed.workerIds).toHaveLength(0);
+    expect((await addHours(store, worker, typed.id, { date: today, hours: 3, note: "" })).ok).toBe(true);
+
+    // Finished work written up as an invoice: never scheduled, never has a crew.
+    const second = await quoted(store);
+    const invoice = await store.saveJob({ ...second.job, ownerPriced: true, status: "balance_due", workDoneOn: today }, { skipOverlap: true });
+    const added = await addHours(store, worker, invoice.id, { date: today, hours: 4, note: "" });
+    if (!added.ok) throw new Error(added.error);
+    expect(added.data.hours?.[0].workerId).toBe(worker.workerId);
+    expect(added.data.status).toBe("balance_due");
+    expect(added.data.total).toBe(invoice.total);
+  });
+
+  it("takes hours on a website job once the customer has held a time, and never on a cancelled job", async () => {
+    const store = repo();
+    const { customer, job } = await quoted(store);
+    const worker = await actor(store, DEMO_USERS.worker);
+    // Only priced so far: there is no job to work yet.
+    expect((await addHours(store, worker, job.id, { date: today, hours: 2, note: "" })).ok).toBe(false);
+    const held = await holdSlot(store, customer, job.id, "earliest");
+    if (!held.ok) throw new Error(held.error);
+    expect(held.data.status).toBe("held");
+    expect((await addHours(store, worker, job.id, { date: today, hours: 2, note: "" })).ok).toBe(true);
+
+    const latest = await store.getJob(job.id);
+    if (!latest) throw new Error("job missing");
+    await store.saveJob({ ...latest, status: "cancelled" }, { skipOverlap: true });
+    const refused = await addHours(store, worker, job.id, { date: today, hours: 1, note: "" });
+    expect(refused.ok).toBe(false);
+    // The owner's own job is no different once it is cancelled.
+    const owner = await actor(store, DEMO_USERS.owner);
+    const typed = await quoted(store);
+    await store.saveJob({ ...typed.job, ownerPriced: true, status: "cancelled" }, { skipOverlap: true });
+    expect((await addHours(store, owner, typed.job.id, { workerId: worker.workerId ?? "", date: today, hours: 1, note: "" })).ok).toBe(false);
+  });
+
   it("refuses customers, jobs that aren't booked yet, and bad entries", async () => {
     const store = repo();
     const { customer, owner, job } = await booked(store);

@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, JobRecord } from "@/lib/db/types";
-import { checkHours, HOURS_LIMITS, HOURS_STATUSES } from "@/lib/domain/hours";
+import { checkHours, HOURS_LIMITS, hoursRefusal } from "@/lib/domain/hours";
 import { todayDetroit } from "@/lib/format";
-import { visibleTo } from "@/lib/services/booking";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -13,7 +12,9 @@ function fail(error: string): Err {
 }
 
 /**
- * Log hours worked on a job. A crew member logs their own, on a job that is theirs.
+ * Log hours worked on a job. A crew member logs their own, on any job in the app that
+ * hours can go on: it does not have to be on their crew, or have a crew at all, because
+ * people help on other crews' jobs and finished work is written up with nobody assigned.
  * The owner can log for anyone on the crew list. Customers never can. Nothing about
  * the job's price, status or schedule changes.
  */
@@ -27,8 +28,8 @@ export async function addHours(
     const job = await repo.getJob(jobId);
     if (!job) return fail("Job not found.");
     if (actor.role === "customer") return fail("Only the crew can log hours.");
-    if (!(await visibleTo(repo, actor, job))) return fail("This job isn't on your list.");
-    if (!HOURS_STATUSES.includes(job.status)) return fail("Hours can be logged once the job is booked.");
+    const refusal = hoursRefusal(job);
+    if (refusal) return fail(refusal);
 
     const workers = await repo.listWorkers();
     const workerId = actor.role === "owner" ? (input.workerId ?? "") : (actor.workerId ?? "");

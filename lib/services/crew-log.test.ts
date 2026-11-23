@@ -105,7 +105,7 @@ describe("receipts", () => {
     expect((await addExpense(store, worker, { date: today, amount: 12, what: "" })).ok).toBe(false);
   });
 
-  it("only ties a receipt to a job that person can see", async () => {
+  it("ties a receipt to a job hours can go on, and not to a price nobody has taken", async () => {
     const store = repo();
     const worker = await actor(store, DEMO_USERS.worker);
     const owner = await actor(store, DEMO_USERS.owner);
@@ -122,8 +122,25 @@ describe("receipts", () => {
       photos: [],
     });
     if (!created.ok) throw new Error(created.error);
-    // A quote nobody is assigned to isn't on the crew member's list.
+    // A price the customer hasn't taken a time on isn't a job yet.
     expect((await addExpense(store, worker, { date: today, amount: 9, what: "Anchors", jobId: created.data.id })).ok).toBe(false);
+    // A job the owner added is, even with no crew on it.
+    const second = await createQuote(store, customer, {
+      service: "tv",
+      description: "Mount a 55-inch TV on a drywall wall",
+      params: { ...DEFAULT_PARAMS, tvSize: "55", wall: "drywall", conceal: "none" },
+      differentSite: false,
+      jobSiteAddress: "",
+      urgent: false,
+      pickup: false,
+      preferredWorkerId: null,
+      photos: [],
+    });
+    if (!second.ok) throw new Error(second.error);
+    const typed = await store.saveJob({ ...second.data, ownerPriced: true }, { skipOverlap: true });
+    const mine = await addExpense(store, worker, { date: today, amount: 9, what: "Anchors", jobId: typed.id });
+    if (!mine.ok) throw new Error(mine.error);
+    expect(mine.data.jobId).toBe(typed.id);
     const forWorker = (await store.listWorkers())[0];
     const added = await addExpense(store, owner, { workerId: forWorker.id, date: today, amount: 9, what: "Anchors", jobId: created.data.id });
     if (!added.ok) throw new Error(added.error);

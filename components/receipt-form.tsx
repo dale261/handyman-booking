@@ -2,9 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { JobPick } from "@/components/job-pick";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addExpenseAction } from "@/lib/actions";
+import type { JobChoice } from "@/lib/domain/job-pick";
 
 /** A receipt reads fine at this size, and it keeps a phone photo small enough to send. */
 const MAX_SIDE = 1600;
@@ -34,15 +36,6 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
-export type ReceiptJob = { id: string; scope: string; where: string; when: string };
-
-/** The line shown in the job list: the work, then the street, short enough for a phone. */
-function jobLine(job: ReceiptJob): string {
-  const work = job.scope.length > 44 ? `${job.scope.slice(0, 43)}…` : job.scope;
-  const street = job.where.split(",")[0].trim();
-  return street ? `${work} · ${street}` : work;
-}
-
 function Save({ busy }: { busy: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -69,10 +62,8 @@ export function ReceiptForm({
   /** Given on the owner's page, where the owner says who paid. */
   workers?: { id: string; fullName: string }[];
   /** Jobs the receipt can be tied to, with where and when, so the right one is easy to tell. */
-  jobs: ReceiptJob[];
+  jobs: JobChoice[];
 }) {
-  const [jobId, setJobId] = useState("");
-  const picked = jobs.find((job) => job.id === jobId);
   const [photoId, setPhotoId] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -137,27 +128,15 @@ export function ReceiptForm({
         What it was
         <Input name="what" required minLength={2} maxLength={200} placeholder="Caulk and painter's tape" />
       </label>
-      <label className="grid gap-1 font-semibold sm:col-span-2">
-        <span>
-          Job it was for <span className="font-normal text-muted">(optional)</span>
-        </span>
-        <select name="jobId" value={jobId} onChange={(event) => setJobId(event.target.value)} className="h-10 rounded-md border border-line bg-card px-3 font-normal">
-          <option value="">Not for one job</option>
-          {jobs.map((job) => (
-            <option key={job.id} value={job.id}>
-              {jobLine(job)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {picked && (
-        <div className="rounded-md border border-line bg-paper px-3 py-2 sm:col-span-2">
-          <p className="text-muted">Check it&apos;s the right job:</p>
-          <p className="font-semibold">{picked.scope}</p>
-          {picked.where && <p>{picked.where}</p>}
-          <p>{picked.when}</p>
-        </div>
-      )}
+      <JobPick
+        jobs={jobs}
+        blank="Not for one job"
+        label={
+          <span>
+            Job it was for <span className="font-normal text-muted">(optional)</span>
+          </span>
+        }
+      />
       <div className="grid gap-1 sm:col-span-2">
         <span className="font-semibold">
           Photo of the receipt <span className="font-normal text-muted">(optional)</span>

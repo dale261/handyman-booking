@@ -100,6 +100,12 @@ On the Rates page, **Invite a crew member** takes just a phone number or an emai
 - The owner gets a notice for every join, with a reminder to remove anyone they don't know.
 - No database change.
 
+### Crew hours
+
+A crew member adds their own hours from their crew page: **Add hours to a job** lists every job in the app that is going ahead, today's first, and they pick the one they worked on. The job does not have to be on their crew, or have a crew at all, so finished work written up as an invoice and a job with no time held yet are both in the list. The rule is `hoursRefusal()` in `lib/domain/hours.ts`: a job the owner added takes hours from the moment it is added; a job a customer started on the website takes hours once they have picked a time; a cancelled, declined or referred job never does. The list goes back two months (`lib/domain/job-pick.ts`). Receipts use the same list.
+
+Picking a job from the list shows the work, the address and the day, nothing else. A crew member can still open a job's page only when their own crew is on it.
+
 Shop time and receipts (crew page, owner's Hours and Receipts pages) need `supabase/migrations/20261121120000_crew_log.sql`.
 
 ## Turn on email (Resend, free tier)

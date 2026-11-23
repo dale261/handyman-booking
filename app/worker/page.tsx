@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CrewLogSetupNote, ReceiptRow, ShopTimeForm } from "@/components/crew-log";
+import { CrewLogSetupNote, JobHoursForm, ReceiptRow, ShopTimeForm } from "@/components/crew-log";
 import { Flash } from "@/components/flash";
 import { ReceiptForm } from "@/components/receipt-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -9,10 +9,11 @@ import { requireActor } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { formatDate, formatDateRange, formatMinutes, todayDetroit, usd } from "@/lib/format";
 import { STATUS_LABEL, statusTone } from "@/lib/labels";
-import { removeCrewEntryAction } from "@/lib/actions";
+import { removeCrewEntryAction, removeJobHoursAction } from "@/lib/actions";
 import type { ExpenseEntry, ShopHoursEntry } from "@/lib/db/types";
 import { EXPENSE_LIMITS, totalOwed } from "@/lib/domain/expenses";
-import { addDays, entriesFor, HOURS_LIMITS, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
+import { addDays, canLogHours, entriesFor, HOURS_LIMITS, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
+import { jobChoice, recentJobs } from "@/lib/domain/job-pick";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
 
 export default async function WorkerPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
@@ -44,18 +45,20 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
   // Every receipt still owed, then the ones paid back in the last two months.
   const shownReceipts = receipts.filter((entry) => !entry.reimbursedAt || entry.date >= addDays(today, -EXPENSE_LIMITS.daysBack));
   const owed = totalOwed(receipts);
-  // Jobs a receipt can be tied to: this person's jobs from the last two months, newest first, each with where and when.
-  const receiptJobs = jobs
-    .filter((job) => !job.scheduledDate || job.scheduledDate >= addDays(today, -EXPENSE_LIMITS.daysBack))
-    .sort((a, b) => (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? ""))
-    .map((job) => ({ id: job.id, scope: job.scope || "Job", where: job.jobSiteAddress || "", when: job.scheduledDate ? formatDateRange(jobDates(job)) : "Not scheduled yet" }));
+  // Jobs this person's crew is on. Only these have a job page they can open.
+  const onMyCrew = new Set(jobs.map((job) => job.id));
+  // Jobs hours can go on: every job in the app that is going ahead, whichever crew it is on and even with no crew
+  // (finished work written up afterwards, a job with no time held yet). Today's job first, nothing older than two months.
+  const hoursJobs = recentJobs(allJobs.filter(canLogHours), today, EXPENSE_LIMITS.daysBack).map(jobChoice);
+  // A receipt can go on any of those, and on anything else that is on this person's own list.
+  const receiptJobs = recentJobs(allJobs.filter((job) => canLogHours(job) || onMyCrew.has(job.id)), today, EXPENSE_LIMITS.daysBack).map(jobChoice);
   const mine = me ? entriesFor(allJobs, me.id, thisWeek, addDays(thisWeek, 6), shop) : [];
   const mineLastWeek = me ? entriesFor(allJobs, me.id, lastWeek, addDays(lastWeek, 6), shop) : [];
 
   return (
     <div className="space-y-4">
       <h1 className="font-display text-3xl font-semibold text-ink">{me ? me.fullName : "Crew work"}</h1>
-      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Open a job to start it, mark it done, or add your hours.</p>
+      <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Add your hours below. Open a job to start it or mark it done.</p>
       <Flash notice={query.notice} error={query.error} />
       {me && (
         <Card>
@@ -65,14 +68,14 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
               This week: <span className="font-semibold">{hoursLabel(totalHours(mine))}</span> · Last week: <span className="font-semibold">{hoursLabel(totalHours(mineLastWeek))}</span>
             </p>
             {mine.length === 0 ? (
-              <p className="text-muted">Nothing logged this week yet. For time on a job, open the job and use &quot;Add hours&quot;. For time that wasn&apos;t on a job, use shop time below.</p>
+              <p className="text-muted">Nothing logged this week yet.</p>
             ) : (
               <ul className="space-y-1">
                 {mine.map((entry) => (
                   <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2">
                     <span>
                       {formatDate(entry.date)}: {hoursLabel(entry.hours)} ·{" "}
-                      {entry.jobId ? (
+                      {entry.jobId && onMyCrew.has(entry.jobId) ? (
                         <Link className="font-semibold text-pine underline" href={`/jobs/${entry.jobId}`}>
                           {entry.scope}
                         </Link>
@@ -83,20 +86,26 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
                         </span>
                       )}
                     </span>
-                    {!entry.jobId && (
-                      <form action={removeCrewEntryAction}>
-                        <input type="hidden" name="back" value="/worker" />
-                        <input type="hidden" name="entryId" value={entry.id} />
-                        <SubmitButton size="sm" variant="ghost">
-                          Remove
-                        </SubmitButton>
-                      </form>
-                    )}
+                    <form action={entry.jobId ? removeJobHoursAction : removeCrewEntryAction}>
+                      <input type="hidden" name="back" value="/worker" />
+                      {entry.jobId && <input type="hidden" name="jobId" value={entry.jobId} />}
+                      <input type="hidden" name="entryId" value={entry.id} />
+                      <SubmitButton size="sm" variant="ghost">
+                        Remove
+                      </SubmitButton>
+                    </form>
                   </li>
                 ))}
               </ul>
             )}
             <p className="text-muted">A week runs Monday through Sunday.</p>
+            <div className="space-y-3 border-t border-line pt-3">
+              <div>
+                <p className="font-semibold">Add hours to a job</p>
+                <p className="text-muted">Pick the job you worked on. It doesn&apos;t have to be on your crew&apos;s list.</p>
+              </div>
+              <JobHoursForm today={today} minDate={addDays(today, -HOURS_LIMITS.daysBack)} back="/worker" jobs={hoursJobs} />
+            </div>
             <div className="space-y-3 border-t border-line pt-3">
               <div>
                 <p className="font-semibold">Add shop time</p>

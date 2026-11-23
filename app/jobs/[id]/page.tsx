@@ -45,7 +45,7 @@ import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository } from "@/lib/db/index";
 import type { JobRecord, PaymentRecord } from "@/lib/db/types";
 import { builderRuleApplies, invoiceOnly } from "@/lib/domain/agreement";
-import { hoursLabel, HOURS_LIMITS, HOURS_STATUSES, totalHours } from "@/lib/domain/hours";
+import { canLogHours, hoursLabel, HOURS_LIMITS, totalHours } from "@/lib/domain/hours";
 import { applyRevisedTotal } from "@/lib/domain/cancellation";
 import { grossTotal } from "@/lib/domain/discount";
 import { LOCKED_PRICE, REVIEW_WAIT } from "@/lib/domain/copy";
@@ -617,7 +617,7 @@ export default async function JobPage({
               </CardContent>
             </Card>
           )}
-          {(actor.role === "worker" || actor.role === "owner") && HOURS_STATUSES.includes(job.status) && (
+          {(actor.role === "worker" || actor.role === "owner") && canLogHours(job) && (
             <HoursCard job={job} owner={actor.role === "owner"} myWorkerId={actor.workerId} workers={workers.filter((worker) => worker.active)} />
           )}
 

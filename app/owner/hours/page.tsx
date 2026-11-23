@@ -61,7 +61,7 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
       {people.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted">
-            No hours were logged this week. The crew adds job hours from each job page and shop time from their crew page. You can add either for anyone.
+            No hours were logged this week. The crew adds job hours and shop time from their crew page. You can add either for anyone: job hours on the job&apos;s page, shop time below.
           </CardContent>
         </Card>
       ) : (

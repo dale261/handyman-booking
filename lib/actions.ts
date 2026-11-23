@@ -463,6 +463,24 @@ export async function addExpenseAction(form: FormData) {
   );
 }
 
+/**
+ * Hours on a job, added from the crew page: the crew member picks the job from a list, so
+ * it can be one their crew isn't scheduled on. They come back to the crew page afterwards.
+ */
+export async function addJobHoursAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const hours = Number(field(form, "hours"));
+  await crewLog(form, "Hours added.", async (repo, actor) =>
+    jobId
+      ? addHours(repo, actor, jobId, { workerId: field(form, "workerId") || undefined, date: field(form, "date"), hours, note: field(form, "note") })
+      : { ok: false as const, error: "Pick the job you worked on." },
+  );
+}
+
+export async function removeJobHoursAction(form: FormData) {
+  await crewLog(form, "Hours removed.", (repo, actor) => removeHours(repo, actor, field(form, "jobId"), field(form, "entryId")));
+}
+
 export async function removeCrewEntryAction(form: FormData) {
   await crewLog(form, "Removed.", (repo, actor) => removeCrewEntry(repo, actor, field(form, "entryId")));
 }

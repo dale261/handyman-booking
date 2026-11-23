@@ -6,8 +6,29 @@ import type { HoursEntry, JobRecord, JobStatus, ShopHoursEntry } from "@/lib/db/
  */
 export const HOURS_LIMITS = { min: 0.25, max: 16, step: 0.25, daysBack: 31, noteMax: 200, perJob: 500 };
 
-/** Jobs a crew member can log time against: booked work, work underway, and finished work. */
-export const HOURS_STATUSES: JobStatus[] = ["booked", "price_change", "in_progress", "awaiting_approval", "disputed", "balance_due", "completed", "reviewed", "cancel_requested"];
+/** Steps a job is at once a customer has taken a time for it: held, booked, underway, finished. */
+const TAKEN: JobStatus[] = ["held", "booked", "price_change", "in_progress", "awaiting_approval", "disputed", "balance_due", "completed", "reviewed", "cancel_requested"];
+
+/** Steps where there is no job to work: turned down, sent elsewhere, cancelled. */
+const OFF: JobStatus[] = ["declined", "referred", "cancelled"];
+
+/**
+ * Why hours can't go on a job, or null when they can.
+ *
+ * A job the owner added counts from the moment it is in the app, whatever step it is at:
+ * not scheduled yet, held, or written up after the work was done. A job a customer started
+ * on the website counts once they have taken a time. It does not matter which crew the job
+ * is on, or whether it has a crew at all.
+ */
+export function hoursRefusal(job: Pick<JobRecord, "status" | "ownerPriced">): string | null {
+  if (OFF.includes(job.status)) return "This job isn't going ahead (it was cancelled, turned down or sent elsewhere), so hours can't go on it.";
+  if (job.ownerPriced || TAKEN.includes(job.status)) return null;
+  return "Hours can go on this job once the customer has picked a time.";
+}
+
+export function canLogHours(job: Pick<JobRecord, "status" | "ownerPriced">): boolean {
+  return hoursRefusal(job) === null;
+}
 
 function toUtc(date: string): Date {
   const [y, m, d] = date.split("-").map(Number);

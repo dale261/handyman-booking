@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewEntry, ExpenseEntry, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
 import { checkExpense } from "@/lib/domain/expenses";
-import { checkHours } from "@/lib/domain/hours";
+import { canLogHours, checkHours } from "@/lib/domain/hours";
 import { todayDetroit, usd } from "@/lib/format";
 import { notify, visibleTo } from "@/lib/services/booking";
 
@@ -80,7 +80,8 @@ export async function addExpense(
   let jobScope = "";
   if (input.jobId) {
     const job = await repo.getJob(input.jobId);
-    if (!job || !(await visibleTo(repo, actor, job))) return fail("That job isn't on your list. Pick another, or leave the job blank.");
+    // Any job hours can go on can take a receipt too, whichever crew it is on.
+    if (!job || !(canLogHours(job) || (await visibleTo(repo, actor, job)))) return fail("That job isn't on your list. Pick another, or leave the job blank.");
     jobId = job.id;
     jobScope = job.scope || "Job";
   }

@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { JobPick } from "@/components/job-pick";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
-import { addShopHoursAction, reimburseAction, removeCrewEntryAction } from "@/lib/actions";
+import { addJobHoursAction, addShopHoursAction, reimburseAction, removeCrewEntryAction } from "@/lib/actions";
 import type { ExpenseEntry } from "@/lib/db/types";
 import { HOURS_LIMITS } from "@/lib/domain/hours";
+import type { JobChoice } from "@/lib/domain/job-pick";
 import { formatDate, todayDetroit, usd } from "@/lib/format";
 
 /** Shown in place of the forms until the crew log's table exists. */
@@ -14,6 +16,40 @@ export function CrewLogSetupNote({ owner }: { owner: boolean }) {
         ? "One setup step left: shop time and receipts can't be saved until the crew_log SQL file has been run in Supabase."
         : "Shop time and receipts aren't switched on yet. The owner has one setup step to finish."}
     </p>
+  );
+}
+
+/**
+ * Hours on a job, added from the crew page. The crew member picks the job from every job
+ * in the app that hours can go on, so a job with no crew on it is still there to pick.
+ */
+export function JobHoursForm({ today, minDate, back, jobs }: { today: string; minDate: string; back: string; jobs: JobChoice[] }) {
+  if (jobs.length === 0) {
+    return <p className="text-muted">No jobs to pick from yet. A job shows up here as soon as the owner adds it or a customer books it.</p>;
+  }
+  return (
+    <form action={addJobHoursAction} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="back" value={back} />
+      <JobPick jobs={jobs} label="Job" blank="Pick the job" required />
+      <label className="grid gap-1 font-semibold">
+        Day worked
+        <Input name="date" type="date" required defaultValue={today} min={minDate} max={today} />
+      </label>
+      <label className="grid gap-1 font-semibold">
+        Hours
+        <Input name="hours" type="number" inputMode="decimal" required min={HOURS_LIMITS.min} max={HOURS_LIMITS.max} step={HOURS_LIMITS.step} placeholder="3.5" />
+      </label>
+      <label className="grid gap-1 font-semibold sm:col-span-2">
+        <span>
+          Note <span className="font-normal text-muted">(optional)</span>
+        </span>
+        <Input name="note" maxLength={HOURS_LIMITS.noteMax} placeholder="What you worked on" />
+      </label>
+      <div className="sm:col-span-2">
+        <SubmitButton pendingLabel="Saving…">Add hours</SubmitButton>
+      </div>
+      <p className="text-muted sm:col-span-2">Job not in the list? It has to be in the app first. Ask the owner to add it.</p>
+    </form>
   );
 }
 
