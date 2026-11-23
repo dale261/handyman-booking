@@ -1019,7 +1019,7 @@ export async function builderWorkAction(form: FormData) {
   const notBuilderWork = field(form, "notBuilderWork") === "1";
   await mutate(
     jobId,
-    notBuilderWork ? "Marked as not builder work. The contract now says the builder rule doesn't apply." : "Back to builder work. The contract says a licensed contractor does the licensed part.",
+    notBuilderWork ? "Marked as not builder work. The contract now says nothing about the builder rule." : "Back to builder work. The contract says a licensed contractor does the licensed part.",
     (repo, actor) => setNotBuilderWork(repo, actor, jobId, notBuilderWork),
   );
 }

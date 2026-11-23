@@ -199,7 +199,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
                 <input type="checkbox" name="notBuilderWork" className="mt-1" />
                 <span>
                   <span className="font-semibold">Not builder work</span>
-                  <span className="block font-normal text-muted">Tick for a store or commercial job, or work outside the licensed building trades. The contract then says the ${Math.round(settings.builderThreshold)} builder rule doesn&apos;t apply.</span>
+                  <span className="block font-normal text-muted">Tick for a store or commercial job, or work outside the licensed building trades. The contract then says nothing about the ${Math.round(settings.builderThreshold)} builder rule.</span>
                 </span>
               </label>
             )}

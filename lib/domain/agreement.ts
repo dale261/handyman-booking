@@ -120,6 +120,17 @@ export function builderRuleApplies(job: Pick<JobRecord, "service" | "quoteMeta" 
   return job.service === "other";
 }
 
+/** Choices that depend on when the customer accepted, not on the job itself. */
+export type TermOptions = {
+  /** The customer accepted while a "not builder work" job still printed the sentence saying the rule doesn't apply. */
+  keepNotBuilderSentence?: boolean;
+};
+
+/** True when the licensing statement should leave the builder rule out: the owner marked the job as not builder work. */
+function builderRuleQuiet(job: Pick<JobRecord, "notBuilderWork">, options: TermOptions): boolean {
+  return Boolean(job.notBuilderWork) && !options.keepNotBuilderSentence;
+}
+
 /**
  * Michigan's licensing statement, worded for the license we actually hold.
  * Not legal advice: the owner should have a lawyer look at the whole agreement once.
@@ -133,6 +144,8 @@ export function licensingStatement(
   service?: string,
   /** False when the builder rule doesn't reach this kind of work. Left out, the statement stays cautious. */
   builderWork = true,
+  /** The owner marked the job as not builder work, so the statement leaves the builder rule out. */
+  quiet = false,
 ): string[] {
   const threshold = `$${Math.round(settings.builderThreshold).toLocaleString("en-US")}`;
   const rule = `Michigan requires a residential builder or a residential maintenance and alteration contractor to be licensed for residential work of ${threshold} or more, labor and materials included.`;
@@ -141,6 +154,8 @@ export function licensingStatement(
       ? "This job is drain clearing: we clear the clog with a drain snake and make no changes to the plumbing. Plumbing repairs or changes, electrical, and heating or cooling work must be done by contractors licensed for those trades and are not part of this agreement."
       : "Electrical, plumbing, and heating or cooling work must be done by contractors licensed for those trades. It is not part of this agreement unless it is listed above and a licensed trade contractor is named for it.";
   if (settings.licenseNumber) return [`${rule} ${settings.businessName} holds Michigan license number ${settings.licenseNumber}.`, trades];
+  // Owner's call (Nov 23, 2026): a job the owner marked as not builder work says nothing about the builder rule, at any price.
+  if (quiet) return [trades];
   if (total < settings.builderThreshold) return [`${rule} This job is under that amount, so no builder license is required for it.`, trades];
   // Owner's call (Nov 21, 2026): a larger drain clearing job says nothing about a builder license. It's irrelevant to clearing a clog.
   if (service === "drain") return [trades];
@@ -178,7 +193,7 @@ export function whiteLabelTerms(done = false): TermSection {
  * The terms for an invoice on finished work: no scheduling, holds, or cancellation rules,
  * because none of that applies once the work is done. Paying is the acceptance.
  */
-export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] {
+export function invoiceTerms(job: JobRecord, settings: Settings, options: TermOptions = {}): TermSection[] {
   const done = job.workDoneOn ? ` on ${longDate(job.workDoneOn)}` : "";
   const sections: TermSection[] = [
     {
@@ -207,7 +222,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
         },
   ];
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service, builderRuleApplies(job)) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, true, job.service, builderRuleApplies(job), builderRuleQuiet(job, options)) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Paying this invoice",
@@ -219,7 +234,7 @@ export function invoiceTerms(job: JobRecord, settings: Settings): TermSection[] 
 }
 
 /** The agreement terms, built from the rules the app actually enforces. */
-export function agreementTerms(job: JobRecord, settings: Settings): TermSection[] {
+export function agreementTerms(job: JobRecord, settings: Settings, options: TermOptions = {}): TermSection[] {
   const declineRefund =
     job.travelFee > 0
       ? `If you decline, we cancel the job and refund everything you paid except ${usd(job.travelFee)} for travel.`
@@ -280,7 +295,7 @@ export function agreementTerms(job: JobRecord, settings: Settings): TermSection[
   // A white-label job says so right after the price, where a store customer will look for it.
   if (isWhiteLabel(job)) sections.splice(1, 0, whiteLabelTerms());
   if (settings.warrantyText) sections.push({ title: "Our workmanship promise", body: [settings.warrantyText] });
-  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service, builderRuleApplies(job)) });
+  sections.push({ title: "Michigan licensing statement", body: licensingStatement(settings, job.total, false, job.service, builderRuleApplies(job), builderRuleQuiet(job, options)) });
   if (settings.extraTerms) sections.push({ title: "Other terms", body: settings.extraTerms.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean) });
   sections.push({
     title: "Agreeing to this",

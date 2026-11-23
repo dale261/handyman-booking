@@ -694,7 +694,7 @@ export default async function JobPage({
               canEdit={canEdit}
               canVoid={canVoid}
               billingZip={customerAccount?.billingZip ?? ""}
-              builderRule={!settings.licenseNumber && job.total >= settings.builderThreshold && (Boolean(job.notBuilderWork) || builderRuleApplies(job))}
+              builderRule={!settings.licenseNumber && (Boolean(job.notBuilderWork) || (job.total >= settings.builderThreshold && builderRuleApplies(job)))}
             />
           )}
         </div>
@@ -963,7 +963,7 @@ function OwnerTools({
             <p className="font-semibold">Builder license</p>
             <p className="text-muted">
               {job.notBuilderWork
-                ? "You marked this as not builder work, so the contract says the builder rule doesn't apply."
+                ? "You marked this as not builder work, so the contract says nothing about the builder rule."
                 : "This job is over the builder amount and the app can't tell it isn't builder work, so the contract says a licensed contractor does the licensed part."}
             </p>
             <SubmitButton size="sm" variant="outline">{job.notBuilderWork ? "It is builder work" : "It's not builder work"}</SubmitButton>

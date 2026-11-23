@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser, type JobRecord, type PaymentRecord } from "@/lib/db/types";
-import { acceptedAt, documentTerms, keepsEarlierTerms, NEW_TERMS_FROM } from "@/lib/domain/contract-versions";
+import { acceptedAt, documentTerms, keepsEarlierTerms, NEW_TERMS_FROM, NOT_BUILDER_QUIET_FROM } from "@/lib/domain/contract-versions";
 import { DEFAULT_SETTINGS } from "@/lib/domain/settings";
 import { DEFAULT_PARAMS } from "@/lib/domain/types";
 import { createQuote } from "@/lib/services/booking";
@@ -121,7 +121,25 @@ describe("the $600 builder rule only reaches builder work", () => {
   it("stays cautious on unlisted work over the amount, until the owner says it isn't builder work", async () => {
     const job = { ...(await quotedJob()), service: "other" as const, total: 900, licenseTrade: "" };
     expect(licensing(job)).toContain("a licensed contractor does the licensed part");
-    expect(licensing({ ...job, notBuilderWork: true })).toContain("That rule does not apply to this kind of work");
+    // Marked "not builder work": the statement leaves the builder rule out, at any price.
+    const marked = licensing({ ...job, notBuilderWork: true });
+    expect(marked).not.toContain("residential builder");
+    expect(marked).not.toContain("That rule does not apply to this kind of work");
+    expect(marked).not.toContain("a licensed contractor does the licensed part");
+    expect(marked).toContain("Electrical, plumbing, and heating or cooling work must be done");
+    expect(licensing({ ...job, total: 300, notBuilderWork: true })).not.toContain("residential builder");
+  });
+
+  it("keeps the 'does not apply' sentence on a marked job accepted before that sentence was dropped", async () => {
+    const job = { ...(await quotedJob()), service: "other" as const, total: 900, licenseTrade: "", notBuilderWork: true };
+    const between = new Date(new Date(NOT_BUILDER_QUIET_FROM).getTime() - 3_600_000).toISOString();
+    const terms = (payments: PaymentRecord[]) =>
+      documentTerms(job, payments, DEFAULT_SETTINGS)
+        .find((section) => section.title === "Michigan licensing statement")
+        ?.body.join(" ") ?? "";
+    expect(terms([payment(job, between)])).toContain("That rule does not apply to this kind of work");
+    const later = new Date(new Date(NOT_BUILDER_QUIET_FROM).getTime() + 3_600_000).toISOString();
+    expect(terms([payment(job, later)])).not.toContain("residential builder");
   });
 
   it("keeps the licensed-contractor sentence when the license screen found builder work", async () => {

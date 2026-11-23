@@ -20,6 +20,13 @@ import { usd } from "@/lib/format";
  */
 export const NEW_TERMS_FROM = "2026-11-21T20:57:00.000Z";
 
+/**
+ * Second change (Nov 23, 2026, Michigan time in the value below): a job the owner marked as
+ * "not builder work" says nothing about the builder rule. Until this moment it said the
+ * rule "does not apply to this kind of work". A job accepted before this keeps that sentence.
+ */
+export const NOT_BUILDER_QUIET_FROM = "2026-11-23T23:59:00.000Z";
+
 /** When the customer agreed: their signature, or the first payment they made. Null if neither yet. */
 export function acceptedAt(job: Pick<JobRecord, "agreement">, payments: PaymentRecord[]): string | null {
   const times = payments.filter((payment) => payment.kind !== "refund" && payment.status === "paid").map((payment) => payment.createdAt);
@@ -36,7 +43,11 @@ export function keepsEarlierTerms(job: Pick<JobRecord, "agreement">, payments: P
 /** The terms to print for a job: the wording the customer accepted, or today's if they haven't yet. */
 export function documentTerms(job: JobRecord, payments: PaymentRecord[], settings: Settings): TermSection[] {
   const invoice = invoiceOnly(job);
-  if (!keepsEarlierTerms(job, payments)) return invoice ? invoiceTerms(job, settings) : agreementTerms(job, settings);
+  if (!keepsEarlierTerms(job, payments)) {
+    const when = acceptedAt(job, payments);
+    const options = { keepNotBuilderSentence: when !== null && when < NOT_BUILDER_QUIET_FROM };
+    return invoice ? invoiceTerms(job, settings, options) : agreementTerms(job, settings, options);
+  }
   const sections = invoice ? invoiceTermsBefore(job, settings) : agreementTermsBefore(job, settings);
   // White-label only ever protects the customer more, so it shows on an earlier agreement too.
   if (isWhiteLabel(job)) sections.splice(1, 0, whiteLabelTerms(invoice));
