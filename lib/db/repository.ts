@@ -3,6 +3,7 @@ import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
   CrewRecord,
+  PayItem,
   EmailRecord,
   JobRecord,
   LeadRecord,
@@ -57,6 +58,13 @@ export interface Repository {
   getCrewEntry(id: string): Promise<CrewEntry | null>;
   saveCrewEntry(entry: CrewEntry): Promise<void>;
   deleteCrewEntry(id: string): Promise<void>;
+  /** False until the crew pay table exists. Lets the owner's Pay page say the setup step is still to do. */
+  payReady(): Promise<boolean>;
+  /** Crew pay: what each person earned and what they have been paid. Owner only. Newest day first. */
+  listPay(): Promise<PayItem[]>;
+  getPayItem(id: string): Promise<PayItem | null>;
+  savePayItem(item: PayItem): Promise<void>;
+  deletePayItem(id: string): Promise<void>;
   listReviews(): Promise<ReviewRecord[]>;
   getReview(jobId: string): Promise<ReviewRecord | null>;
   saveReview(review: ReviewRecord): Promise<void>;

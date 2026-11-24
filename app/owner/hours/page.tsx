@@ -141,7 +141,10 @@ export default async function OwnerHoursPage({ searchParams }: { searchParams: P
               <CrewLogSetupNote owner />
             )}
           </div>
-          <p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link className="font-semibold text-pine underline" href="/owner/pay">
+              Crew pay
+            </Link>
             <Link className="font-semibold text-pine underline" href="/owner/receipts">
               Receipts to pay back
             </Link>

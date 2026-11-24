@@ -5,6 +5,7 @@ import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
+  PayItem,
   CrewRecord,
   EmailRecord,
   JobRecord,
@@ -36,6 +37,14 @@ export const CREW_LOG_SETUP = "Shop time and receipts need one setup step first:
 function crewLogMissing(error: { message: string; code?: string }): boolean {
   if (error.code === "42P01" || error.code === "PGRST205") return true;
   return /crew_entries/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
+}
+
+export const PAY_SETUP = "Crew pay needs one setup step first: the owner has to run the crew_pay SQL file in Supabase.";
+
+/** True when Supabase is saying the crew_pay table isn't there. */
+function payMissing(error: { message: string; code?: string }): boolean {
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  return /crew_pay/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
 }
 
 export class SupabaseRepository implements Repository {
@@ -374,6 +383,44 @@ export class SupabaseRepository implements Repository {
   async deleteCrewEntry(id: string) {
     const { error } = await this.db().from("crew_entries").delete().eq("id", id);
     if (error) throw new Error(crewLogMissing(error) ? CREW_LOG_SETUP : error.message);
+  }
+
+  // Crew pay: what each person earned and what they have been paid. Its own table, with no
+  // client policies, so nobody can read wages straight from a browser. Until the owner has
+  // run the crew_pay SQL file, reads come back empty and writes say what is missing.
+  async payReady() {
+    const { error } = await this.db().from("crew_pay").select("id").limit(1);
+    if (!error) return true;
+    if (payMissing(error)) return false;
+    throw new Error(error.message);
+  }
+
+  async listPay() {
+    const { data, error } = await this.db().from("crew_pay").select("payload").order("day", { ascending: false }).order("created_at", { ascending: false });
+    if (error) {
+      if (payMissing(error)) return [];
+      throw new Error(error.message);
+    }
+    return ((data ?? []) as { payload: PayItem }[]).map((row) => row.payload);
+  }
+
+  async getPayItem(id: string) {
+    const { data, error } = await this.db().from("crew_pay").select("payload").eq("id", id).maybeSingle();
+    if (error) {
+      if (payMissing(error)) return null;
+      throw new Error(error.message);
+    }
+    return (data?.payload as PayItem | undefined) ?? null;
+  }
+
+  async savePayItem(item: PayItem) {
+    const { error } = await this.db().from("crew_pay").upsert({ id: item.id, kind: item.kind, worker_id: item.workerId, day: item.date, payload: item });
+    if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
+  }
+
+  async deletePayItem(id: string) {
+    const { error } = await this.db().from("crew_pay").delete().eq("id", id);
+    if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
   }
 
   async listLeads() {

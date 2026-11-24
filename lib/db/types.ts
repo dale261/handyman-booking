@@ -158,6 +158,48 @@ export type ExpenseEntry = {
 /** The crew log: shop time and receipts. Kept apart from jobs because neither belongs to one job's record. */
 export type CrewEntry = ShopHoursEntry | ExpenseEntry;
 
+/**
+ * What a crew member earned: hours at a rate, or a flat amount. Owner only. It lives in
+ * its own table and never on a job record, because a job's customer and crew can read
+ * that record. The rate is kept on each line, since it changes with the job.
+ */
+export type PayLine = {
+  id: string;
+  kind: "pay";
+  workerId: string;
+  /** Kept on the line so the record still reads right if the crew list changes later. */
+  workerName: string;
+  /** The day worked, YYYY-MM-DD. */
+  date: string;
+  /** Hours and dollars an hour, when it is hourly pay. Both null for a flat amount. */
+  hours: number | null;
+  rate: number | null;
+  /** What was earned, in dollars. Setting a rate in the app makes it hours times rate, to the cent. */
+  amount: number;
+  /** The hours entry this pays for, when the hours were logged in the app (on a job or as shop time). */
+  entryId: string | null;
+  jobId: string | null;
+  /** What it was for, kept so the line reads right later: the job's title, "Shop time", or the owner's words. */
+  what: string;
+  note: string;
+  at: string;
+};
+
+/** Money the owner paid a crew member. Owner only, kept with the pay lines. */
+export type CrewPayment = {
+  id: string;
+  kind: "payment";
+  workerId: string;
+  workerName: string;
+  /** The day it was paid, YYYY-MM-DD. */
+  date: string;
+  amount: number;
+  note: string;
+  at: string;
+};
+
+export type PayItem = PayLine | CrewPayment;
+
 /** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
 export type WorkSignOff = {
   name: string;

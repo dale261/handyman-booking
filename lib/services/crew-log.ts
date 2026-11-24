@@ -6,6 +6,7 @@ import { canLogHours, checkHours } from "@/lib/domain/hours";
 import { todayDetroit, usd } from "@/lib/format";
 import { notify, visibleTo } from "@/lib/services/booking";
 import { hoursEmail } from "@/lib/services/hours";
+import { dropPayFor, hasPay } from "@/lib/services/pay";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -121,7 +122,8 @@ export async function addExpense(
 
 /**
  * Take an entry back off. A crew member can remove their own, except a receipt that has
- * already been paid back: that one is part of the record. The owner can remove any.
+ * already been paid back or shop time that has pay set on it: those are part of the
+ * record. The owner can remove any.
  */
 export async function removeCrewEntry(repo: Repository, actor: Actor, id: string): Promise<Ok<CrewEntry> | Err> {
   if (actor.role === "customer") return fail("Only the crew can change this.");
@@ -130,10 +132,14 @@ export async function removeCrewEntry(repo: Repository, actor: Actor, id: string
   if (actor.role !== "owner") {
     if (entry.workerId !== actor.workerId) return fail("You can only remove entries you added yourself.");
     if (entry.kind === "expense" && entry.reimbursedAt) return fail("That receipt has been paid back, so it stays on the record.");
+    if (entry.kind === "shop_hours" && (await hasPay(repo, id))) return fail("Pay has been set on those hours, so they stay on the record. Ask the owner to change them.");
   }
   const problem = await saved(repo.deleteCrewEntry(id));
   if (problem) return problem;
-  if (entry.kind === "shop_hours") await hoursEmail(repo, actor, { ...entry, removed: true });
+  if (entry.kind === "shop_hours") {
+    await dropPayFor(repo, id);
+    await hoursEmail(repo, actor, { ...entry, removed: true });
+  }
   return { ok: true, data: entry };
 }
 

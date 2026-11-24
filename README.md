@@ -108,6 +108,18 @@ Picking a job from the list shows the work, the address and the day, nothing els
 
 The owner gets an email each time a crew member logs hours, on a job or as shop time, and each time one takes hours back off: who, how many, which day, which job, their note, and their total for that week so far (`hoursEmail()` in `lib/services/hours.ts`). It goes to the same inbox as the other owner emails and puts nothing in the Queue. Hours the owner enters send nothing.
 
+### Crew pay
+
+The owner's **Pay** page (`/owner/pay`) keeps what each person earned, what they have been paid, and what is still owed. Only the owner can see it. The crew never sees rates or pay.
+
+- The crew logs hours; the owner sets the rate on each entry, because the rate changes with the job. The page lists hours that have no rate yet and offers that person's last rate on the same job as a starting point. Pay is hours times rate. A rate of 0 means tracked, not paid. The owner's own hours never wait for a rate.
+- **Flat pay** is pay that isn't by the hour: a flat amount for a job, a split, a bonus.
+- **Payments** record money the owner paid someone. The money moves outside the app.
+- Someone who isn't on the crew list (a helper for a day, a past worker) can be added by name only: no sign-in, not on the schedule.
+- Once a rate is set on hours, the crew member can't remove them. The owner can, and the pay line goes with them.
+
+Pay lives in its own table, `crew_pay`, which has no client policies. It is deliberately **not** stored on the job record: a job's customer and crew can read that row, so a rate there would be readable by them. Needs `supabase/migrations/20261124120000_crew_pay.sql`; until it is run the Pay page says so. Rules are in `lib/domain/pay.ts`, the writes in `lib/services/pay.ts`.
+
 Shop time and receipts (crew page, owner's Hours and Receipts pages) need `supabase/migrations/20261121120000_crew_log.sql`.
 
 ## Turn on email (Resend, free tier)

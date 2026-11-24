@@ -8,6 +8,7 @@ import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
+  PayItem,
   CrewRecord,
   EmailRecord,
   JobRecord,
@@ -39,6 +40,8 @@ type FileShape = {
   leads: LeadRecord[];
   /** Shop time and receipts. Missing in files saved before the crew log existed. */
   crewLog?: CrewEntry[];
+  /** Crew pay lines and payments. Missing in files saved before crew pay existed. */
+  payLog?: PayItem[];
   reviews: ReviewRecord[];
   library: LibraryEntry[];
   geo: Record<string, { lat: number; lng: number }>;
@@ -494,6 +497,37 @@ export class LocalRepository implements Repository {
     await this.run(async () => {
       const db = this.db();
       db.crewLog = this.crewLog().filter((item) => item.id !== id);
+    });
+  }
+  private payLog(): PayItem[] {
+    const db = this.db();
+    if (!db.payLog) db.payLog = [];
+    return db.payLog;
+  }
+  async payReady() {
+    return true;
+  }
+  async listPay() {
+    return this.run(async () => this.clone(this.payLog()).sort((a, b) => b.date.localeCompare(a.date) || b.at.localeCompare(a.at)));
+  }
+  async getPayItem(id: string) {
+    return this.run(async () => {
+      const item = this.payLog().find((entry) => entry.id === id);
+      return item ? this.clone(item) : null;
+    });
+  }
+  async savePayItem(item: PayItem) {
+    await this.run(async () => {
+      const log = this.payLog();
+      const at = log.findIndex((entry) => entry.id === item.id);
+      if (at === -1) log.unshift(this.clone(item));
+      else log[at] = this.clone(item);
+    });
+  }
+  async deletePayItem(id: string) {
+    await this.run(async () => {
+      const db = this.db();
+      db.payLog = this.payLog().filter((entry) => entry.id !== id);
     });
   }
   async listReviews() {

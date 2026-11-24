@@ -9,6 +9,7 @@ import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { addHours, removeHours } from "@/lib/services/hours";
 import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
+import { addFlatPay, addPayment, addPayPerson, removePayItem, setRate } from "@/lib/services/pay";
 import { joinCrew } from "@/lib/services/crew-join";
 import { INVITE_DAYS, INVITE_EMAIL_SUBJECT, inviteEmailBody, inviteLink, parseInviteContact, readInvite, signInvite, type CrewInvite } from "@/lib/invites";
 import { isDate } from "@/lib/domain/hours";
@@ -491,6 +492,55 @@ export async function removeCrewEntryAction(form: FormData) {
 export async function reimburseAction(form: FormData) {
   const done = field(form, "done") === "1";
   await crewLog(form, done ? "Marked paid back." : "Marked not paid back yet.", (repo, actor) => setReimbursed(repo, actor, field(form, "entryId"), done));
+}
+
+/** A dollar amount typed into a form: "$1,250.50" reads as 1250.5. */
+function money(form: FormData, key: string): number {
+  const raw = field(form, key).replace(/[$,\s]/g, "");
+  return raw ? Number(raw) : Number.NaN;
+}
+
+/**
+ * Crew pay forms live on the owner's Pay page and go back to it, on the same person's
+ * record when one is open. Each service checks again that it is the owner.
+ */
+async function payForm(form: FormData, notice: string, work: (repo: Repository, actor: Actor) => Promise<{ ok: true } | { ok: false; error: string }>) {
+  const actor = await requireRole("owner");
+  const who = field(form, "who");
+  const extra = /^[\w-]{1,64}$/.test(who) ? `&who=${who}` : "";
+  const repo = getRepository();
+  const result = await work(repo, actor);
+  await settle(repo);
+  if (!result.ok) redirect(`/owner/pay?error=${encodeURIComponent(result.error)}${extra}`);
+  redirect(`/owner/pay?notice=${encodeURIComponent(notice)}${extra}`);
+}
+
+/** Put a rate on hours someone logged, or change it. */
+export async function setRateAction(form: FormData) {
+  await payForm(form, "Rate set.", (repo, actor) => setRate(repo, actor, field(form, "entryId"), money(form, "rate")));
+}
+
+/** Pay that isn't by the hour: a flat amount for a job, a split, a bonus. */
+export async function addFlatPayAction(form: FormData) {
+  await payForm(form, "Pay added.", (repo, actor) =>
+    addFlatPay(repo, actor, { workerId: field(form, "workerId"), date: field(form, "date"), amount: money(form, "amount"), what: field(form, "what"), jobId: field(form, "jobId") || undefined }),
+  );
+}
+
+/** Record money paid to a crew member. */
+export async function addPaymentAction(form: FormData) {
+  await payForm(form, "Payment recorded.", (repo, actor) =>
+    addPayment(repo, actor, { workerId: field(form, "workerId"), date: field(form, "date"), amount: money(form, "amount"), note: field(form, "note") }),
+  );
+}
+
+export async function removePayItemAction(form: FormData) {
+  await payForm(form, "Removed.", (repo, actor) => removePayItem(repo, actor, field(form, "itemId")));
+}
+
+/** Someone to pay who isn't on the crew list: a helper for a day, or a past worker. */
+export async function addPayPersonAction(form: FormData) {
+  await payForm(form, "Added. You can pick them in the forms below.", (repo, actor) => addPayPerson(repo, actor, field(form, "fullName")));
 }
 
 /** The crew's phone, handed to whoever is on site: record their sign-off. */

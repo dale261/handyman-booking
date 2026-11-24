@@ -4,6 +4,7 @@ import type { Actor, CrewEntry, HoursEntry, JobRecord, ShopHoursEntry } from "@/
 import { checkHours, HOURS_LIMITS, hoursLabel, hoursRefusal, SHOP_LABEL, weekStart, weekTotals } from "@/lib/domain/hours";
 import { appUrl, formatDate, todayDetroit } from "@/lib/format";
 import { tellOwner } from "@/lib/services/booking";
+import { dropPayFor, hasPay } from "@/lib/services/pay";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -55,6 +56,7 @@ export async function hoursEmail(repo: Repository, actor: Actor, change: HoursCh
     if (change.note) lines.push(`Note: ${change.note}`);
     lines.push("", `${change.workerName}'s total for the week of ${formatDate(start)} is now ${hoursLabel(week)}, shop time included.`);
     lines.push("", `Everyone's hours: ${appUrl()}/owner/hours?week=${start}`);
+    if (!change.removed) lines.push(`Set the rate for these hours: ${appUrl()}/owner/pay`);
     await tellOwner(repo, settings, title, lines.join("\n"), change.job?.id ?? null);
   } catch (error) {
     console.error("[hours email] skipped", error);
@@ -102,7 +104,11 @@ export async function addHours(
   return { ok: true, data: result.data };
 }
 
-/** Take an entry back off. A crew member can remove their own; the owner can remove any. The owner is emailed. */
+/**
+ * Take an entry back off. A crew member can remove their own, unless pay has been set
+ * on it: then it is part of the pay record and only the owner can remove it, which
+ * takes the pay line off with it. The owner is emailed.
+ */
 export async function removeHours(repo: Repository, actor: Actor, jobId: string, entryId: string): Promise<Ok<JobRecord> | Err> {
   const result = await repo.run(async (): Promise<(Ok<JobRecord> & { entry: HoursEntry }) | Err> => {
     const job = await repo.getJob(jobId);
@@ -111,10 +117,12 @@ export async function removeHours(repo: Repository, actor: Actor, jobId: string,
     const entry = (job.hours ?? []).find((item) => item.id === entryId);
     if (!entry) return fail("That entry is already gone.");
     if (actor.role !== "owner" && entry.workerId !== actor.workerId) return fail("You can only remove hours you logged yourself.");
+    if (actor.role !== "owner" && (await hasPay(repo, entryId))) return fail("Pay has been set on those hours, so they stay on the record. Ask the owner to change them.");
     job.hours = (job.hours ?? []).filter((item) => item.id !== entryId);
     return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }), entry };
   });
   if (!result.ok) return result;
+  await dropPayFor(repo, entryId);
   await hoursEmail(repo, actor, { ...result.entry, removed: true, job: result.data });
   return { ok: true, data: result.data };
 }
