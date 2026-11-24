@@ -175,6 +175,7 @@ On **Add a job**, the owner can paste a customer's message or type the job in hi
 - With `ANTHROPIC_API_KEY` set (or `OPENAI_API_KEY`, used when Claude does not answer), the model reads the note and fills in the customer, the work, a short title, and the price if the note states one. It uses `claude-haiku-5-5` unless `ANTHROPIC_PASTE_MODEL` names another model.
 - Every value is checked against the note before the form is touched. A phone, email, ZIP, address, name or dollar amount that is not written in the note is not filled in. It goes to the bottom of Details under "Not sure about:", along with anything the model was unsure of. Details prints on the agreement, so those lines are for the owner to fix or delete.
 - The model never sets or changes a price. It only copies one the note states.
+- An address in the note goes to the job site address, with its ZIP on the same line. It goes to the billing address only when the note says it is for billing ("bill to", "mailing address"). Under the billing boxes, **Move address to job site** moves a billing address and its ZIP down to the job site address in one tap.
 - With no key, a failed call, or more than 60 reads in an hour, the built-in reader fills in the contact details the way it always has. Nothing is saved until **Add the job**.
 - The owner page's status card shows whether an AI key is set. These reads do not count against the daily AI quote caps on the Rates screen.
 

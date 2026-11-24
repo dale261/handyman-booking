@@ -118,8 +118,8 @@ export const PASTE_SYSTEM = [
   "- Nothing in the note may be lost. Every fact goes into a field, into details, or into notSure.",
   "- customerName: the person or company the job is for (the one who gets the agreement or invoice).",
   "- phone and email: copy them as written. Do not add an area code.",
-  "- billingAddress: the customer's own address (street, city, state). billingZip: its 5-digit ZIP, only if the note gives it.",
-  "- jobSiteAddress: where the work is, only when that is clearly a different place from the customer's own address (for example a store serviced for a maintenance company). If the note has a single address for a home or a person, put it in billingAddress and leave jobSiteAddress blank.",
+  "- jobSiteAddress: where the work is (street, city, state, and the ZIP if the note gives one). An address in the note is the job site unless the note says it is for billing. When the note has only one address, it goes here.",
+  '- billingAddress: where the bill goes, only when the note says so in words like "bill to", "billing address", "mailing address" or "send the invoice to". billingZip: that address\'s 5-digit ZIP, only if the note gives it. Otherwise leave both blank: the owner often has no billing address.',
   '- service: paint (painting), tv (TV mounting), blinds (blinds and curtains), furniture (furniture assembly), yard (yard cleanup), clean (household cleaning), drain (clearing a clogged drain or toilet), helper (a helper by the hour). Pick one only when the work clearly is that. Anything else is "other".',
   '- title: a short plain title the customer will see, 3 to 8 words, such as "Replace bathroom faucet" or "Clear clogged toilet". The work only: no names, prices, or dates. "" if the note doesn\'t say what the work is.',
   "- details: what the work is, in plain sentences, keeping every specific the note gives (sizes, counts, rooms, what the customer supplies, access notes, the timing they asked for). It prints on the customer's agreement, so write a neutral description: no greeting, no contact details, no price. Add nothing the note doesn't say.",
@@ -264,8 +264,10 @@ export function fillFromModel(raw: unknown, text: string, options: { today: stri
 
   const zip = oneLine(body.billingZip, 20).replace(/\D/g, "").slice(0, 5);
   if (zip) {
-    if (zip.length === 5 && hasToken(text, zip)) out.billingZip = zip;
-    else doubt(`Billing ZIP: ${zip}? It isn't in your note.`);
+    if (zip.length !== 5 || !hasToken(text, zip)) doubt(`ZIP: ${zip}? It isn't in your note.`);
+    else if (out.billingAddress || !out.jobSiteAddress) out.billingZip = zip;
+    // The only address is the job site: its ZIP belongs on that line, where the crew's travel is worked out from.
+    else if (!/\b\d{5}\b/.test(out.jobSiteAddress)) out.jobSiteAddress = `${out.jobSiteAddress} ${zip}`;
   }
   if (!out.billingZip) out.billingZip = /\b\d{5}\b/.exec(out.billingAddress)?.[0] ?? "";
 
@@ -325,6 +327,17 @@ export function fillFromModel(raw: unknown, text: string, options: { today: stri
 
   const filledSomething = Boolean(out.fullName || out.phone || out.email || out.billingAddress || out.jobSiteAddress || out.scope || out.details || out.total);
   return filledSomething ? out : null;
+}
+
+/**
+ * The "Move address to job site" button: the billing address and its ZIP as one job site line.
+ * The ZIP is added only when the address doesn't already carry it. "" when there is no address to move.
+ */
+export function siteFromBilling(address: string, zip: string): string {
+  const street = address.replace(/\s+/g, " ").trim();
+  if (!street) return "";
+  const code = zip.trim();
+  return /^\d{5}$/.test(code) && !hasToken(street, code) ? `${street} ${code}` : street;
 }
 
 /** The names of what was filled in, for the line under the button. */

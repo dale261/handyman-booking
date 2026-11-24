@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filledLabels, fillFromModel, fillFromRules, NOT_SURE_HEADING, pasteUserContent, stillNeeded } from "@/lib/domain/paste-fill";
+import { filledLabels, fillFromModel, fillFromRules, NOT_SURE_HEADING, PASTE_SYSTEM, pasteUserContent, siteFromBilling, stillNeeded } from "@/lib/domain/paste-fill";
 
 const limits = { minHours: 0.5, maxHours: 12, maxDays: 30, maxCrew: 4, maxTotal: 50_000, maxDoneDaysAgo: 365 };
 const options = { today: "2026-11-23", limits };
@@ -102,7 +102,7 @@ describe("fillFromModel", () => {
     expect(got?.unsure).toBe(3);
     expect(got?.details).toContain("- Phone: 231-555-9999?");
     expect(got?.details).toContain("- Email: lee@example.com?");
-    expect(got?.details).toContain("- Billing ZIP: 49651? It isn't in your note.");
+    expect(got?.details).toContain("- ZIP: 49651? It isn't in your note.");
   });
 
   it("accepts a phone written with spaces, a leading 1, or no area code", () => {
@@ -150,6 +150,29 @@ describe("fillFromModel", () => {
     expect(got?.whiteLabel).toBe(true);
     expect(got?.done).toBe("schedule");
     expect(got?.total).toBe("250");
+  });
+
+  it("puts the ZIP on the job site line when that is the only address", () => {
+    const note = "Mary Johnson 231-555-0142, kitchen sink clogged, 412 Pine St Cadillac MI 49601, $250";
+    const got = fillFromModel(answer({ customerName: "Mary Johnson", phone: "231-555-0142", jobSiteAddress: "412 Pine St, Cadillac, MI", billingZip: "49601", service: "drain", title: "Clear kitchen sink drain", price: 250 }), note, options);
+    expect(got?.jobSiteAddress).toBe("412 Pine St, Cadillac, MI 49601");
+    expect(got?.billingAddress).toBe("");
+    expect(got?.billingZip).toBe("");
+    // Already on the line: not added twice, and still not put in the billing box.
+    const twice = fillFromModel(answer({ jobSiteAddress: "412 Pine St, Cadillac, MI 49601", billingZip: "49601", title: "Clear kitchen sink drain" }), note, options);
+    expect(twice?.jobSiteAddress).toBe("412 Pine St, Cadillac, MI 49601");
+    expect(twice?.billingZip).toBe("");
+  });
+
+  it("keeps a billing ZIP with the billing address, and a ZIP with no address at all", () => {
+    const note = "bill to Apex, 90 Monroe Ave Grand Rapids 49503. work is at 1650 S Mitchell St Cadillac 49601";
+    const both = fillFromModel(answer({ billingAddress: "90 Monroe Ave, Grand Rapids", billingZip: "49503", jobSiteAddress: "1650 S Mitchell St, Cadillac 49601", title: "Clear sink drain" }), note, options);
+    expect(both?.billingAddress).toBe("90 Monroe Ave, Grand Rapids");
+    expect(both?.billingZip).toBe("49503");
+    expect(both?.jobSiteAddress).toBe("1650 S Mitchell St, Cadillac 49601");
+    const zipOnly = fillFromModel(answer({ billingZip: "49601", title: "Clear sink drain" }), "sink drain, somewhere in 49601", options);
+    expect(zipOnly?.billingZip).toBe("49601");
+    expect(zipOnly?.jobSiteAddress).toBe("");
   });
 
   it("ticks white-label only when the note says the words", () => {
@@ -227,6 +250,27 @@ describe("fillFromRules", () => {
     expect(got.unsure).toBe(0);
     expect(filledLabels(got)).toEqual(["name", "phone", "address", "ZIP", "service", "details"]);
     expect(stillNeeded(got)).toEqual(["title", "price"]);
+  });
+});
+
+describe("siteFromBilling", () => {
+  it("joins the billing address and ZIP into one job site line", () => {
+    expect(siteFromBilling("412 Pine St, Cadillac, MI", "49601")).toBe("412 Pine St, Cadillac, MI 49601");
+    expect(siteFromBilling("  412 Pine St,   Cadillac, MI 49601 ", "49601")).toBe("412 Pine St, Cadillac, MI 49601");
+    expect(siteFromBilling("412 Pine St, Cadillac, MI", "")).toBe("412 Pine St, Cadillac, MI");
+    expect(siteFromBilling("412 Pine St, Cadillac, MI", "4960")).toBe("412 Pine St, Cadillac, MI");
+  });
+
+  it("has nothing to move when there is no address", () => {
+    expect(siteFromBilling("", "49601")).toBe("");
+    expect(siteFromBilling("   ", "")).toBe("");
+  });
+});
+
+describe("the model's instructions", () => {
+  it("send a lone address to the job site, and to billing only when the note says so", () => {
+    expect(PASTE_SYSTEM).toContain("An address in the note is the job site unless the note says it is for billing.");
+    expect(PASTE_SYSTEM).toContain('only when the note says so in words like "bill to"');
   });
 });
 

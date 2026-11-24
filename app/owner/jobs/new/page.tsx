@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createOwnerJobAction } from "@/lib/actions";
 import { CustomerPicker } from "@/components/customer-picker";
 import { Flash } from "@/components/flash";
+import { MoveToSite } from "@/components/move-to-site";
 import { PasteFill } from "@/components/paste-fill";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,7 @@ export default async function NewOwnerJobPage({ searchParams }: { searchParams: 
               Billing ZIP
               <Input name="billingZip" inputMode="numeric" pattern="\d{5}" maxLength={5} autoComplete="off" defaultValue={start.billingZip} />
             </label>
+            <MoveToSite />
             <label className={`${fieldClass} sm:col-span-2`}>
               Temporary password for their sign-in (optional)
               <Input name="password" type="password" autoComplete="new-password" placeholder="8+ characters. Leave blank; the emailed link needs no sign-in" />
