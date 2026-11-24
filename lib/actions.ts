@@ -19,7 +19,9 @@ import { areaCheck } from "@/lib/domain/area";
 import { phoneDigits, realEmail } from "@/lib/domain/contact";
 import { DEMO_PAY_UNAVAILABLE, demoSignInAllowed } from "@/lib/demo";
 import { getRepository, supabaseConfigured } from "@/lib/db/index";
-import { allowRequest, ANON_LIMIT, LEAD_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
+import { allowRequest, ANON_LIMIT, LEAD_LIMIT, PASTE_LIMIT, QUOTE_LIMIT } from "@/lib/rate-limit";
+import { fillFromModel, fillFromRules, PASTE_MAX_CHARS, type PasteRead } from "@/lib/domain/paste-fill";
+import { pasteModelConfigured, readPasteWithModel } from "@/lib/paste-ai";
 import { DEMO_USERS } from "@/lib/db/local";
 import type { Repository } from "@/lib/db/repository";
 import { actorFromUser, type Actor, type CrewRecord, type Role, type UserRecord, type WorkerRecord } from "@/lib/db/types";
@@ -881,6 +883,24 @@ export async function removeTimeOffAction(form: FormData) {
 // ---------------------------------------------------------------------------
 // Owner-entered jobs (phone and in-person) and the contract and invoice page
 // ---------------------------------------------------------------------------
+
+/**
+ * The paste box on Add a job: read the owner's note (a customer's message, or his own
+ * words) into form values. Saves nothing and never sets a price the note doesn't state.
+ * With an AI key the model reads it and every value is checked against the note; with no
+ * key, a failed call, or too many reads in an hour, the built-in reader answers instead.
+ */
+export async function readPasteAction(text: string): Promise<PasteRead> {
+  await requireRole("owner");
+  const note = String(text ?? "").slice(0, PASTE_MAX_CHARS).trim();
+  const rules = fillFromRules(note);
+  if (!note || !pasteModelConfigured()) return { source: "rules", fill: rules, why: "no-key" };
+  if (!(await allowRequest(PASTE_LIMIT))) return { source: "rules", fill: rules, why: "busy" };
+  const today = todayDetroit();
+  const answer = await readPasteWithModel(note, today);
+  const fill = answer ? fillFromModel(answer, note, { today, limits: OWNER_JOB_LIMITS }) : null;
+  return fill ? { source: "ai", fill } : { source: "rules", fill: rules, why: "failed" };
+}
 
 /** The owner types a phone or in-person job once: customer, work, firm price, and (optionally) the time. */
 export async function createOwnerJobAction(form: FormData) {

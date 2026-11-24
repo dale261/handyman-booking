@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { resendConfigured } from "@/lib/email";
+import { pasteModelConfigured } from "@/lib/paste-ai";
 import { checkPayPalKeys } from "@/lib/paypal";
 
 /**
@@ -22,6 +23,8 @@ function variableReport() {
 export async function ConnectionsCard() {
   const paypal = await checkPayPalKeys();
   const email = resendConfigured();
+  // Optional, so it never turns the card red: which AI service (if any) this build has a key for.
+  const ai = pasteModelConfigured();
   const allGood = paypal.ok && paypal.mode === "live" && email;
   const report = variableReport();
   const build = `${process.env.VERCEL_ENV || "local"} build ${(process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || "(no commit)"}`;
@@ -43,6 +46,16 @@ export async function ConnectionsCard() {
           tone={email ? "ok" : "stop"}
           status={email ? "Connected" : "Not connected"}
           detail={email ? "Customers get their hold, receipt, and finished-work emails." : "No Resend key in Vercel. Emails pile up in the Queue instead of sending."}
+        />
+        <Row
+          label="AI"
+          tone={ai ? "ok" : "wait"}
+          status={ai ? "Key set" : "Not connected"}
+          detail={
+            ai
+              ? `Add a job reads what you paste or type and fills in the form (${ai === "anthropic" ? "Claude" : "OpenAI"}). The key is in Vercel; this doesn't test it.`
+              : "Optional. Add a job still fills in contact details from a pasted message. To have AI read your own notes, an AI key goes into Vercel."
+          }
         />
         {report.missing.length > 0 && (
           <div className="rounded-md bg-black/5 p-3 text-xs">

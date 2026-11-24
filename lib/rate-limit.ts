@@ -14,6 +14,9 @@ export const QUOTE_LIMIT = { bucket: "quote", max: 12, windowMs: 60 * 60 * 1000 
 /** New leads from the public price page: new phone numbers per network per hour. Re-checks from the same phone are not counted. */
 export const LEAD_LIMIT = { bucket: "lead", max: 6, windowMs: 60 * 60 * 1000 };
 
+/** The owner's paste box on Add a job: reads sent to the AI per network per hour. Past it, the built-in reader answers. */
+export const PASTE_LIMIT = { bucket: "paste", max: 60, windowMs: 60 * 60 * 1000 };
+
 const memory = new Map<string, { windowStart: number; hits: number }>();
 
 function memoryAllow(bucket: string, ip: string, max: number, windowMs: number): boolean {

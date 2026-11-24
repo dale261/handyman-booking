@@ -168,6 +168,16 @@ Listed services can still get a short note from the description. That note uses 
 2. Create an OpenAI key at [https://platform.openai.com](https://platform.openai.com). Put a spending limit on it.
 3. Set `OPENAI_API_KEY` in `.env.local`. Leave `OPENAI_MODEL=gpt-4.1-mini` unless you want a different model. Listed jobs use this key. Unlisted jobs use it only when Claude does not answer.
 
+## The paste box on Add a job
+
+On **Add a job**, the owner can paste a customer's message or type the job in his own words and tap **Fill in the form**.
+
+- With `ANTHROPIC_API_KEY` set (or `OPENAI_API_KEY`, used when Claude does not answer), the model reads the note and fills in the customer, the work, a short title, and the price if the note states one. It uses `claude-haiku-5-5` unless `ANTHROPIC_PASTE_MODEL` names another model.
+- Every value is checked against the note before the form is touched. A phone, email, ZIP, address, name or dollar amount that is not written in the note is not filled in. It goes to the bottom of Details under "Not sure about:", along with anything the model was unsure of. Details prints on the agreement, so those lines are for the owner to fix or delete.
+- The model never sets or changes a price. It only copies one the note states.
+- With no key, a failed call, or more than 60 reads in an hour, the built-in reader fills in the contact details the way it always has. Nothing is saved until **Add the job**.
+- The owner page's status card shows whether an AI key is set. These reads do not count against the daily AI quote caps on the Rates screen.
+
 ## Road miles (optional)
 
 Travel is $1 per one-way mile with a $50 minimum, unless you change those numbers. The first stop of a crew's day is measured from the shop (1339 N Mitchell St, Cadillac, by default). Later stops are measured from that crew's previous job. A paid job keeps its travel number even if you move the crew.
@@ -205,6 +215,7 @@ Optional:
 - `ORS_API_KEY` — real road miles. Without it, travel uses straight-line distance times 1.25.
 - `OPENAI_MODEL` — leave as `gpt-4.1-mini` unless you want a different model for listed-job notes and the unlisted fallback.
 - `ANTHROPIC_MODEL` — leave as `claude-sonnet-5-5` unless you want a different Claude model for unlisted jobs.
+- `ANTHROPIC_PASTE_MODEL` — leave unset for `claude-haiku-5-5`, the small model that reads the paste box on Add a job.
 
 4. In Supabase, open **Authentication → URL configuration**. Set **Site URL** to the Vercel `https://` domain. Add that same domain under **Redirect URLs**, including `https://your-app.vercel.app/**`. Sign-in fails if these still point at localhost.
 5. Deploy, open the site, and sign in with the owner email and password. The sample buttons should not be on the sign-in page.
