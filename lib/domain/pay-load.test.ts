@@ -190,6 +190,13 @@ describe("what a load would do", () => {
     expect(twice.after[0]).toMatchObject({ paid: 200, owed: -200 });
   });
 
+  it("takes how a payment was made from a method column, and never guesses it from the note", () => {
+    const withColumn = plan(["date,worker,job,job_number,hours,rate,pay,note,method", "2026-11-16,Sam,payment,,,,-130,sent Friday,PayPal", "2026-11-16,Sam,payment,,,,-20,,venmo"].join("\n"));
+    expect(withColumn.items.map((item) => (item.kind === "payment" ? item.method : "x"))).toEqual(["paypal", undefined]);
+    const noColumn = plan([HEAD, "2026-11-16,Sam,payment,,,,-130,paid $130 via PayPal"].join("\n"));
+    expect(noColumn.items[0].kind === "payment" && "method" in noColumn.items[0]).toBe(false);
+  });
+
   it("passes problems through and still shows the rest", () => {
     const made = plan([HEAD, "2026-11-10,Sam,deck,,8,15,120,", "bad day,Sam,deck,,8,15,120,"].join("\n"));
     expect(made.problems).toHaveLength(1);

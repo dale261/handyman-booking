@@ -185,7 +185,12 @@ export type PayLine = {
   at: string;
   /** True when it came from the owner's own records file, loaded on the Pay page. A later load replaces these. */
   loaded?: boolean;
+  /** True when the rate was filled in from the owner's rate list as the hours were logged. Cleared once the owner sets it himself. */
+  auto?: boolean;
 };
+
+/** How a payment to a crew member was made. */
+export type PayMethod = "cash" | "paypal" | "check" | "other";
 
 /** Money the owner paid a crew member. Owner only, kept with the pay lines. */
 export type CrewPayment = {
@@ -196,6 +201,8 @@ export type CrewPayment = {
   /** The day it was paid, YYYY-MM-DD. */
   date: string;
   amount: number;
+  /** How it was paid, when the owner said. */
+  method?: PayMethod;
   note: string;
   at: string;
   /** True when it came from the owner's own records file. A later load replaces these. */
@@ -203,6 +210,20 @@ export type CrewPayment = {
 };
 
 export type PayItem = PayLine | CrewPayment;
+
+/**
+ * One line of the owner's rate list: what a crew member is paid an hour, in general
+ * ("usual"), for shop time ("shop"), or on one job (that job's id). New hours get their
+ * rate from this list as they are logged. Owner only, in its own table like the pay lines.
+ */
+export type CrewRate = {
+  /** The worker's id and the scope, joined: one rate per person per scope. */
+  id: string;
+  workerId: string;
+  scope: string;
+  rate: number;
+  updatedAt: string;
+};
 
 /** Someone confirmed the finished work looks right. Optional: nothing waits on it. */
 export type WorkSignOff = {

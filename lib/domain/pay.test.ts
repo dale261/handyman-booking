@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CrewPayment, PayItem, PayLine, ShopHoursEntry } from "@/lib/db/types";
-import { balances, checkAmount, checkFlatPay, checkPayDay, checkPayment, checkRate, lineFor, loggedHours, needsRate, payFor, suggestRate, totalOwed } from "./pay";
+import type { CrewPayment, CrewRate, PayItem, PayLine, ShopHoursEntry } from "@/lib/db/types";
+import { balances, checkAmount, checkFlatPay, checkPayDay, checkPayment, checkRate, lastRates, lineFor, loggedHours, methodLabel, needsRate, payFor, rateFor, rateId, readMethod, seenJobRates, suggestRate, totalOwed } from "./pay";
 
 const today = "2026-11-24";
 
@@ -130,5 +130,77 @@ describe("what each person is owed", () => {
   it("adds cents without drift", () => {
     const pay: PayItem[] = Array.from({ length: 30 }, () => line({ amount: 0.1 }));
     expect(balances(pay)[0].earned).toBe(3);
+  });
+});
+
+function listed(workerId: string, scope: string, rate: number): CrewRate {
+  return { id: rateId(workerId, scope), workerId, scope, rate, updatedAt: "2026-11-24T12:00:00.000Z" };
+}
+
+describe("the rate list", () => {
+  const rates = [listed("w1", "usual", 35), listed("w1", "shop", 15), listed("w1", "j1", 30), listed("w2", "j1", 10), listed("w3", "usual", 0)];
+
+  it("gives job hours the rate for that job, else the person's usual rate", () => {
+    expect(rateFor(rates, "w1", "j1")).toEqual({ rate: 30, from: "job" });
+    expect(rateFor(rates, "w1", "j2")).toEqual({ rate: 35, from: "usual" });
+    expect(rateFor(rates, "w2", "j1")).toEqual({ rate: 10, from: "job" });
+    // A rate of zero is a real rate: tracked, not paid.
+    expect(rateFor(rates, "w3", "j1")).toEqual({ rate: 0, from: "usual" });
+  });
+
+  it("says nothing when the list has no rate for the hours, so they wait for the owner", () => {
+    expect(rateFor(rates, "w2", "j2")).toBeNull();
+    expect(rateFor(rates, "w4", "j1")).toBeNull();
+    expect(rateFor([], "w1", "j1")).toBeNull();
+  });
+
+  it("gives shop time the shop rate and never the usual rate", () => {
+    expect(rateFor(rates, "w1", null)).toEqual({ rate: 15, from: "shop" });
+    expect(rateFor(rates, "w3", null)).toBeNull();
+    expect(rateFor(rates, "w2", null)).toBeNull();
+  });
+
+  it("is offered ahead of what they were last paid", () => {
+    const pay: PayItem[] = [line({ workerId: "w1", jobId: "j1", rate: 22, date: "2026-11-20" })];
+    expect(suggestRate(pay, "w1", "j1", rates)).toEqual({ rate: 30, from: "the rate list" });
+    expect(suggestRate(pay, "w1", "j1")).toEqual({ rate: 22, from: "this job" });
+    // No list rate for this person on this job: back to what they were last paid.
+    expect(suggestRate([line({ workerId: "w2", jobId: "j2", rate: 12 })], "w2", "j2", rates)).toEqual({ rate: 12, from: "this job" });
+  });
+
+  it("can be started from the records: each job's latest rate that isn't on the list, and the last rates paid", () => {
+    const pay: PayItem[] = [
+      line({ workerId: "w2", jobId: "j1", rate: 10, date: "2026-11-10" }),
+      line({ workerId: "w2", jobId: "j2", rate: 15, date: "2026-11-12" }),
+      line({ workerId: "w2", jobId: "j2", rate: 20, date: "2026-11-14" }),
+      line({ workerId: "w2", jobId: null, what: "Shop time", rate: 12, date: "2026-11-15" }),
+      line({ workerId: "w2", jobId: null, what: "Trim", rate: 18, date: "2026-11-16" }),
+      line({ workerId: "w2", jobId: "j3", rate: 0, date: "2026-11-17" }),
+      line({ workerId: "w2", jobId: "j4", hours: null, rate: null, amount: 200, entryId: null, date: "2026-11-18" }),
+      payment({ workerId: "w2" }),
+    ];
+    // j1 is already on the list for w2; tracked and flat lines don't suggest a rate.
+    expect(seenJobRates(pay, rates, "w2")).toEqual([{ jobId: "j2", rate: 20, date: "2026-11-14" }]);
+    expect(lastRates(pay, "w2")).toEqual({ work: { rate: 18, date: "2026-11-16" }, shop: { rate: 12, date: "2026-11-15" } });
+    expect(lastRates(pay, "w9")).toEqual({ work: null, shop: null });
+  });
+});
+
+describe("hours and how a payment was made", () => {
+  it("adds up the hours on each person's pay lines", () => {
+    const list = balances([line({ hours: 4, amount: 80 }), line({ hours: 3.5, amount: 70 }), line({ hours: null, rate: null, entryId: null, amount: 150 }), payment({ amount: 100 })]);
+    expect(list[0]).toMatchObject({ hours: 7.5, earned: 300, paid: 100, owed: 200 });
+  });
+
+  it("reads how a payment was made, and leaves out anything it doesn't know", () => {
+    expect(readMethod("PayPal")).toBe("paypal");
+    expect(readMethod(" cash ")).toBe("cash");
+    expect(readMethod("cheque")).toBe("check");
+    expect(readMethod("other")).toBe("other");
+    expect(readMethod("venmo")).toBeUndefined();
+    expect(readMethod("")).toBeUndefined();
+    expect(readMethod(undefined)).toBeUndefined();
+    expect(methodLabel("paypal")).toBe("PayPal");
+    expect(methodLabel(undefined)).toBe("");
   });
 });

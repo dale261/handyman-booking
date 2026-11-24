@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
-import type { Actor, CrewPayment, PayItem, PayLine, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
-import { checkFlatPay, checkPayment, checkRate, lineFor, loggedHours, payFor } from "@/lib/domain/pay";
+import type { Actor, CrewPayment, CrewRate, PayItem, PayLine, PayMethod, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
+import { checkFlatPay, checkPayment, checkRate, lineFor, loggedHours, payFor, RATE_SHOP, RATE_USUAL, rateFor, rateId, type LoggedHours } from "@/lib/domain/pay";
 import { todayDetroit } from "@/lib/format";
 
 type Ok<T> = { ok: true; data: T };
@@ -33,8 +33,11 @@ async function person(repo: Repository, workerId: string): Promise<WorkerRecord 
  * Set the hourly rate on hours that are already logged in the app, or change it. The
  * crew logs the hours; the owner puts the rate on them, because the rate changes with
  * the job. The pay is hours times rate.
+ *
+ * With `remember`, the rate also goes on the rate list for that person on that job (or
+ * for their shop time), so their next hours there get it without the owner doing anything.
  */
-export async function setRate(repo: Repository, actor: Actor, entryId: string, rate: number): Promise<Ok<PayLine> | Err> {
+export async function setRate(repo: Repository, actor: Actor, entryId: string, rate: number, remember = false): Promise<(Ok<PayLine> & { remembered: boolean }) | Err> {
   if (actor.role !== "owner") return fail(OWNER_ONLY);
   const checked = checkRate(rate);
   if (!checked.ok) return fail(checked.error);
@@ -59,7 +62,87 @@ export async function setRate(repo: Repository, actor: Actor, entryId: string, r
   };
   const problem = await saved(repo.savePayItem(line));
   if (problem) return problem;
-  return { ok: true, data: line };
+  // The rate on the hours is saved either way. If the list can't take it, the owner is told.
+  const kept = remember ? await saved(repo.saveRate(listRate(entry.workerId, entry.jobId ?? RATE_SHOP, checked.rate))) : null;
+  return { ok: true, data: line, remembered: remember && !kept };
+}
+
+function listRate(workerId: string, scope: string, rate: number): CrewRate {
+  return { id: rateId(workerId, scope), workerId, scope, rate, updatedAt: new Date().toISOString() };
+}
+
+/**
+ * Put a rate on the owner's rate list, or take one off (a blank rate). `scope` is
+ * "usual", "shop", or a job's id. Changing the list never changes hours already logged:
+ * each of those keeps the rate it was given.
+ */
+export async function saveListRate(repo: Repository, actor: Actor, input: { workerId: string; scope: string; rate: number | null }): Promise<Ok<CrewRate | null> | Err> {
+  if (actor.role !== "owner") return fail(OWNER_ONLY);
+  const worker = await person(repo, input.workerId);
+  if ("ok" in worker) return worker;
+  if (input.scope !== RATE_USUAL && input.scope !== RATE_SHOP && !(await repo.getJob(input.scope))) return fail("Pick the job the rate is for.");
+  if (input.rate === null) {
+    const problem = await saved(repo.deleteRate(rateId(worker.id, input.scope)));
+    return problem ?? { ok: true, data: null };
+  }
+  const checked = checkRate(input.rate);
+  if (!checked.ok) return fail(checked.error);
+  const rate = listRate(worker.id, input.scope, checked.rate);
+  const problem = await saved(repo.saveRate(rate));
+  return problem ?? { ok: true, data: rate };
+}
+
+/**
+ * As hours are logged, give them the rate the owner's list says, if it says one. The
+ * crew member never sees it. The line is marked as filled in automatically so the owner
+ * can tell, and he can change it. Never stops the hours from being saved.
+ */
+export async function autoRate(repo: Repository, entry: Omit<LoggedHours, "at">): Promise<boolean> {
+  try {
+    const listed = rateFor(await repo.listRates(), entry.workerId, entry.jobId);
+    if (!listed) return false;
+    if (lineFor(await repo.listPay(), entry.entryId)) return false;
+    const line: PayLine = {
+      id: randomUUID(),
+      kind: "pay",
+      workerId: entry.workerId,
+      workerName: entry.workerName,
+      date: entry.date,
+      hours: entry.hours,
+      rate: listed.rate,
+      amount: payFor(entry.hours, listed.rate),
+      entryId: entry.entryId,
+      jobId: entry.jobId,
+      what: entry.what,
+      note: entry.note,
+      at: new Date().toISOString(),
+      auto: true,
+    };
+    await repo.savePayItem(line);
+    return true;
+  } catch (error) {
+    console.error("[crew pay] couldn't fill in the rate from the list", error);
+    return false;
+  }
+}
+
+/**
+ * Why a crew member can't be removed from the crew list, or null when they can: someone
+ * with pay or payments on record has to stay, or their record would have no person.
+ */
+export async function payBlocksRemoval(repo: Repository, workerId: string): Promise<string | null> {
+  const pay = await repo.listPay();
+  if (!pay.some((item) => item.workerId === workerId)) return null;
+  return "That person has pay on record, so they stay on the list. Untick Active to take them off the schedule.";
+}
+
+/** When someone is removed from the crew list, their lines on the rate list go too. */
+export async function dropRatesFor(repo: Repository, workerId: string): Promise<void> {
+  try {
+    for (const rate of (await repo.listRates()).filter((item) => item.workerId === workerId)) await repo.deleteRate(rate.id);
+  } catch (error) {
+    console.error("[crew pay] couldn't clear the rate list for a removed worker", error);
+  }
 }
 
 /** Pay that isn't by the hour: a flat amount for a job, a split, a bonus. It can name the job. */
@@ -103,7 +186,7 @@ export async function addFlatPay(
 export async function addPayment(
   repo: Repository,
   actor: Actor,
-  input: { workerId: string; date: string; amount: number; note: string },
+  input: { workerId: string; date: string; amount: number; note: string; method?: PayMethod },
 ): Promise<Ok<CrewPayment> | Err> {
   if (actor.role !== "owner") return fail(OWNER_ONLY);
   const worker = await person(repo, input.workerId);
@@ -117,6 +200,7 @@ export async function addPayment(
     workerName: worker.fullName,
     date: checked.date,
     amount: checked.amount,
+    ...(input.method ? { method: input.method } : {}),
     note: checked.note,
     at: new Date().toISOString(),
   };

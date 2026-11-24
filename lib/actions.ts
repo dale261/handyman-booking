@@ -9,7 +9,8 @@ import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { addHours, removeHours } from "@/lib/services/hours";
 import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
-import { addFlatPay, addPayment, addPayPerson, removePayItem, setRate } from "@/lib/services/pay";
+import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, setRate } from "@/lib/services/pay";
+import { RATE_SHOP, RATE_USUAL, readMethod } from "@/lib/domain/pay";
 import { checkPayFile, clearLoadedPay, loadPayFile, type LoadResult } from "@/lib/services/pay-load";
 import { LOAD_LIMITS, type LoadChoices, type LoadSummary } from "@/lib/domain/pay-load";
 import { joinCrew } from "@/lib/services/crew-join";
@@ -506,20 +507,72 @@ function money(form: FormData, key: string): number {
  * Crew pay forms live on the owner's Pay page and go back to it, on the same person's
  * record when one is open. Each service checks again that it is the owner.
  */
-async function payForm(form: FormData, notice: string, work: (repo: Repository, actor: Actor) => Promise<{ ok: true } | { ok: false; error: string }>) {
+async function payForm(
+  form: FormData,
+  notice: string,
+  work: (repo: Repository, actor: Actor) => Promise<{ ok: true; notice?: string } | { ok: false; error: string }>,
+  page = "/owner/pay",
+) {
   const actor = await requireRole("owner");
   const who = field(form, "who");
   const extra = /^[\w-]{1,64}$/.test(who) ? `&who=${who}` : "";
   const repo = getRepository();
   const result = await work(repo, actor);
   await settle(repo);
-  if (!result.ok) redirect(`/owner/pay?error=${encodeURIComponent(result.error)}${extra}`);
-  redirect(`/owner/pay?notice=${encodeURIComponent(notice)}${extra}`);
+  if (!result.ok) redirect(`${page}?error=${encodeURIComponent(result.error)}${extra}`);
+  redirect(`${page}?notice=${encodeURIComponent(result.notice ?? notice)}${extra}`);
 }
 
-/** Put a rate on hours someone logged, or change it. */
+/**
+ * Put a rate on hours someone logged, or change it. With "remember" ticked, the rate also
+ * goes on the rate list for that person on that job, so their next hours there get it.
+ */
 export async function setRateAction(form: FormData) {
-  await payForm(form, "Rate set.", (repo, actor) => setRate(repo, actor, field(form, "entryId"), money(form, "rate")));
+  const remember = field(form, "remember") === "on";
+  await payForm(form, "Rate set.", async (repo, actor) => {
+    const result = await setRate(repo, actor, field(form, "entryId"), money(form, "rate"), remember);
+    if (!result.ok || !remember) return result;
+    return { ok: true, notice: result.remembered ? "Rate set, and saved to your rate list." : "Rate set. It couldn't be saved to the rate list." };
+  });
+}
+
+/** A rate box on the rate list: a number saves it, blank takes it off. */
+function listRate(form: FormData, key: string): number | null {
+  return field(form, key) === "" ? null : money(form, key);
+}
+
+/** One person's usual rate and shop time rate, from the rate list page. */
+export async function saveRatesAction(form: FormData) {
+  const workerId = field(form, "workerId");
+  await payForm(
+    form,
+    "Rates saved.",
+    async (repo, actor) => {
+      const usual = await saveListRate(repo, actor, { workerId, scope: RATE_USUAL, rate: listRate(form, "usual") });
+      if (!usual.ok) return usual;
+      return saveListRate(repo, actor, { workerId, scope: RATE_SHOP, rate: listRate(form, "shop") });
+    },
+    "/owner/pay/rates",
+  );
+}
+
+/** A rate for one person on one job. */
+export async function saveJobRateAction(form: FormData) {
+  await payForm(
+    form,
+    "Job rate saved.",
+    async (repo, actor) => {
+      const jobId = field(form, "jobId");
+      if (!jobId) return { ok: false as const, error: "Pick the job the rate is for." };
+      if (field(form, "rate") === "") return { ok: false as const, error: "Enter the rate in dollars an hour." };
+      return saveListRate(repo, actor, { workerId: field(form, "workerId"), scope: jobId, rate: money(form, "rate") });
+    },
+    "/owner/pay/rates",
+  );
+}
+
+export async function removeJobRateAction(form: FormData) {
+  await payForm(form, "Job rate removed.", (repo, actor) => saveListRate(repo, actor, { workerId: field(form, "workerId"), scope: field(form, "jobId"), rate: null }), "/owner/pay/rates");
 }
 
 /** Pay that isn't by the hour: a flat amount for a job, a split, a bonus. */
@@ -532,7 +585,7 @@ export async function addFlatPayAction(form: FormData) {
 /** Record money paid to a crew member. */
 export async function addPaymentAction(form: FormData) {
   await payForm(form, "Payment recorded.", (repo, actor) =>
-    addPayment(repo, actor, { workerId: field(form, "workerId"), date: field(form, "date"), amount: money(form, "amount"), note: field(form, "note") }),
+    addPayment(repo, actor, { workerId: field(form, "workerId"), date: field(form, "date"), amount: money(form, "amount"), note: field(form, "note"), method: readMethod(field(form, "method")) }),
   );
 }
 
@@ -944,7 +997,11 @@ export async function deleteWorkerAction(form: FormData) {
   if (jobs.some((job) => job.workerIds.includes(id) && blocksSchedule(job.status))) {
     redirect("/owner/settings?error=" + encodeURIComponent("That worker is still on a scheduled job."));
   }
+  // Someone with pay on record stays on the list, or their record would have no person to pay.
+  const held = await payBlocksRemoval(repo, id);
+  if (held) redirect("/owner/settings?error=" + encodeURIComponent(held));
   await repo.deleteWorker(id);
+  await dropRatesFor(repo, id);
   redirect("/owner/settings?notice=" + encodeURIComponent("Worker removed."));
 }
 

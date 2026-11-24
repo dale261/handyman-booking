@@ -1,7 +1,7 @@
-import type { CrewPayment, JobRecord, PayItem, PayLine, WorkerRecord } from "@/lib/db/types";
+import type { CrewPayment, JobRecord, PayItem, PayLine, PayMethod, WorkerRecord } from "@/lib/db/types";
 import { addDays, isDate, SHOP_LABEL } from "@/lib/domain/hours";
 import { roundCents } from "@/lib/domain/money";
-import { balances, payFor, PAY_LIMITS, type LoggedHours } from "@/lib/domain/pay";
+import { balances, payFor, PAY_LIMITS, readMethod, type LoggedHours } from "@/lib/domain/pay";
 
 /**
  * Loading the owner's own pay records from a file: one line per day worked or payment
@@ -60,6 +60,8 @@ export type FileRow = {
   /** Dollars earned, or dollars paid for a payment. Never negative. */
   amount: number;
   note: string;
+  /** How a payment was made, when the file has a "method" column that says. It is never guessed from the note. */
+  method?: PayMethod;
 };
 
 export type FileRead = {
@@ -90,7 +92,7 @@ export function readPayFile(text: string, today: string): FileRead {
   if (table.length === 0) return { rows: [], problems: ["The file is empty."], warnings, lines };
   const head = table[0].map((name) => name.trim().toLowerCase().replace(/\s+/g, "_"));
   const col = (name: string) => head.indexOf(name);
-  const at = { date: col("date"), worker: col("worker"), job: col("job"), jobNumber: col("job_number"), hours: col("hours"), rate: col("rate"), pay: col("pay"), note: col("note") };
+  const at = { date: col("date"), worker: col("worker"), job: col("job"), jobNumber: col("job_number"), hours: col("hours"), rate: col("rate"), pay: col("pay"), note: col("note"), method: col("method") };
   const missing = (["date", "worker", "job", "hours", "rate", "pay"] as const).filter((name) => at[name] === -1);
   if (missing.length > 0) {
     return { rows: [], problems: [`The first line has to name the columns. Missing: ${missing.join(", ")}. Expected: date, worker, job, job_number, hours, rate, pay, note.`], warnings, lines };
@@ -120,7 +122,8 @@ export function readPayFile(text: string, today: string): FileRead {
 
     if (job.toLowerCase() === "payment") {
       if (pay === null || pay === 0) return bad("a payment needs an amount in the pay column.");
-      rows.push({ ...base, kind: "payment", hours: null, rate: null, amount: roundCents(Math.abs(pay)) });
+      const method = readMethod(get(at.method));
+      rows.push({ ...base, kind: "payment", hours: null, rate: null, amount: roundCents(Math.abs(pay)), ...(method ? { method } : {}) });
     } else if (hours !== null && rate !== null) {
       if (pay !== null && pay < 0) return bad("pay can't be negative on a line with hours.");
       const worked = payFor(hours, rate);
@@ -284,7 +287,7 @@ export function planLoad(input: {
         counts.skipped += 1;
         return;
       }
-      const payment: CrewPayment = { id, kind: "payment", workerId, workerName, date: row.date, amount: row.amount, note: row.note, at, loaded: true };
+      const payment: CrewPayment = { id, kind: "payment", workerId, workerName, date: row.date, amount: row.amount, ...(row.method ? { method: row.method } : {}), note: row.note, at, loaded: true };
       items.push(payment);
       return;
     }

@@ -8,6 +8,7 @@ import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
+  CrewRate,
   PayItem,
   CrewRecord,
   EmailRecord,
@@ -42,6 +43,8 @@ type FileShape = {
   crewLog?: CrewEntry[];
   /** Crew pay lines and payments. Missing in files saved before crew pay existed. */
   payLog?: PayItem[];
+  /** The owner's rate list. Missing in files saved before it existed. */
+  payRates?: CrewRate[];
   reviews: ReviewRecord[];
   library: LibraryEntry[];
   geo: Record<string, { lat: number; lng: number }>;
@@ -545,6 +548,31 @@ export class LocalRepository implements Repository {
       const gone = new Set(ids);
       const db = this.db();
       db.payLog = this.payLog().filter((entry) => !gone.has(entry.id));
+    });
+  }
+  private payRates(): CrewRate[] {
+    const db = this.db();
+    if (!db.payRates) db.payRates = [];
+    return db.payRates;
+  }
+  async ratesReady() {
+    return true;
+  }
+  async listRates() {
+    return this.run(async () => this.clone(this.payRates()));
+  }
+  async saveRate(rate: CrewRate) {
+    await this.run(async () => {
+      const list = this.payRates();
+      const at = list.findIndex((item) => item.id === rate.id);
+      if (at === -1) list.push(this.clone(rate));
+      else list[at] = this.clone(rate);
+    });
+  }
+  async deleteRate(id: string) {
+    await this.run(async () => {
+      const db = this.db();
+      db.payRates = this.payRates().filter((item) => item.id !== id);
     });
   }
   async listReviews() {

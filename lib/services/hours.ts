@@ -4,7 +4,7 @@ import type { Actor, CrewEntry, HoursEntry, JobRecord, ShopHoursEntry } from "@/
 import { checkHours, HOURS_LIMITS, hoursLabel, hoursRefusal, SHOP_LABEL, weekStart, weekTotals } from "@/lib/domain/hours";
 import { appUrl, formatDate, todayDetroit } from "@/lib/format";
 import { tellOwner } from "@/lib/services/booking";
-import { dropPayFor, hasPay } from "@/lib/services/pay";
+import { autoRate, dropPayFor, hasPay } from "@/lib/services/pay";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -22,6 +22,8 @@ export type HoursChange = {
   note: string;
   /** The job the hours were on. Leave out for shop time. */
   job?: Pick<JobRecord, "id" | "scope" | "jobSiteAddress">;
+  /** True when the rate was filled in from the owner's rate list as the hours were logged. */
+  priced?: boolean;
 };
 
 /**
@@ -56,7 +58,13 @@ export async function hoursEmail(repo: Repository, actor: Actor, change: HoursCh
     if (change.note) lines.push(`Note: ${change.note}`);
     lines.push("", `${change.workerName}'s total for the week of ${formatDate(start)} is now ${hoursLabel(week)}, shop time included.`);
     lines.push("", `Everyone's hours: ${appUrl()}/owner/hours?week=${start}`);
-    if (!change.removed) lines.push(`Set the rate for these hours: ${appUrl()}/owner/pay`);
+    if (!change.removed) {
+      lines.push(
+        change.priced
+          ? `The rate was filled in from your rate list. See it: ${appUrl()}/owner/pay?who=${change.workerId}`
+          : `Set the rate for these hours: ${appUrl()}/owner/pay`,
+      );
+    }
     await tellOwner(repo, settings, title, lines.join("\n"), change.job?.id ?? null);
   } catch (error) {
     console.error("[hours email] skipped", error);
@@ -100,7 +108,8 @@ export async function addHours(
     return { ok: true, data: await repo.saveJob(job, { skipOverlap: true }), entry };
   });
   if (!result.ok) return result;
-  await hoursEmail(repo, actor, { ...result.entry, job: result.data });
+  const priced = await autoRate(repo, { entryId: result.entry.id, workerId: result.entry.workerId, workerName: result.entry.workerName, date: result.entry.date, hours: result.entry.hours, note: result.entry.note, jobId: result.data.id, what: result.data.scope || "Job" });
+  await hoursEmail(repo, actor, { ...result.entry, job: result.data, priced });
   return { ok: true, data: result.data };
 }
 

@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewEntry, ExpenseEntry, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
 import { checkExpense } from "@/lib/domain/expenses";
-import { canLogHours, checkHours } from "@/lib/domain/hours";
+import { canLogHours, checkHours, SHOP_LABEL } from "@/lib/domain/hours";
 import { todayDetroit, usd } from "@/lib/format";
 import { notify, visibleTo } from "@/lib/services/booking";
 import { hoursEmail } from "@/lib/services/hours";
-import { dropPayFor, hasPay } from "@/lib/services/pay";
+import { autoRate, dropPayFor, hasPay } from "@/lib/services/pay";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -61,7 +61,8 @@ export async function addShopHours(
   };
   const problem = await saved(repo.saveCrewEntry(entry));
   if (problem) return problem;
-  await hoursEmail(repo, actor, entry);
+  const priced = await autoRate(repo, { entryId: entry.id, workerId: entry.workerId, workerName: entry.workerName, date: entry.date, hours: entry.hours, note: entry.note, jobId: null, what: SHOP_LABEL });
+  await hoursEmail(repo, actor, { ...entry, priced });
   return { ok: true, data: entry };
 }
 

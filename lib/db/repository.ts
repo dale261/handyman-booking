@@ -2,6 +2,7 @@ import type { LibraryEntry } from "@/lib/domain/library-data";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
+  CrewRate,
   CrewRecord,
   PayItem,
   EmailRecord,
@@ -68,6 +69,12 @@ export interface Repository {
   /** Many at once, for loading the owner's records file: one trip to the database, not one per line. */
   savePayItems(items: PayItem[]): Promise<void>;
   deletePayItems(ids: string[]): Promise<void>;
+  /** False until the crew rates table exists. Until then there is no rate list and every rate is set by hand. */
+  ratesReady(): Promise<boolean>;
+  /** The owner's rate list. Owner only. Empty when the table isn't there yet. */
+  listRates(): Promise<CrewRate[]>;
+  saveRate(rate: CrewRate): Promise<void>;
+  deleteRate(id: string): Promise<void>;
   listReviews(): Promise<ReviewRecord[]>;
   getReview(jobId: string): Promise<ReviewRecord | null>;
   saveReview(review: ReviewRecord): Promise<void>;

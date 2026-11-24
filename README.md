@@ -112,11 +112,13 @@ The owner gets an email each time a crew member logs hours, on a job or as shop 
 
 The owner's **Pay** page (`/owner/pay`) keeps what each person earned, what they have been paid, and what is still owed. Only the owner can see it. The crew never sees rates or pay.
 
-- The crew logs hours; the owner sets the rate on each entry, because the rate changes with the job. The page lists hours that have no rate yet and offers that person's last rate on the same job as a starting point. Pay is hours times rate. A rate of 0 means tracked, not paid. The owner's own hours never wait for a rate.
+- The crew logs hours and never sees a rate. Each entry gets its rate from the owner's **rate list** as it is logged, and keeps it: changing the list later never changes hours already logged. Hours the list doesn't cover wait on the Pay page for the owner to set a rate, with their last rate on that job offered as a starting point and a tick box to remember it. Pay is hours times rate. A rate of 0 means tracked, not paid. The owner's own hours never wait for a rate.
+- The **rate list** (`/owner/pay/rates`) holds, for each person, a usual rate, a shop time rate, and a rate for any job where it differs. Job hours take the job's rate, else the usual rate. Shop time takes the shop rate only. A blank means "ask me". There are no date ranges, because each entry carries its own rate. Needs `supabase/migrations/20261124150000_crew_rates.sql`; until it is run there is no list and every rate is set by hand.
 - **Flat pay** is pay that isn't by the hour: a flat amount for a job, a split, a bonus.
-- **Payments** record money the owner paid someone. The money moves outside the app.
+- **Payments** record money the owner paid someone, and optionally how (cash, PayPal, check, other). The money moves outside the app.
 - Someone who isn't on the crew list (a helper for a day, a past worker) can be added by name only: no sign-in, not on the schedule.
 - Once a rate is set on hours, the crew member can't remove them. The owner can, and the pay line goes with them.
+- Someone with pay or payments on record can't be removed from the crew list (Rates page). Untick Active instead.
 
 Pay lives in its own table, `crew_pay`, which has no client policies. It is deliberately **not** stored on the job record: a job's customer and crew can read that row, so a rate there would be readable by them. Needs `supabase/migrations/20261124120000_crew_pay.sql`; until it is run the Pay page says so. Rules are in `lib/domain/pay.ts`, the writes in `lib/services/pay.ts`.
 

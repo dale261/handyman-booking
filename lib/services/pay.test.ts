@@ -10,7 +10,7 @@ import { todayDetroit } from "@/lib/format";
 import { createQuote } from "@/lib/services/booking";
 import { addShopHours, removeCrewEntry } from "@/lib/services/crew-log";
 import { addHours, removeHours } from "@/lib/services/hours";
-import { addFlatPay, addPayment, addPayPerson, removePayItem, setRate } from "@/lib/services/pay";
+import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, setRate } from "@/lib/services/pay";
 
 const dirs: string[] = [];
 
@@ -236,5 +236,163 @@ describe("the hours email", () => {
     expect(email?.body).toContain("/owner/pay");
     // The email itself never carries a rate or pay.
     expect(email?.body).not.toContain("$");
+  });
+});
+
+describe("the rate list", () => {
+  it("is the owner's to keep: a rate saves, a blank takes it off, and the job has to be real", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    expect((await saveListRate(store, worker, { workerId, scope: "usual", rate: 20 })).ok).toBe(false);
+    expect((await saveListRate(store, owner, { workerId: "nobody", scope: "usual", rate: 20 })).ok).toBe(false);
+    expect((await saveListRate(store, owner, { workerId, scope: "no-such-job", rate: 20 })).ok).toBe(false);
+    expect((await saveListRate(store, owner, { workerId, scope: "usual", rate: -1 })).ok).toBe(false);
+    expect(await store.listRates()).toHaveLength(0);
+
+    expect((await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 })).ok).toBe(true);
+    expect((await saveListRate(store, owner, { workerId, scope: "shop", rate: 15 })).ok).toBe(true);
+    expect((await saveListRate(store, owner, { workerId, scope: job.id, rate: 30 })).ok).toBe(true);
+    // Saving again replaces, it doesn't add a second line.
+    expect((await saveListRate(store, owner, { workerId, scope: "usual", rate: 36.5 })).ok).toBe(true);
+    expect((await store.listRates()).map((rate) => [rate.scope, rate.rate]).sort()).toEqual([[job.id, 30], ["shop", 15], ["usual", 36.5]].sort());
+
+    expect((await saveListRate(store, owner, { workerId, scope: "shop", rate: null })).ok).toBe(true);
+    expect((await store.listRates()).map((rate) => rate.scope).sort()).toEqual([job.id, "usual"].sort());
+  });
+
+  it("fills the rate in as hours are logged, and the crew member is never shown it", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 });
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: 15 });
+
+    const logged = await addHours(store, worker, job.id, { date: today, hours: 4, note: "Railings" });
+    if (!logged.ok) throw new Error(logged.error);
+    // What goes back to the crew member is the job, and it carries no pay.
+    expect(JSON.stringify(logged.data)).not.toContain("140");
+    const shop = await addShopHours(store, worker, { date: today, hours: 1.5, note: "" });
+    if (!shop.ok) throw new Error(shop.error);
+    expect(JSON.stringify(shop.data)).not.toContain("22.5");
+
+    const pay = await store.listPay();
+    const onJob = pay.find((item) => item.kind === "pay" && item.entryId === logged.data.hours?.[0].id);
+    const onShop = pay.find((item) => item.kind === "pay" && item.entryId === shop.data.id);
+    expect(onJob).toMatchObject({ hours: 4, rate: 35, amount: 140, jobId: job.id, auto: true, note: "Railings" });
+    expect(onShop).toMatchObject({ hours: 1.5, rate: 15, amount: 22.5, jobId: null, what: "Shop time", auto: true });
+    expect(await waiting(store)).toHaveLength(0);
+    expect(balances(pay)[0]).toMatchObject({ earned: 162.5, hours: 5.5 });
+  });
+
+  it("uses the rate for that job ahead of the usual rate, and fills it in when the owner logs the hours too", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 });
+    await saveListRate(store, owner, { workerId, scope: job.id, rate: 10 });
+    const logged = await addHours(store, owner, job.id, { workerId, date: today, hours: 6, note: "" });
+    if (!logged.ok) throw new Error(logged.error);
+    expect((await store.listPay())[0]).toMatchObject({ rate: 10, amount: 60, auto: true });
+  });
+
+  it("leaves hours waiting when it has no rate for them: shop time never takes the usual rate", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    // Only a shop rate: job hours wait. Only a usual rate: shop time waits.
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: 15 });
+    expect((await addHours(store, worker, job.id, { date: today, hours: 2, note: "" })).ok).toBe(true);
+    expect(await store.listPay()).toHaveLength(0);
+    expect(await waiting(store)).toHaveLength(1);
+
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: null });
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 });
+    expect((await addShopHours(store, worker, { date: today, hours: 1, note: "" })).ok).toBe(true);
+    expect(await store.listPay()).toHaveLength(0);
+    expect(await waiting(store)).toHaveLength(2);
+  });
+
+  it("never changes hours already logged when a rate on the list changes", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 30 });
+    await addHours(store, worker, job.id, { date: today, hours: 2, note: "first" });
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 });
+    await addHours(store, worker, job.id, { date: today, hours: 2, note: "second" });
+    const amounts = (await store.listPay()).map((item) => (item.kind === "pay" ? [item.note, item.rate, item.amount] : [])).sort();
+    expect(amounts).toEqual([["first", 30, 60], ["second", 35, 70]]);
+  });
+
+  it("can remember a rate the owner sets by hand, for that job or for shop time", async () => {
+    const { store, worker, owner, job } = await setup();
+    const logged = await addHours(store, worker, job.id, { date: today, hours: 3, note: "" });
+    if (!logged.ok) throw new Error(logged.error);
+    const shop = await addShopHours(store, worker, { date: today, hours: 1, note: "" });
+    if (!shop.ok) throw new Error(shop.error);
+
+    const plain = await setRate(store, owner, logged.data.hours?.[0].id ?? "", 20);
+    if (!plain.ok) throw new Error(plain.error);
+    expect(plain.remembered).toBe(false);
+    expect(await store.listRates()).toHaveLength(0);
+
+    const kept = await setRate(store, owner, logged.data.hours?.[0].id ?? "", 25, true);
+    const keptShop = await setRate(store, owner, shop.data.id, 15, true);
+    if (!kept.ok || !keptShop.ok) throw new Error("rate not set");
+    expect(kept.remembered).toBe(true);
+    expect((await store.listRates()).map((rate) => [rate.scope, rate.rate]).sort()).toEqual([[job.id, 25], ["shop", 15]].sort());
+
+    // The next hours on that job, and the next shop time, get those rates by themselves.
+    await addHours(store, worker, job.id, { date: today, hours: 2, note: "next" });
+    await addShopHours(store, worker, { date: today, hours: 2, note: "next" });
+    const next = (await store.listPay()).filter((item) => item.kind === "pay" && item.note === "next");
+    expect(next.map((item) => (item.kind === "pay" ? [item.rate, item.auto] : [])).sort()).toEqual([[15, true], [25, true]]);
+  });
+
+  it("drops the 'filled in from the list' mark once the owner sets the rate himself", async () => {
+    const { store, worker, owner, job } = await setup();
+    await saveListRate(store, owner, { workerId: worker.workerId ?? "", scope: "usual", rate: 30 });
+    const logged = await addHours(store, worker, job.id, { date: today, hours: 2, note: "" });
+    if (!logged.ok) throw new Error(logged.error);
+    expect((await store.listPay())[0]).toMatchObject({ auto: true, rate: 30 });
+    await setRate(store, owner, logged.data.hours?.[0].id ?? "", 20);
+    const [line] = await store.listPay();
+    expect(line).toMatchObject({ rate: 20, amount: 40 });
+    expect(line.kind === "pay" && line.auto).toBeFalsy();
+    expect(await store.listPay()).toHaveLength(1);
+  });
+
+  it("changes the email's last line when the rate was filled in, without putting the rate in the email", async () => {
+    const { store, worker, owner, job } = await setup();
+    await saveListRate(store, owner, { workerId: worker.workerId ?? "", scope: "usual", rate: 41.25 });
+    await addHours(store, worker, job.id, { date: today, hours: 2, note: "" });
+    const email = (await store.listEmails()).find((item) => item.to === owner.email && item.subject.includes(" logged "));
+    expect(email?.body).toContain("The rate was filled in from your rate list.");
+    expect(email?.body).toContain(`/owner/pay?who=${worker.workerId}`);
+    expect(email?.body).not.toContain("Set the rate for these hours");
+    expect(email?.body).not.toContain("41.25");
+    expect(email?.body).not.toContain("$");
+  });
+});
+
+describe("a payment's method, and keeping people who have pay on record", () => {
+  it("keeps how a payment was made when the owner says", async () => {
+    const { store, worker, owner } = await setup();
+    const workerId = worker.workerId ?? "";
+    const said = await addPayment(store, owner, { workerId, date: today, amount: 100, note: "", method: "paypal" });
+    const unsaid = await addPayment(store, owner, { workerId, date: today, amount: 50, note: "" });
+    if (!said.ok || !unsaid.ok) throw new Error("payment not saved");
+    expect(said.data.method).toBe("paypal");
+    expect("method" in unsaid.data).toBe(false);
+  });
+
+  it("won't let someone with pay on record be removed from the crew list, and clears a removed person's rates", async () => {
+    const { store, worker, owner } = await setup();
+    const workerId = worker.workerId ?? "";
+    expect(await payBlocksRemoval(store, workerId)).toBeNull();
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 30 });
+    const paid = await addPayment(store, owner, { workerId, date: today, amount: 25, note: "" });
+    if (!paid.ok) throw new Error(paid.error);
+    expect(await payBlocksRemoval(store, workerId)).toContain("pay on record");
+    await removePayItem(store, owner, paid.data.id);
+    expect(await payBlocksRemoval(store, workerId)).toBeNull();
+    await dropRatesFor(store, workerId);
+    expect(await store.listRates()).toHaveLength(0);
   });
 });

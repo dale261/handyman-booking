@@ -5,6 +5,7 @@ import { normalizeSettings } from "@/lib/domain/settings";
 import type { Settings, ZipRecord } from "@/lib/domain/types";
 import type {
   CrewEntry,
+  CrewRate,
   PayItem,
   CrewRecord,
   EmailRecord,
@@ -45,6 +46,14 @@ export const PAY_SETUP = "Crew pay needs one setup step first: the owner has to 
 function payMissing(error: { message: string; code?: string }): boolean {
   if (error.code === "42P01" || error.code === "PGRST205") return true;
   return /crew_pay/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
+}
+
+export const RATES_SETUP = "The rate list needs one setup step first: the owner has to run the crew_rates SQL file in Supabase.";
+
+/** True when Supabase is saying the crew_rates table isn't there. */
+function ratesMissing(error: { message: string; code?: string }): boolean {
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  return /crew_rates/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
 }
 
 export class SupabaseRepository implements Repository {
@@ -436,6 +445,40 @@ export class SupabaseRepository implements Repository {
       const { error } = await this.db().from("crew_pay").delete().in("id", ids.slice(at, at + 50));
       if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
     }
+  }
+
+  // The owner's rate list. Its own table with no client policies, like crew pay. Until the
+  // owner has run the crew_rates SQL file the list is empty, so no rate is filled in.
+  async ratesReady() {
+    const { error } = await this.db().from("crew_rates").select("id").limit(1);
+    if (!error) return true;
+    if (ratesMissing(error)) return false;
+    throw new Error(error.message);
+  }
+
+  async listRates() {
+    const { data, error } = await this.db().from("crew_rates").select("id, worker_id, scope, rate, updated_at");
+    if (error) {
+      if (ratesMissing(error)) return [];
+      throw new Error(error.message);
+    }
+    return ((data ?? []) as { id: string; worker_id: string; scope: string; rate: number | string; updated_at: string }[]).map((row) => ({
+      id: row.id,
+      workerId: row.worker_id,
+      scope: row.scope,
+      rate: Number(row.rate),
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async saveRate(rate: CrewRate) {
+    const { error } = await this.db().from("crew_rates").upsert({ id: rate.id, worker_id: rate.workerId, scope: rate.scope, rate: rate.rate, updated_at: rate.updatedAt });
+    if (error) throw new Error(ratesMissing(error) ? RATES_SETUP : error.message);
+  }
+
+  async deleteRate(id: string) {
+    const { error } = await this.db().from("crew_rates").delete().eq("id", id);
+    if (error) throw new Error(ratesMissing(error) ? RATES_SETUP : error.message);
   }
 
   async listLeads() {

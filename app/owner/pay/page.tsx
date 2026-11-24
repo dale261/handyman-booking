@@ -11,7 +11,7 @@ import type { PayItem, ShopHoursEntry } from "@/lib/db/types";
 import { EXPENSE_LIMITS } from "@/lib/domain/expenses";
 import { canLogHours, hoursLabel } from "@/lib/domain/hours";
 import { jobChoice, recentJobs } from "@/lib/domain/job-pick";
-import { balances, loggedHours, needsRate, PAY_LIMITS, suggestRate, totalOwed, type Balance } from "@/lib/domain/pay";
+import { balances, loggedHours, methodLabel, needsRate, PAY_LIMITS, PAY_METHODS, suggestRate, totalOwed, type Balance } from "@/lib/domain/pay";
 import { formatDate, todayDetroit, usd } from "@/lib/format";
 
 /** How many unpriced entries are listed at once. The rest show as they are dealt with. */
@@ -47,7 +47,7 @@ function PersonSelect({ people, label, picked }: { people: Person[]; label: stri
 }
 
 /** One line of a person's record: pay they earned, or a payment to them. */
-function RecordRow({ item, who }: { item: PayItem; who: string }) {
+function RecordRow({ item, who, canRemember }: { item: PayItem; who: string; canRemember: boolean }) {
   return (
     <li className="space-y-1.5 rounded-md border border-line px-3 py-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -58,6 +58,8 @@ function RecordRow({ item, who }: { item: PayItem; who: string }) {
         {formatDate(item.date)}
         {item.kind === "pay" && item.hours !== null && item.rate !== null ? ` · ${hoursLabel(item.hours)} at ${usd(item.rate)} an hour` : ""}
         {item.kind === "pay" && item.rate === null ? ` · flat amount${item.hours !== null ? ` for ${hoursLabel(item.hours)}` : ""}` : ""}
+        {item.kind === "pay" && item.auto ? " · rate from your list" : ""}
+        {item.kind === "payment" && item.method ? ` · ${methodLabel(item.method)}` : ""}
         {item.note ? <span className="block break-words">{item.note}</span> : null}
       </p>
       <div className="flex flex-wrap items-end gap-2">
@@ -72,6 +74,11 @@ function RecordRow({ item, who }: { item: PayItem; who: string }) {
             <SubmitButton size="sm" variant="outline" pendingLabel="Saving…">
               Change rate
             </SubmitButton>
+            {canRemember && (
+              <label className="flex basis-full items-center gap-2">
+                <input type="checkbox" name="remember" /> Also use it for their {item.jobId ? "next hours on this job" : "next shop time"}
+              </label>
+            )}
           </form>
         )}
         <form action={removePayItemAction}>
@@ -99,6 +106,8 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
   const repo = getRepository();
   const ready = await repo.payReady();
   const pay = ready ? await repo.listPay() : [];
+  const ratesReady = ready && (await repo.ratesReady());
+  const rates = ratesReady ? await repo.listRates() : [];
   const jobs = await repo.listJobs();
   const shop = (await repo.listCrewEntries()).filter((entry): entry is ShopHoursEntry => entry.kind === "shop_hours");
   const people: Person[] = (await repo.listWorkers())
@@ -143,7 +152,7 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                 ) : (
                   <ul className="space-y-1.5">
                     {openItems.map((item) => (
-                      <RecordRow key={item.id} item={item} who={open.id} />
+                      <RecordRow key={item.id} item={item} who={open.id} canRemember={ratesReady} />
                     ))}
                   </ul>
                 )}
@@ -155,14 +164,16 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
             <CardContent className="space-y-3 text-sm">
               <div>
                 <p className="font-display text-xl font-semibold">Hours that need a rate</p>
-                <p className="text-muted">The crew logs the hours. You set the rate on each one, and the pay is hours times rate.</p>
+                <p className="text-muted">
+                  {ratesReady ? "Hours your rate list doesn't cover wait here. Set the rate, and the pay is hours times rate." : "The crew logs the hours. You set the rate on each one, and the pay is hours times rate."}
+                </p>
               </div>
               {waiting.length === 0 ? (
                 <p className="text-muted">Every entry has a rate.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {waiting.slice(0, WAITING_SHOWN).map((entry) => {
-                    const hint = suggestRate(pay, entry.workerId, entry.jobId);
+                    const hint = suggestRate(pay, entry.workerId, entry.jobId, rates);
                     return (
                       <li key={entry.entryId} className="space-y-2 rounded-md border border-line px-3 py-2">
                         <p>
@@ -181,10 +192,15 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                           <SubmitButton size="sm" pendingLabel="Saving…">
                             Set rate
                           </SubmitButton>
+                          {ratesReady && (
+                            <label className="flex basis-full items-center gap-2">
+                              <input type="checkbox" name="remember" defaultChecked /> Use this for their {entry.jobId ? "next hours on this job" : "next shop time"} too
+                            </label>
+                          )}
                         </form>
                         {hint && (
                           <p className="text-muted">
-                            Filled in with their last rate on {hint.from}. Change it if this one is different.
+                            {hint.from === "the rate list" ? "Filled in from your rate list." : `Filled in with their last rate on ${hint.from}.`} Change it if this one is different.
                           </p>
                         )}
                       </li>
@@ -214,6 +230,7 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                       </div>
                       <p className="text-muted">
                         Earned {usd(person.earned)} · Paid {usd(person.paid)}
+                        {person.hours > 0 ? ` · ${hoursLabel(person.hours)}` : ""}
                         {person.lastPaid ? ` · Last paid ${formatDate(person.lastPaid)}` : ""}
                       </p>
                     </li>
@@ -221,7 +238,10 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                 </ul>
               )}
               <p className="text-muted">Tap a name to see every line. Receipts you pay back are separate, on the Receipts page.</p>
-              <p>
+              <p className="flex flex-wrap gap-x-4 gap-y-1">
+                <Link className="font-semibold text-pine underline" href="/owner/pay/rates">
+                  Rate list
+                </Link>
                 <Link className="font-semibold text-pine underline" href="/owner/pay/load">
                   Load records you kept outside the app
                 </Link>
@@ -246,11 +266,24 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                   Amount
                   <Input name="amount" inputMode="decimal" required placeholder="150" />
                 </label>
+                <label className="grid min-w-0 grid-cols-1 gap-1 font-semibold sm:col-span-2">
+                  <span>
+                    How you paid <span className="font-normal text-muted">(optional)</span>
+                  </span>
+                  <select name="method" defaultValue="" className={SELECT}>
+                    <option value="">Not said</option>
+                    {PAY_METHODS.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="grid gap-1 font-semibold sm:col-span-2">
                   <span>
                     Note <span className="font-normal text-muted">(optional)</span>
                   </span>
-                  <Input name="note" maxLength={PAY_LIMITS.textMax} placeholder="Cash, PayPal, what it covered" />
+                  <Input name="note" maxLength={PAY_LIMITS.textMax} placeholder="What it covered" />
                 </label>
                 <div className="sm:col-span-2">
                   <SubmitButton pendingLabel="Saving…">Record payment</SubmitButton>
