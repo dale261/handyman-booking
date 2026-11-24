@@ -5,6 +5,7 @@ import { checkExpense } from "@/lib/domain/expenses";
 import { canLogHours, checkHours } from "@/lib/domain/hours";
 import { todayDetroit, usd } from "@/lib/format";
 import { notify, visibleTo } from "@/lib/services/booking";
+import { hoursEmail } from "@/lib/services/hours";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -33,7 +34,7 @@ async function whoFor(repo: Repository, actor: Actor, workerId: string | undefin
   return worker;
 }
 
-/** Time worked that wasn't on a job: loading up, cleaning tools, a supply run. */
+/** Time worked that wasn't on a job: loading up, cleaning tools, a supply run. The owner is emailed. */
 export async function addShopHours(
   repo: Repository,
   actor: Actor,
@@ -59,6 +60,7 @@ export async function addShopHours(
   };
   const problem = await saved(repo.saveCrewEntry(entry));
   if (problem) return problem;
+  await hoursEmail(repo, actor, entry);
   return { ok: true, data: entry };
 }
 
@@ -131,6 +133,7 @@ export async function removeCrewEntry(repo: Repository, actor: Actor, id: string
   }
   const problem = await saved(repo.deleteCrewEntry(id));
   if (problem) return problem;
+  if (entry.kind === "shop_hours") await hoursEmail(repo, actor, { ...entry, removed: true });
   return { ok: true, data: entry };
 }
 

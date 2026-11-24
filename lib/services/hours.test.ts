@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_USERS, LocalRepository } from "@/lib/db/local";
 import { actorFromUser } from "@/lib/db/types";
 import { DEFAULT_PARAMS } from "@/lib/domain/types";
-import { todayDetroit } from "@/lib/format";
+import { formatDate, todayDetroit } from "@/lib/format";
 import { amountPayable, createQuote, holdSlot, payJob } from "@/lib/services/booking";
 import { addHours, removeHours } from "@/lib/services/hours";
 
@@ -155,6 +155,79 @@ describe("logging hours on a job", () => {
     const typed = await quoted(store);
     await store.saveJob({ ...typed.job, ownerPriced: true, status: "cancelled" }, { skipOverlap: true });
     expect((await addHours(store, owner, typed.job.id, { workerId: worker.workerId ?? "", date: today, hours: 1, note: "" })).ok).toBe(false);
+  });
+
+  it("emails the owner each time a crew member logs or removes hours, with their week so far", async () => {
+    const store = repo();
+    const { job } = await booked(store);
+    const worker = await actor(store, DEMO_USERS.worker);
+    const owner = await actor(store, DEMO_USERS.owner);
+    const aboutHours = async () => (await store.listEmails()).filter((email) => email.to === owner.email && / (logged|removed) /.test(email.subject));
+    const queueBefore = (await store.listNotifications()).length;
+    expect(await aboutHours()).toHaveLength(0);
+
+    const first = await addHours(store, worker, job.id, { date: today, hours: 3.5, note: "Hung the mount" });
+    if (!first.ok) throw new Error(first.error);
+    let emails = await aboutHours();
+    expect(emails).toHaveLength(1);
+    expect(emails[0].subject).toBe(`${worker.fullName} logged 3.5 hrs for ${formatDate(today)}: ${job.scope}`);
+    expect(emails[0].body).toContain(`${worker.fullName} logged 3.5 hrs on ${job.scope} for ${formatDate(today)}.`);
+    expect(emails[0].body).toContain("Note: Hung the mount");
+    expect(emails[0].body).toContain("is now 3.5 hrs, shop time included.");
+    expect(emails[0].body).toContain("/owner/hours?week=");
+    expect(emails[0].jobId).toBe(job.id);
+    // The customer's name, phone and the price stay out of it.
+    expect(emails[0].body).not.toContain("$");
+
+    const second = await addHours(store, worker, job.id, { date: today, hours: 2, note: "" });
+    if (!second.ok) throw new Error(second.error);
+    emails = await aboutHours();
+    expect(emails).toHaveLength(2);
+    const later = emails.find((email) => email.subject.includes("logged 2 hrs"));
+    expect(later?.body).toContain("is now 5.5 hrs");
+    expect(later?.body).not.toContain("Note:");
+
+    const entryId = first.data.hours?.find((entry) => entry.hours === 3.5)?.id ?? "";
+    expect((await removeHours(store, worker, job.id, entryId)).ok).toBe(true);
+    emails = await aboutHours();
+    expect(emails).toHaveLength(3);
+    const taken = emails.find((email) => email.subject.includes(" removed "));
+    expect(taken?.subject).toBe(`${worker.fullName} removed 3.5 hrs for ${formatDate(today)}: ${job.scope}`);
+    expect(taken?.body).toContain("is now 2 hrs");
+
+    // Nothing for the owner to act on, so nothing lands in the Queue.
+    expect((await store.listNotifications()).length).toBe(queueBefore);
+  });
+
+  it("sends nothing when the owner enters or removes the hours", async () => {
+    const store = repo();
+    const { job } = await booked(store);
+    const worker = await actor(store, DEMO_USERS.worker);
+    const owner = await actor(store, DEMO_USERS.owner);
+    const before = (await store.listEmails()).length;
+    const added = await addHours(store, owner, job.id, { workerId: worker.workerId ?? "", date: today, hours: 4, note: "" });
+    if (!added.ok) throw new Error(added.error);
+    expect((await removeHours(store, owner, job.id, added.data.hours?.[0].id ?? "")).ok).toBe(true);
+    expect((await store.listEmails()).length).toBe(before);
+  });
+
+  it("still saves the hours when the email can't be put together", async () => {
+    const store = repo();
+    const { job } = await booked(store);
+    const worker = await actor(store, DEMO_USERS.worker);
+    const realError = console.error;
+    console.error = () => {};
+    try {
+      store.getSettings = async () => {
+        throw new Error("settings are down");
+      };
+      const added = await addHours(store, worker, job.id, { date: today, hours: 1.5, note: "" });
+      if (!added.ok) throw new Error(added.error);
+      expect(added.data.hours).toHaveLength(1);
+      expect((await store.getJob(job.id))?.hours?.[0].hours).toBe(1.5);
+    } finally {
+      console.error = realError;
+    }
   });
 
   it("refuses customers, jobs that aren't booked yet, and bad entries", async () => {

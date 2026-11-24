@@ -192,6 +192,15 @@ export async function notify(
   if (inbox) await mail(repo, inbox, title, `${detail}${emailFooter(settings)}`, jobId);
 }
 
+/**
+ * An email to the owner inbox with nothing added to the Queue: for things the owner
+ * wants to hear about but doesn't have to act on, like hours being logged.
+ */
+export async function tellOwner(repo: Repository, settings: Settings, title: string, detail: string, jobId: string | null) {
+  const inbox = await ownerInbox(repo, settings);
+  if (inbox) await mail(repo, inbox, title, `${detail}${emailFooter(settings)}`, jobId);
+}
+
 function applyQuote(
   job: JobRecord,
   settings: Settings,

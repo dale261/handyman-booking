@@ -106,6 +106,8 @@ A crew member adds their own hours from their crew page: **Add hours to a job** 
 
 Picking a job from the list shows the work, the address and the day, nothing else. A crew member can still open a job's page only when their own crew is on it.
 
+The owner gets an email each time a crew member logs hours, on a job or as shop time, and each time one takes hours back off: who, how many, which day, which job, their note, and their total for that week so far (`hoursEmail()` in `lib/services/hours.ts`). It goes to the same inbox as the other owner emails and puts nothing in the Queue. Hours the owner enters send nothing.
+
 Shop time and receipts (crew page, owner's Hours and Receipts pages) need `supabase/migrations/20261121120000_crew_log.sql`.
 
 ## Turn on email (Resend, free tier)

@@ -44,6 +44,35 @@ describe("shop time", () => {
     expect(await store.listCrewEntries()).toHaveLength(1);
   });
 
+  it("emails the owner when a crew member logs or removes shop time, and not when the owner enters it", async () => {
+    const store = repo();
+    const worker = await actor(store, DEMO_USERS.worker);
+    const owner = await actor(store, DEMO_USERS.owner);
+    const aboutHours = async () => (await store.listEmails()).filter((email) => email.to === owner.email && / (logged|removed) /.test(email.subject));
+
+    const added = await addShopHours(store, worker, { date: today, hours: 1.5, note: "Loaded the truck" });
+    if (!added.ok) throw new Error(added.error);
+    let emails = await aboutHours();
+    expect(emails).toHaveLength(1);
+    expect(emails[0].subject).toContain(`${worker.fullName} logged 1.5 hrs for `);
+    expect(emails[0].subject).toContain(": Shop time");
+    expect(emails[0].body).toContain("logged 1.5 hrs of shop time for ");
+    expect(emails[0].body).toContain("Note: Loaded the truck");
+    expect(emails[0].body).toContain("is now 1.5 hrs");
+    expect(emails[0].jobId).toBeNull();
+    expect(await store.listNotifications()).toHaveLength(0);
+
+    expect((await removeCrewEntry(store, worker, added.data.id)).ok).toBe(true);
+    emails = await aboutHours();
+    expect(emails).toHaveLength(2);
+    expect(emails.find((email) => email.subject.includes(" removed "))?.body).toContain("is now 0 hrs");
+
+    const byOwner = await addShopHours(store, owner, { workerId: worker.workerId ?? "", date: today, hours: 2, note: "" });
+    if (!byOwner.ok) throw new Error(byOwner.error);
+    expect((await removeCrewEntry(store, owner, byOwner.data.id)).ok).toBe(true);
+    expect(await aboutHours()).toHaveLength(2);
+  });
+
   it("makes the owner say who it was, and refuses a customer", async () => {
     const store = repo();
     const owner = await actor(store, DEMO_USERS.owner);
