@@ -65,6 +65,9 @@ export interface Repository {
   getPayItem(id: string): Promise<PayItem | null>;
   savePayItem(item: PayItem): Promise<void>;
   deletePayItem(id: string): Promise<void>;
+  /** Many at once, for loading the owner's records file: one trip to the database, not one per line. */
+  savePayItems(items: PayItem[]): Promise<void>;
+  deletePayItems(ids: string[]): Promise<void>;
   listReviews(): Promise<ReviewRecord[]>;
   getReview(jobId: string): Promise<ReviewRecord | null>;
   saveReview(review: ReviewRecord): Promise<void>;

@@ -57,7 +57,7 @@ function RecordRow({ item, who }: { item: PayItem; who: string }) {
       <p className="text-muted">
         {formatDate(item.date)}
         {item.kind === "pay" && item.hours !== null && item.rate !== null ? ` · ${hoursLabel(item.hours)} at ${usd(item.rate)} an hour` : ""}
-        {item.kind === "pay" && item.hours === null ? " · flat amount" : ""}
+        {item.kind === "pay" && item.rate === null ? ` · flat amount${item.hours !== null ? ` for ${hoursLabel(item.hours)}` : ""}` : ""}
         {item.note ? <span className="block break-words">{item.note}</span> : null}
       </p>
       <div className="flex flex-wrap items-end gap-2">
@@ -221,6 +221,11 @@ export default async function OwnerPayPage({ searchParams }: { searchParams: Pro
                 </ul>
               )}
               <p className="text-muted">Tap a name to see every line. Receipts you pay back are separate, on the Receipts page.</p>
+              <p>
+                <Link className="font-semibold text-pine underline" href="/owner/pay/load">
+                  Load records you kept outside the app
+                </Link>
+              </p>
             </CardContent>
           </Card>
 

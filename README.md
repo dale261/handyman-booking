@@ -120,6 +120,16 @@ The owner's **Pay** page (`/owner/pay`) keeps what each person earned, what they
 
 Pay lives in its own table, `crew_pay`, which has no client policies. It is deliberately **not** stored on the job record: a job's customer and crew can read that row, so a rate there would be readable by them. Needs `supabase/migrations/20261124120000_crew_pay.sql`; until it is run the Pay page says so. Rules are in `lib/domain/pay.ts`, the writes in `lib/services/pay.ts`.
 
+**Loading records kept outside the app** (`/owner/pay/load`, linked from the Pay page). The owner chooses a CSV file, or pastes it, with the columns `date, worker, job, job_number, hours, rate, pay, note`. A payment is a line with `payment` in the job column and the amount in `pay`; a line with pay and no rate is a flat amount; a line with hours and nothing else is tracked at no pay. **Check the file** shows what loading would do and saves nothing: who each name is (a guess the owner can change, or "add by name"), which job numbers match an invoice number in the app, and what everyone would be owed. **Load** then saves it.
+
+- Hours already logged on the site get the file's rate put on them, not a second entry. A rate the owner already set, or a payment he already recorded, is left alone.
+- The file's pay amount is kept as written, not worked out again.
+- Loading again replaces everything loaded before, so a newer file never doubles an older one. "Undo a load" takes all loaded lines off and leaves what was entered on the site.
+- Nothing loads if any line can't be read.
+- Loaded hours are pay lines that carry their hours. They are not added to the weekly Hours page.
+
+**Never commit a records file to this repository.** It is public, and the file holds people's pay. The reader is `lib/domain/pay-load.ts`, the load `lib/services/pay-load.ts`.
+
 Shop time and receipts (crew page, owner's Hours and Receipts pages) need `supabase/migrations/20261121120000_crew_log.sql`.
 
 ## Turn on email (Resend, free tier)

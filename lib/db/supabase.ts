@@ -423,6 +423,21 @@ export class SupabaseRepository implements Repository {
     if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
   }
 
+  async savePayItems(items: PayItem[]) {
+    if (items.length === 0) return;
+    const rows = items.map((item) => ({ id: item.id, kind: item.kind, worker_id: item.workerId, day: item.date, payload: item }));
+    const { error } = await this.db().from("crew_pay").upsert(rows);
+    if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
+  }
+
+  async deletePayItems(ids: string[]) {
+    // In batches, so a long list of ids never makes the request too long.
+    for (let at = 0; at < ids.length; at += 50) {
+      const { error } = await this.db().from("crew_pay").delete().in("id", ids.slice(at, at + 50));
+      if (error) throw new Error(payMissing(error) ? PAY_SETUP : error.message);
+    }
+  }
+
   async listLeads() {
     const data = await this.must(this.db().from("leads").select("*").order("created_at", { ascending: false }));
     return (data as Record<string, unknown>[]).map(leadFromRow);

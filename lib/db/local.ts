@@ -530,6 +530,23 @@ export class LocalRepository implements Repository {
       db.payLog = this.payLog().filter((entry) => entry.id !== id);
     });
   }
+  async savePayItems(items: PayItem[]) {
+    await this.run(async () => {
+      const log = this.payLog();
+      for (const item of items) {
+        const at = log.findIndex((entry) => entry.id === item.id);
+        if (at === -1) log.unshift(this.clone(item));
+        else log[at] = this.clone(item);
+      }
+    });
+  }
+  async deletePayItems(ids: string[]) {
+    await this.run(async () => {
+      const gone = new Set(ids);
+      const db = this.db();
+      db.payLog = this.payLog().filter((entry) => !gone.has(entry.id));
+    });
+  }
   async listReviews() {
     return this.run(async () => this.clone(this.db().reviews));
   }

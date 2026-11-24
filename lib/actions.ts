@@ -10,6 +10,8 @@ import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreem
 import { addHours, removeHours } from "@/lib/services/hours";
 import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
 import { addFlatPay, addPayment, addPayPerson, removePayItem, setRate } from "@/lib/services/pay";
+import { checkPayFile, clearLoadedPay, loadPayFile, type LoadResult } from "@/lib/services/pay-load";
+import { LOAD_LIMITS, type LoadChoices, type LoadSummary } from "@/lib/domain/pay-load";
 import { joinCrew } from "@/lib/services/crew-join";
 import { INVITE_DAYS, INVITE_EMAIL_SUBJECT, inviteEmailBody, inviteLink, parseInviteContact, readInvite, signInvite, type CrewInvite } from "@/lib/invites";
 import { isDate } from "@/lib/domain/hours";
@@ -541,6 +543,39 @@ export async function removePayItemAction(form: FormData) {
 /** Someone to pay who isn't on the crew list: a helper for a day, or a past worker. */
 export async function addPayPersonAction(form: FormData) {
   await payForm(form, "Added. You can pick them in the forms below.", (repo, actor) => addPayPerson(repo, actor, field(form, "fullName")));
+}
+
+/** What the load screen sends: the file's text and who each name in it is. Trimmed to plain, bounded values. */
+function loadInput(text: string, choices: LoadChoices): { text: string; choices: LoadChoices } {
+  const picked: LoadChoices = {};
+  if (choices && typeof choices === "object") {
+    for (const [name, value] of Object.entries(choices).slice(0, 200)) {
+      if (typeof value === "string" && name.length <= 80 && value.length <= 64) picked[name] = value;
+    }
+  }
+  return { text: String(text ?? "").slice(0, LOAD_LIMITS.chars + 1), choices: picked };
+}
+
+/** Loading the owner's pay records: read the file and say what would happen. Saves nothing. */
+export async function checkPayFileAction(text: string, choices: LoadChoices): Promise<{ ok: true; data: LoadSummary } | { ok: false; error: string }> {
+  const actor = await requireRole("owner");
+  const input = loadInput(text, choices);
+  return checkPayFile(getRepository(), actor, input.text, input.choices);
+}
+
+/** Load the file the owner just checked. */
+export async function loadPayFileAction(text: string, choices: LoadChoices): Promise<{ ok: true; data: LoadResult } | { ok: false; error: string }> {
+  const actor = await requireRole("owner");
+  const input = loadInput(text, choices);
+  return loadPayFile(getRepository(), actor, input.text, input.choices);
+}
+
+/** Take off everything that came from a records file. */
+export async function clearLoadedPayAction() {
+  const actor = await requireRole("owner");
+  const result = await clearLoadedPay(getRepository(), actor);
+  if (!result.ok) redirect(`/owner/pay/load?error=${encodeURIComponent(result.error)}`);
+  redirect(`/owner/pay/load?notice=${encodeURIComponent(result.data === 0 ? "Nothing had been loaded." : `Removed ${result.data} loaded ${result.data === 1 ? "line" : "lines"}.`)}`);
 }
 
 /** The crew's phone, handed to whoever is on site: record their sign-off. */

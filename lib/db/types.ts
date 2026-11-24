@@ -171,7 +171,7 @@ export type PayLine = {
   workerName: string;
   /** The day worked, YYYY-MM-DD. */
   date: string;
-  /** Hours and dollars an hour, when it is hourly pay. Both null for a flat amount. */
+  /** Hours and dollars an hour, when it is hourly pay. A flat amount has no rate, and usually no hours. */
   hours: number | null;
   rate: number | null;
   /** What was earned, in dollars. Setting a rate in the app makes it hours times rate, to the cent. */
@@ -183,6 +183,8 @@ export type PayLine = {
   what: string;
   note: string;
   at: string;
+  /** True when it came from the owner's own records file, loaded on the Pay page. A later load replaces these. */
+  loaded?: boolean;
 };
 
 /** Money the owner paid a crew member. Owner only, kept with the pay lines. */
@@ -196,6 +198,8 @@ export type CrewPayment = {
   amount: number;
   note: string;
   at: string;
+  /** True when it came from the owner's own records file. A later load replaces these. */
+  loaded?: boolean;
 };
 
 export type PayItem = PayLine | CrewPayment;
