@@ -559,7 +559,7 @@ export async function saveRatesAction(form: FormData) {
 /** The shop time rate for everyone who has none of their own. Blank takes it off. */
 export async function saveShopDefaultAction(form: FormData) {
   const rate = listRate(form, "rate");
-  await payForm(form, rate === null ? "Shop time has no rate for everyone now." : "Saved. Shop time pays that unless someone has their own rate.", (repo, actor) => saveShopDefault(repo, actor, rate), "/owner/pay/rates");
+  await payForm(form, rate === null ? "The default shop time rate is off now." : "Saved. Shop time pays that unless someone has their own rate.", (repo, actor) => saveShopDefault(repo, actor, rate), "/owner/pay/rates");
 }
 
 /** A rate for one person on one job. */

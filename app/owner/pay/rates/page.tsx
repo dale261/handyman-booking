@@ -65,7 +65,7 @@ export default async function OwnerPayRatesPage({ searchParams }: { searchParams
               <p className="font-semibold">How the list is used</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>Hours on a job get that person&apos;s rate for that job. If there isn&apos;t one, they get the usual rate.</li>
-                <li>Shop time gets that person&apos;s shop time rate. If they don&apos;t have one, it gets the shop time rate for everyone. It never gets the usual rate.</li>
+                <li>Shop time gets that person&apos;s shop time rate. If they don&apos;t have one, it gets the default shop time rate. It never gets the usual rate.</li>
                 <li>If the list has no rate for the hours, they wait on the Pay page for you to set one.</li>
                 <li>Leave the usual rate blank for someone whose pay changes by job, and you&apos;ll be asked the first time they work each job.</li>
                 <li>Changing a rate here only affects hours logged afterwards. Hours already logged keep their rate.</li>
@@ -76,8 +76,8 @@ export default async function OwnerPayRatesPage({ searchParams }: { searchParams
           <Card>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="font-display text-xl font-semibold">Shop time for everyone</p>
-                <p className="text-muted">What shop time pays anyone who doesn&apos;t have their own shop time rate below. Someone new gets it from their first day.</p>
+                <p className="font-display text-xl font-semibold">Default shop time rate</p>
+                <p className="text-muted">What shop time pays, unless a person has their own shop time rate below. Someone new gets it from their first day.</p>
               </div>
               <form action={saveShopDefaultAction} className="grid grid-cols-2 gap-3">
                 <label className="grid min-w-0 gap-1 font-semibold">
