@@ -283,6 +283,32 @@ describe("the rate list", () => {
     expect(balances(pay)[0]).toMatchObject({ earned: 162.5, hours: 5.5 });
   });
 
+  it("still lets a crew member take back hours whose rate was only filled in from the list, and the pay goes with them", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    await saveListRate(store, owner, { workerId, scope: "usual", rate: 35 });
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: 15 });
+
+    // A wrong number on a job and on shop time: both got a rate the moment they were logged.
+    const onJob = await addHours(store, worker, job.id, { date: today, hours: 14, note: "" });
+    if (!onJob.ok) throw new Error(onJob.error);
+    const shop = await addShopHours(store, worker, { date: today, hours: 10, note: "" });
+    if (!shop.ok) throw new Error(shop.error);
+    expect(await store.listPay()).toHaveLength(2);
+
+    expect((await removeHours(store, worker, job.id, onJob.data.hours?.[0].id ?? "")).ok).toBe(true);
+    expect((await removeCrewEntry(store, worker, shop.data.id)).ok).toBe(true);
+    // Nobody is owed for hours that aren't there.
+    expect(await store.listPay()).toHaveLength(0);
+
+    // Once the owner has set the rate himself, the hours are part of the record again.
+    const again = await addShopHours(store, worker, { date: today, hours: 1, note: "" });
+    if (!again.ok) throw new Error(again.error);
+    expect((await setRate(store, owner, again.data.id, 15)).ok).toBe(true);
+    expect((await removeCrewEntry(store, worker, again.data.id)).ok).toBe(false);
+    expect(await store.listPay()).toHaveLength(1);
+  });
+
   it("uses the rate for that job ahead of the usual rate, and fills it in when the owner logs the hours too", async () => {
     const { store, worker, owner, job } = await setup();
     const workerId = worker.workerId ?? "";

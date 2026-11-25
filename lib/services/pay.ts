@@ -254,19 +254,23 @@ export async function addPayPerson(repo: Repository, actor: Actor, name: string)
 }
 
 /**
- * True when pay has been set on these hours. A crew member can't take such hours back
- * off; the owner can. If the pay table can't be read, the hours are treated as unpriced
- * so a crew member is never stuck because of it.
+ * True when the owner has put pay on these hours himself: a rate he set, or a line from
+ * his own records. A crew member can't take such hours back off; the owner can. A rate
+ * that was only filled in from the rate list doesn't lock them, because that happens the
+ * moment hours are logged and a crew member still has to be able to fix a wrong number:
+ * the pay line goes with the hours. If the pay table can't be read, the hours are treated
+ * as unlocked so a crew member is never stuck because of it.
  */
-export async function hasPay(repo: Repository, entryId: string): Promise<boolean> {
+export async function payLocked(repo: Repository, entryId: string): Promise<boolean> {
   try {
-    return Boolean(lineFor(await repo.listPay(), entryId));
+    const line = lineFor(await repo.listPay(), entryId);
+    return Boolean(line && !line.auto);
   } catch {
     return false;
   }
 }
 
-/** When the owner removes hours, the pay set on them goes too, so nobody is owed for hours that aren't there. */
+/** When hours are removed, the pay on them goes too, so nobody is owed for hours that aren't there. */
 export async function dropPayFor(repo: Repository, entryId: string): Promise<void> {
   try {
     const line = lineFor(await repo.listPay(), entryId);
