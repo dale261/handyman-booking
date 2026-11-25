@@ -9,7 +9,7 @@ import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
 import { addHours, removeHours } from "@/lib/services/hours";
 import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
-import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, setRate } from "@/lib/services/pay";
+import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, saveShopDefault, setRate } from "@/lib/services/pay";
 import { RATE_SHOP, RATE_USUAL, readMethod } from "@/lib/domain/pay";
 import { checkPayFile, clearLoadedPay, loadPayFile, type LoadResult } from "@/lib/services/pay-load";
 import { LOAD_LIMITS, type LoadChoices, type LoadSummary } from "@/lib/domain/pay-load";
@@ -554,6 +554,12 @@ export async function saveRatesAction(form: FormData) {
     },
     "/owner/pay/rates",
   );
+}
+
+/** The shop time rate for everyone who has none of their own. Blank takes it off. */
+export async function saveShopDefaultAction(form: FormData) {
+  const rate = listRate(form, "rate");
+  await payForm(form, rate === null ? "Shop time has no rate for everyone now." : "Saved. Shop time pays that unless someone has their own rate.", (repo, actor) => saveShopDefault(repo, actor, rate), "/owner/pay/rates");
 }
 
 /** A rate for one person on one job. */

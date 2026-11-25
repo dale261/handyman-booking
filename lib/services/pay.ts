@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Repository } from "@/lib/db/repository";
 import type { Actor, CrewPayment, CrewRate, PayItem, PayLine, PayMethod, ShopHoursEntry, WorkerRecord } from "@/lib/db/types";
-import { checkFlatPay, checkPayment, checkRate, lineFor, loggedHours, payFor, RATE_SHOP, RATE_USUAL, rateFor, rateId, type LoggedHours } from "@/lib/domain/pay";
+import { checkFlatPay, checkPayment, checkRate, lineFor, loggedHours, payFor, RATE_EVERYONE, RATE_SHOP, RATE_USUAL, rateFor, rateId, type LoggedHours } from "@/lib/domain/pay";
 import { todayDetroit } from "@/lib/format";
 
 type Ok<T> = { ok: true; data: T };
@@ -90,6 +90,24 @@ export async function saveListRate(repo: Repository, actor: Actor, input: { work
   const rate = listRate(worker.id, input.scope, checked.rate);
   const problem = await saved(repo.saveRate(rate));
   return problem ?? { ok: true, data: rate };
+}
+
+/**
+ * The shop time rate for everyone who has none of their own, or blank to take it off.
+ * Someone new to the crew gets it from their first shop time, with nothing to set up.
+ * Like the rest of the list, it never changes hours already logged.
+ */
+export async function saveShopDefault(repo: Repository, actor: Actor, rate: number | null): Promise<Ok<CrewRate | null> | Err> {
+  if (actor.role !== "owner") return fail(OWNER_ONLY);
+  if (rate === null) {
+    const problem = await saved(repo.deleteRate(rateId(RATE_EVERYONE, RATE_SHOP)));
+    return problem ?? { ok: true, data: null };
+  }
+  const checked = checkRate(rate);
+  if (!checked.ok) return fail(checked.error);
+  const made = listRate(RATE_EVERYONE, RATE_SHOP, checked.rate);
+  const problem = await saved(repo.saveRate(made));
+  return problem ?? { ok: true, data: made };
 }
 
 /**

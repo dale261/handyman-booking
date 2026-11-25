@@ -129,24 +129,36 @@ export function needsRate(logged: LoggedHours[], pay: PayItem[], skip: string[] 
 /** The two scopes on the rate list that aren't a job. */
 export const RATE_USUAL = "usual";
 export const RATE_SHOP = "shop";
+/**
+ * The "person" a rate belongs to when it is for everyone who has none of their own. Only
+ * shop time has one: job pay changes with the job, so it has no default.
+ */
+export const RATE_EVERYONE = "00000000-0000-0000-0000-000000000000";
 
 export function rateId(workerId: string, scope: string): string {
   return `${workerId}:${scope}`;
 }
 
-export type ListRate = { rate: number; from: "job" | "shop" | "usual" };
+export type ListRate = { rate: number; from: "job" | "shop" | "usual" | "everyone" };
+
+/** The shop time rate for anyone who has none of their own, or null when the owner hasn't set one. */
+export function shopDefault(rates: CrewRate[]): number | null {
+  return rates.find((rate) => rate.workerId === RATE_EVERYONE && rate.scope === RATE_SHOP)?.rate ?? null;
+}
 
 /**
  * What the owner's rate list says these hours pay. On a job: the rate set for that person
- * on that job, else their usual rate. Shop time: their shop rate and nothing else, because
- * shop time is often paid differently from job work. Null means the list doesn't say, and
- * the hours wait for the owner.
+ * on that job, else their usual rate. Shop time: their own shop rate, else the shop rate
+ * for everyone, and never the usual rate, because shop time is often paid differently
+ * from job work. Null means the list doesn't say, and the hours wait for the owner.
  */
 export function rateFor(rates: CrewRate[], workerId: string, jobId: string | null): ListRate | null {
   const mine = rates.filter((rate) => rate.workerId === workerId);
   if (!jobId) {
     const shop = mine.find((rate) => rate.scope === RATE_SHOP);
-    return shop ? { rate: shop.rate, from: "shop" } : null;
+    if (shop) return { rate: shop.rate, from: "shop" };
+    const everyone = shopDefault(rates);
+    return everyone === null ? null : { rate: everyone, from: "everyone" };
   }
   const job = mine.find((rate) => rate.scope === jobId);
   if (job) return { rate: job.rate, from: "job" };

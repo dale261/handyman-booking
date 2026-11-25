@@ -10,7 +10,7 @@ import { todayDetroit } from "@/lib/format";
 import { createQuote } from "@/lib/services/booking";
 import { addShopHours, removeCrewEntry } from "@/lib/services/crew-log";
 import { addHours, removeHours } from "@/lib/services/hours";
-import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, setRate } from "@/lib/services/pay";
+import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, saveShopDefault, setRate } from "@/lib/services/pay";
 
 const dirs: string[] = [];
 
@@ -307,6 +307,44 @@ describe("the rate list", () => {
     expect((await addShopHours(store, worker, { date: today, hours: 1, note: "" })).ok).toBe(true);
     expect(await store.listPay()).toHaveLength(0);
     expect(await waiting(store)).toHaveLength(2);
+  });
+
+  it("has one shop time rate for everyone, so someone with no rate of their own never starts blank", async () => {
+    const { store, worker, owner, job } = await setup();
+    const workerId = worker.workerId ?? "";
+    // The owner's only, and it has to be a sensible rate.
+    expect((await saveShopDefault(store, worker, 15)).ok).toBe(false);
+    expect((await saveShopDefault(store, owner, -1)).ok).toBe(false);
+    expect((await saveShopDefault(store, owner, 15)).ok).toBe(true);
+
+    // Nobody set anything for this person: their shop time is filled in at the rate for everyone.
+    const first = await addShopHours(store, worker, { date: today, hours: 2, note: "" });
+    if (!first.ok) throw new Error(first.error);
+    expect(await store.listPay()).toHaveLength(1);
+    expect((await store.listPay())[0]).toMatchObject({ entryId: first.data.id, rate: 15, amount: 30, auto: true, jobId: null });
+
+    // Job hours don't take it: they still wait for the owner.
+    expect((await addHours(store, worker, job.id, { date: today, hours: 3, note: "" })).ok).toBe(true);
+    expect(await store.listPay()).toHaveLength(1);
+    expect(await waiting(store)).toHaveLength(1);
+
+    // Their own shop rate wins over the one for everyone.
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: 20 });
+    const second = await addShopHours(store, worker, { date: today, hours: 1, note: "" });
+    if (!second.ok) throw new Error(second.error);
+    expect((await store.listPay()).find((item) => item.kind === "pay" && item.entryId === second.data.id)).toMatchObject({ rate: 20, amount: 20 });
+
+    // Changing it, or taking it off, never touches hours already logged.
+    expect((await saveShopDefault(store, owner, 18)).ok).toBe(true);
+    expect((await saveShopDefault(store, owner, null)).ok).toBe(true);
+    expect((await store.listPay()).find((item) => item.kind === "pay" && item.entryId === first.data.id)).toMatchObject({ rate: 15, amount: 30 });
+    await saveListRate(store, owner, { workerId, scope: "shop", rate: null });
+    expect((await addShopHours(store, worker, { date: today, hours: 1, note: "" })).ok).toBe(true);
+    expect(await waiting(store)).toHaveLength(2);
+    // Removing a person from the crew list doesn't take the rate for everyone with it.
+    expect((await saveShopDefault(store, owner, 15)).ok).toBe(true);
+    await dropRatesFor(store, workerId);
+    expect((await store.listRates()).map((rate) => rate.rate)).toEqual([15]);
   });
 
   it("never changes hours already logged when a rate on the list changes", async () => {

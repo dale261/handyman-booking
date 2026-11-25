@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CrewPayment, CrewRate, PayItem, PayLine, ShopHoursEntry } from "@/lib/db/types";
-import { balances, checkAmount, checkFlatPay, checkPayDay, checkPayment, checkRate, lastRates, lineFor, loggedHours, methodLabel, needsRate, payFor, rateFor, rateId, readMethod, seenJobRates, suggestRate, totalOwed } from "./pay";
+import { balances, checkAmount, checkFlatPay, checkPayDay, checkPayment, checkRate, lastRates, lineFor, loggedHours, methodLabel, needsRate, payFor, RATE_EVERYONE, rateFor, rateId, readMethod, seenJobRates, shopDefault, suggestRate, totalOwed } from "./pay";
 
 const today = "2026-11-24";
 
@@ -158,6 +158,22 @@ describe("the rate list", () => {
     expect(rateFor(rates, "w1", null)).toEqual({ rate: 15, from: "shop" });
     expect(rateFor(rates, "w3", null)).toBeNull();
     expect(rateFor(rates, "w2", null)).toBeNull();
+  });
+
+  it("gives shop time the rate for everyone when the person has none of their own, and only shop time", () => {
+    const everyone = { id: rateId(RATE_EVERYONE, "shop"), workerId: RATE_EVERYONE, scope: "shop", rate: 12, updatedAt: "2026-11-25T12:00:00.000Z" };
+    const withDefault = [...rates, everyone];
+    expect(shopDefault(rates)).toBeNull();
+    expect(shopDefault(withDefault)).toBe(12);
+    // Their own shop rate still wins.
+    expect(rateFor(withDefault, "w1", null)).toEqual({ rate: 15, from: "shop" });
+    // No shop rate of their own, and someone the list has never heard of: the rate for everyone.
+    expect(rateFor(withDefault, "w3", null)).toEqual({ rate: 12, from: "everyone" });
+    expect(rateFor(withDefault, "someone-new", null)).toEqual({ rate: 12, from: "everyone" });
+    // Job hours never take it.
+    expect(rateFor(withDefault, "w2", "j2")).toBeNull();
+    expect(rateFor(withDefault, "someone-new", "j1")).toBeNull();
+    expect(suggestRate([], "someone-new", null, withDefault)).toEqual({ rate: 12, from: "the rate list" });
   });
 
   it("is offered ahead of what they were last paid", () => {

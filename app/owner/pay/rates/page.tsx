@@ -4,13 +4,13 @@ import { JobPick } from "@/components/job-pick";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { removeJobRateAction, saveJobRateAction, saveRatesAction } from "@/lib/actions";
+import { removeJobRateAction, saveJobRateAction, saveRatesAction, saveShopDefaultAction } from "@/lib/actions";
 import { requireRole } from "@/lib/auth";
 import { getRepository } from "@/lib/db/index";
 import { EXPENSE_LIMITS } from "@/lib/domain/expenses";
 import { canLogHours } from "@/lib/domain/hours";
 import { jobChoice, recentJobs } from "@/lib/domain/job-pick";
-import { lastRates, RATE_SHOP, RATE_USUAL, seenJobRates } from "@/lib/domain/pay";
+import { lastRates, RATE_SHOP, RATE_USUAL, seenJobRates, shopDefault } from "@/lib/domain/pay";
 import { formatDate, todayDetroit, usd } from "@/lib/format";
 
 const SELECT = "h-10 w-full min-w-0 rounded-md border border-line bg-card px-3 font-normal";
@@ -29,6 +29,7 @@ export default async function OwnerPayRatesPage({ searchParams }: { searchParams
   const ready = await repo.ratesReady();
   const rates = ready ? await repo.listRates() : [];
   const pay = ready ? await repo.listPay() : [];
+  const everyone = shopDefault(rates);
   const jobs = await repo.listJobs();
   const jobName = new Map(jobs.map((job) => [job.id, { scope: job.scope || "Job", street: (job.jobSiteAddress || "").split(",")[0].trim() }]));
   const workers = (await repo.listWorkers()).sort((a, b) => Number(b.active) - Number(a.active) || a.fullName.localeCompare(b.fullName));
@@ -64,11 +65,31 @@ export default async function OwnerPayRatesPage({ searchParams }: { searchParams
               <p className="font-semibold">How the list is used</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>Hours on a job get that person&apos;s rate for that job. If there isn&apos;t one, they get the usual rate.</li>
-                <li>Shop time gets the shop time rate, never the usual rate.</li>
+                <li>Shop time gets that person&apos;s shop time rate. If they don&apos;t have one, it gets the shop time rate for everyone. It never gets the usual rate.</li>
                 <li>If the list has no rate for the hours, they wait on the Pay page for you to set one.</li>
                 <li>Leave the usual rate blank for someone whose pay changes by job, and you&apos;ll be asked the first time they work each job.</li>
                 <li>Changing a rate here only affects hours logged afterwards. Hours already logged keep their rate.</li>
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="font-display text-xl font-semibold">Shop time for everyone</p>
+                <p className="text-muted">What shop time pays anyone who doesn&apos;t have their own shop time rate below. Someone new gets it from their first day.</p>
+              </div>
+              <form action={saveShopDefaultAction} className="grid grid-cols-2 gap-3">
+                <label className="grid min-w-0 gap-1 font-semibold">
+                  $ an hour
+                  <Input name="rate" inputMode="decimal" defaultValue={everyone ?? ""} placeholder="Blank: ask me" />
+                </label>
+                <div className="col-span-2">
+                  <SubmitButton size="sm" pendingLabel="Saving…">
+                    Save
+                  </SubmitButton>
+                </div>
+              </form>
             </CardContent>
           </Card>
 
@@ -94,7 +115,7 @@ export default async function OwnerPayRatesPage({ searchParams }: { searchParams
                     </label>
                     <label className="grid min-w-0 gap-1 font-semibold">
                       Shop time, $ an hour
-                      <Input name="shop" inputMode="decimal" defaultValue={shop?.rate ?? ""} placeholder="Blank: ask me" />
+                      <Input name="shop" inputMode="decimal" defaultValue={shop?.rate ?? ""} placeholder={everyone === null ? "Blank: ask me" : `Blank: ${usd(everyone)}`} />
                     </label>
                     <div className="col-span-2">
                       <SubmitButton size="sm" pendingLabel="Saving…">
