@@ -70,6 +70,12 @@ export type WorkerRecord = {
   dayEndMin: number;
   workDays: number[];
   active: boolean;
+  /**
+   * Leads the crew they are on. A lead can invite people to that crew, see its hours and
+   * what those hours pay, and add, change or remove hours for anyone on it. Never rates,
+   * payments, or anything about another crew. The owner turns this on.
+   */
+  lead?: boolean;
 };
 
 export type TimeOffRecord = {

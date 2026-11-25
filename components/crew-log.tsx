@@ -23,13 +23,30 @@ export function CrewLogSetupNote({ owner }: { owner: boolean }) {
  * Hours on a job, added from the crew page. The crew member picks the job from every job
  * in the app that hours can go on, so a job with no crew on it is still there to pick.
  */
-export function JobHoursForm({ today, minDate, back, jobs }: { today: string; minDate: string; back: string; jobs: JobChoice[] }) {
+export function JobHoursForm({
+  today,
+  minDate,
+  back,
+  jobs,
+  week,
+  workers,
+}: {
+  today: string;
+  minDate: string;
+  back: string;
+  jobs: JobChoice[];
+  week?: string;
+  /** A crew lead's copy also asks who worked: the people on their crew. */
+  workers?: { id: string; fullName: string }[];
+}) {
   if (jobs.length === 0) {
     return <p className="text-muted">No jobs to pick from yet. A job shows up here as soon as the owner adds it or a customer books it.</p>;
   }
   return (
     <form action={addJobHoursAction} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <input type="hidden" name="back" value={back} />
+      {week && <input type="hidden" name="week" value={week} />}
+      {workers && <WhoWorked workers={workers} />}
       <JobPick jobs={jobs} label="Job" blank="Pick the job" required />
       <label className="grid gap-1 font-semibold">
         Day worked
@@ -53,7 +70,25 @@ export function JobHoursForm({ today, minDate, back, jobs }: { today: string; mi
   );
 }
 
-/** Hours that weren't on a job. The owner's copy also asks who worked. */
+function WhoWorked({ workers }: { workers: { id: string; fullName: string }[] }) {
+  return (
+    <label className="grid min-w-0 grid-cols-1 gap-1 font-semibold sm:col-span-2">
+      Who worked
+      <select name="workerId" required defaultValue="" className="h-10 w-full min-w-0 rounded-md border border-line bg-card px-3 font-normal">
+        <option value="" disabled>
+          Pick a crew member
+        </option>
+        {workers.map((worker) => (
+          <option key={worker.id} value={worker.id}>
+            {worker.fullName}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Hours that weren't on a job. The owner's copy, and a crew lead's, also asks who worked. */
 export function ShopTimeForm({
   today,
   minDate,
@@ -71,21 +106,7 @@ export function ShopTimeForm({
     <form action={addShopHoursAction} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="back" value={back} />
       {week && <input type="hidden" name="week" value={week} />}
-      {workers && (
-        <label className="grid gap-1 font-semibold sm:col-span-2">
-          Who worked
-          <select name="workerId" required defaultValue="" className="h-10 rounded-md border border-line bg-card px-3 font-normal">
-            <option value="" disabled>
-              Pick a crew member
-            </option>
-            {workers.map((worker) => (
-              <option key={worker.id} value={worker.id}>
-                {worker.fullName}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      {workers && <WhoWorked workers={workers} />}
       <label className="grid gap-1 font-semibold">
         Day worked
         <Input name="date" type="date" required defaultValue={today} min={minDate} max={today} />

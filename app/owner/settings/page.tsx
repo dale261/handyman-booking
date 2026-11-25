@@ -223,6 +223,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="active" defaultChecked={worker.active} /> Active
               </label>
+              <label className="flex items-start gap-2 text-sm sm:col-span-2">
+                <input type="checkbox" name="lead" defaultChecked={Boolean(worker.lead)} className="mt-1" />
+                <span>
+                  <span className="font-semibold">Crew lead</span>
+                  <span className="block text-muted">
+                    Can invite people to their crew, see that crew&apos;s hours and what those hours pay, and add, change or remove its hours. Can&apos;t see payments or what you owe, and can&apos;t change a rate.
+                  </span>
+                </span>
+              </label>
               <div className="flex gap-2">
                 <SubmitButton size="sm">Save worker</SubmitButton>
                 <button formAction={deleteWorkerAction} className="h-8 rounded-md border border-line px-3 text-xs font-semibold">

@@ -15,6 +15,7 @@ import { EXPENSE_LIMITS, totalOwed } from "@/lib/domain/expenses";
 import { addDays, canLogHours, entriesFor, HOURS_LIMITS, hoursLabel, totalHours, weekStart } from "@/lib/domain/hours";
 import { jobChoice, recentJobs } from "@/lib/domain/job-pick";
 import { blocksSchedule, jobDates } from "@/lib/domain/scheduling";
+import { leadCrew } from "@/lib/services/lead";
 
 export default async function WorkerPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
   const actor = await requireActor();
@@ -25,6 +26,8 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
   const repo = getRepository();
   const workers = await repo.listWorkers();
   const me = workers.find((worker) => worker.id === actor.workerId);
+  // Set when the owner has made this person the lead of their crew.
+  const lead = await leadCrew(repo, actor);
   const allJobs = await repo.listJobs();
   const jobs = allJobs
     .filter((job) => {
@@ -60,6 +63,17 @@ export default async function WorkerPage({ searchParams }: { searchParams: Promi
       <h1 className="font-display text-3xl font-semibold text-ink">{me ? me.fullName : "Crew work"}</h1>
       <p className="text-sm text-muted">Today in Cadillac is {formatDate(today)}. Add your hours below. Open a job to start it or mark it done.</p>
       <Flash notice={query.notice} error={query.error} />
+      {lead && (
+        <Card>
+          <CardContent className="space-y-2 text-sm">
+            <p className="font-display text-xl font-semibold">You lead {lead.crewName}</p>
+            <p className="text-muted">See your crew&apos;s hours and what they pay, fix a wrong entry, add hours for someone, or invite a new person.</p>
+            <Link className="inline-flex h-10 items-center rounded-md bg-pine px-4 font-semibold text-white" href="/worker/crew">
+              Open my crew
+            </Link>
+          </CardContent>
+        </Card>
+      )}
       {me && (
         <Card>
           <CardContent className="space-y-2 text-sm">

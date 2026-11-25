@@ -7,8 +7,9 @@ import { ensureCustomerAccount, updateCustomerContact } from "@/lib/accounts";
 import { clearLocalSession, createSupabaseServer, currentActor, homeFor, requireActor, requireRole, safeNext, setLocalSession } from "@/lib/auth";
 import { clientIp } from "@/lib/client-ip";
 import { jobForLink, sendAgreement, setNotBuilderWork, setWhiteLabel, signAgreement } from "@/lib/services/agreement";
-import { addHours, removeHours } from "@/lib/services/hours";
-import { addExpense, addShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
+import { addHours, changeHours, removeHours } from "@/lib/services/hours";
+import { leadCrew } from "@/lib/services/lead";
+import { addExpense, addShopHours, changeShopHours, removeCrewEntry, setReimbursed } from "@/lib/services/crew-log";
 import { addFlatPay, addPayment, addPayPerson, dropRatesFor, payBlocksRemoval, removePayItem, saveListRate, saveShopDefault, setRate } from "@/lib/services/pay";
 import { RATE_SHOP, RATE_USUAL, readMethod } from "@/lib/domain/pay";
 import { checkPayFile, clearLoadedPay, loadPayFile, type LoadResult } from "@/lib/services/pay-load";
@@ -429,16 +430,16 @@ export async function removeHoursAction(form: FormData) {
 }
 
 /** Pages the crew-log forms may send people back to. Anything else falls back by role. */
-const CREW_LOG_PAGES = ["/worker", "/owner/hours", "/owner/receipts"];
+const CREW_LOG_PAGES = ["/worker", "/worker/crew", "/owner/hours", "/owner/receipts"];
 
 /** Shop time and receipts aren't on a job page, so they go back to the page the form was on. */
 async function crewLog(form: FormData, notice: string, work: (repo: Repository, actor: Actor) => Promise<{ ok: true } | { ok: false; error: string }>) {
   const actor = await requireActor();
   const asked = field(form, "back");
   const fallback = actor.role === "owner" ? "/owner/hours" : "/worker";
-  const page = CREW_LOG_PAGES.includes(asked) && (actor.role === "owner" || asked === "/worker") ? asked : fallback;
+  const page = CREW_LOG_PAGES.includes(asked) && (actor.role === "owner" || asked.startsWith("/worker")) ? asked : fallback;
   const week = field(form, "week");
-  const extra = page === "/owner/hours" && isDate(week) ? `&week=${week}` : "";
+  const extra = (page === "/owner/hours" || page === "/worker/crew") && isDate(week) ? `&week=${week}` : "";
   const repo = getRepository();
   const result = await work(repo, actor);
   await settle(repo);
@@ -485,6 +486,16 @@ export async function addJobHoursAction(form: FormData) {
 
 export async function removeJobHoursAction(form: FormData) {
   await crewLog(form, "Hours removed.", (repo, actor) => removeHours(repo, actor, field(form, "jobId"), field(form, "entryId")));
+}
+
+/**
+ * Change the number of hours on an entry: on a job when the form names the job, else shop
+ * time. For the owner, and for a crew lead on their own crew's entries; the services check.
+ */
+export async function changeHoursAction(form: FormData) {
+  const jobId = field(form, "jobId");
+  const hours = Number(field(form, "hours"));
+  await crewLog(form, "Hours changed.", (repo, actor) => (jobId ? changeHours(repo, actor, jobId, field(form, "entryId"), hours) : changeShopHours(repo, actor, field(form, "entryId"), hours)));
 }
 
 export async function removeCrewEntryAction(form: FormData) {
@@ -839,8 +850,14 @@ export async function saveWorkerAction(form: FormData) {
     dayEndMin: Number(field(form, "dayEndMin") || "1020"),
     workDays: days.length ? days : [1, 2, 3, 4, 5, 6],
     active: form.get("active") === "on",
+    lead: form.get("lead") === "on",
   };
-  await repo.saveWorker(worker);
+  try {
+    await repo.saveWorker(worker);
+  } catch (error) {
+    // A missing setup step (the crew_lead SQL file) is a plain message, not a crashed page.
+    redirect("/owner/settings?error=" + encodeURIComponent(error instanceof Error ? error.message : "That couldn't be saved. Try again."));
+  }
   const password = String(form.get("password") ?? "");
   if (password) {
     if (password.length < 8) redirect("/owner/settings?error=" + encodeURIComponent("Worker password must be at least 8 characters."));
@@ -907,19 +924,35 @@ async function ensureWorkerLogin(repo: Repository, worker: WorkerRecord, passwor
  */
 export async function inviteWorkerAction(form: FormData) {
   await requireRole("owner");
-  const stop = (message: string): never => redirect("/owner/settings?error=" + encodeURIComponent(message));
-  const contact = parseInviteContact(field(form, "contact"));
-  if (!contact.ok) return stop(contact.error);
   const repo = getRepository();
   const crewId = field(form, "crewId");
   const crew = crewId ? (await repo.listCrews()).find((item) => item.id === crewId && item.active) : undefined;
-  if (crewId && !crew) stop("Pick a crew from the list.");
-  if (contact.email && (await repo.listWorkers()).some((worker) => worker.email.toLowerCase() === contact.email)) {
-    stop("That email is already on your crew list.");
-  }
+  if (crewId && !crew) redirect("/owner/settings?error=" + encodeURIComponent("Pick a crew from the list."));
+  await sendInvite(repo, field(form, "contact"), crew?.id ?? null, "/owner/settings", "That email is already on your crew list.");
+}
+
+/**
+ * A crew lead invites someone to the crew they lead. The same invite the owner sends,
+ * except the crew isn't a choice: it is the lead's own, read from the server, never from
+ * the form. The owner gets the usual notice when the person joins.
+ */
+export async function inviteCrewAction(form: FormData) {
+  const actor = await requireActor();
+  const repo = getRepository();
+  const crew = await leadCrew(repo, actor);
+  if (!crew) redirect(homeFor(actor.role));
+  await sendInvite(repo, field(form, "contact"), crew.crewId, "/worker/crew", "That email is already on the crew list.");
+}
+
+/** Make the invite, email it when it went to an email address, and go back to the page with the link to share. */
+async function sendInvite(repo: Repository, typed: string, crewId: string | null, page: string, taken: string): Promise<never> {
+  const stop = (message: string): never => redirect(`${page}?error=${encodeURIComponent(message)}`);
+  const contact = parseInviteContact(typed);
+  if (!contact.ok) return stop(contact.error);
+  if (contact.email && (await repo.listWorkers()).some((worker) => worker.email.toLowerCase() === contact.email)) return stop(taken);
   const invite: CrewInvite = {
     id: randomUUID(),
-    crewId: crew?.id ?? null,
+    crewId,
     email: contact.email,
     phone: contact.phone,
     expires: Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000,
@@ -930,7 +963,7 @@ export async function inviteWorkerAction(form: FormData) {
     const ok = await sendEmailNow({ to: contact.email, subject: INVITE_EMAIL_SUBJECT, body: inviteEmailBody(inviteLink(token, resetOrigin())) });
     sent = ok ? "&sent=1" : "&sent=0";
   }
-  redirect(`/owner/settings?invite=${encodeURIComponent(token)}${sent}`);
+  return redirect(`${page}?invite=${encodeURIComponent(token)}${sent}`);
 }
 
 /** The sign-in for someone joining from an invite. Never used for an email that already has an account. */

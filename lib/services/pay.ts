@@ -270,6 +270,22 @@ export async function payLocked(repo: Repository, entryId: string): Promise<bool
   }
 }
 
+/**
+ * When the hours on an entry are changed, the pay on it follows at the same rate. True
+ * when there was pay to work out again. Never stops the hours from being saved.
+ */
+export async function repriceFor(repo: Repository, entryId: string, hours: number): Promise<boolean> {
+  try {
+    const line = lineFor(await repo.listPay(), entryId);
+    if (!line || line.rate === null) return false;
+    await repo.savePayItem({ ...line, hours, amount: payFor(hours, line.rate) });
+    return true;
+  } catch (error) {
+    console.error("[crew pay] couldn't work the pay out again for changed hours", error);
+    return false;
+  }
+}
+
 /** When hours are removed, the pay on them goes too, so nobody is owed for hours that aren't there. */
 export async function dropPayFor(repo: Repository, entryId: string): Promise<void> {
   try {

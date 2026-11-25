@@ -51,6 +51,14 @@ function payMissing(error: { message: string; code?: string }): boolean {
 export const RATES_SETUP = "The rate list needs one setup step first: the owner has to run the crew_rates SQL file in Supabase.";
 
 /** True when Supabase is saying the crew_rates table isn't there. */
+/** True when the workers table has no "lead" column yet: the crew_lead SQL file hasn't been run. */
+function leadMissing(error: { message: string; code?: string }): boolean {
+  if (!/\blead\b/i.test(error.message)) return false;
+  return error.code === "42703" || error.code === "PGRST204" || /(does not exist|schema cache|could not find)/i.test(error.message);
+}
+
+const LEAD_SETUP = "Crew leads need one setup step first: run the crew_lead SQL file in Supabase.";
+
 function ratesMissing(error: { message: string; code?: string }): boolean {
   if (error.code === "42P01" || error.code === "PGRST205") return true;
   return /crew_rates/.test(error.message) && /(does not exist|schema cache|could not find)/i.test(error.message);
@@ -181,19 +189,23 @@ export class SupabaseRepository implements Repository {
   }
 
   async saveWorker(worker: WorkerRecord) {
-    await this.must(
-      this.db().from("workers").upsert({
-        id: worker.id,
-        profile_id: worker.profileId,
-        full_name: worker.fullName,
-        email: worker.email,
-        crew_id: worker.crewId,
-        day_start_min: worker.dayStartMin,
-        day_end_min: worker.dayEndMin,
-        work_days: worker.workDays,
-        active: worker.active,
-      }),
-    );
+    const row = {
+      id: worker.id,
+      profile_id: worker.profileId,
+      full_name: worker.fullName,
+      email: worker.email,
+      crew_id: worker.crewId,
+      day_start_min: worker.dayStartMin,
+      day_end_min: worker.dayEndMin,
+      work_days: worker.workDays,
+      active: worker.active,
+    };
+    const { error } = await this.db().from("workers").upsert({ ...row, lead: Boolean(worker.lead) });
+    if (!error) return;
+    if (!leadMissing(error)) throw new Error(error.message);
+    // Until the crew_lead SQL file has been run nobody can be a lead, and everything else about a worker still saves.
+    if (worker.lead) throw new Error(LEAD_SETUP);
+    await this.must(this.db().from("workers").upsert(row));
   }
 
   async deleteWorker(id: string) {
@@ -673,6 +685,7 @@ function workerFromRow(row: Record<string, unknown>): WorkerRecord {
     dayEndMin: Number(row.day_end_min),
     workDays: Array.isArray(row.work_days) ? (row.work_days as number[]) : [1, 2, 3, 4, 5, 6],
     active: Boolean(row.active),
+    lead: Boolean(row.lead),
   };
 }
 

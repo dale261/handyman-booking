@@ -108,6 +108,16 @@ Picking a job from the list shows the work, the address and the day, nothing els
 
 The owner gets an email each time a crew member logs hours, on a job or as shop time, and each time one takes hours back off: who, how many, which day, which job, their note, and their total for that week so far (`hoursEmail()` in `lib/services/hours.ts`). It goes to the same inbox as the other owner emails and puts nothing in the Queue. Hours the owner enters send nothing.
 
+### Crew leads
+
+The owner can make a crew member the **lead** of the crew they are on: a tick box on that worker under Rates → Workers. Needs `supabase/migrations/20261125160000_crew_lead.sql`; until it is run the box can't be saved and everything else about a worker still saves.
+
+- A lead gets a page for their crew (`/worker/crew`, a button on their crew page): a week of each person's hours with the rate and pay on each entry.
+- A lead can add hours and shop time for someone on their crew, change the hours on an entry, and remove one, including hours that already have pay on them. The pay follows: it is worked out again at the same rate, or removed with the hours. The owner is emailed each time, and the email says who did it and whose hours they are.
+- A lead can send the crew invite. The crew is always their own.
+- A lead never sees another crew, a payment, what anyone is still owed, or the rate list, and can't set or change a rate. What a lead may see is decided in one place on the server (`lib/services/crew-week.ts`), and who a lead may act for in another (`lib/services/lead.ts`).
+- A crew member can take back their own hours when the rate on them was only filled in from the rate list. Hours the owner priced himself stay locked to everyone but the owner and that person's lead.
+
 ### Crew pay
 
 The owner's **Pay** page (`/owner/pay`) keeps what each person earned, what they have been paid, and what is still owed. Only the owner can see it. The crew never sees rates or pay.
